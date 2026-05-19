@@ -58,6 +58,59 @@ Outro ponto importante é que, o sistema muitas vezes pode precisar de algumas a
 
 **Pronto, agora seu sistema está pronto para seus futuros projetos.**
 
+## ⚡📶 │ Comandos Atualização Wi-Fi Btv E10:
+Nesse momento é muito comum que tenham problemas relacionados ao Wi-Fi e drivers de rede utilizando essa imagem, para resolvê-los recomendamos que sigam os passos e listas de comandos presentes abaixo:
+
+**Obs:** O uso da imagem Debian Linux for Amlogic SOC já possui acesso root e os comandos não precisam usar o "sudo" no inicío
+
+**Atualizando e instalando pacotes:**
+
+Atualizar pacotes:
+
+- **"apt update && apt upgrade"** - Já vistos anteriormente, servem para atualizar pacotes
+
+Instalar pacotes básicos necessários:
+
+- **"apt install build-essential git curl"**
+- **"apt install dkms"**
+- **"apt install usbutils"**
+- **"apt install bc"**
+- **"apt install wget"**
+- **"apt install network-manager"**
+- **"apt install pciutils"**
+- **"apt install lshw"**
+- **"apt install wireless-tools"**
+
+Instalar driver realtek da placa wifi:
+
+- **"apt install firmware-realtek"**
+
+Verificar interfaces de rede disponíveis na box. Deve listar uma cabeada "eth0" e um sem fio "wlan0". Se tiver com o adaptador USB-WiFi reconhecido pode haver uma "wlan1":
+
+- **"ip a"**
+
+Escaneia redes wifi e imprimi lista com informações:
+
+- **"nmcli dev wifi rescan"**
+
+Verifique se sua rede wifi se encontra na lista:
+
+- **"nmcli dev wifi list"**
+
+Opções para conexão:
+
+**"nmcli dev wifi connect <SSID> password <password>"** - Conectar de rede "SSID" com a senha "password". Troque pela credencial da sua rede wifi.
+
+Ou:
+
+Rodar o script "wifi-connect.sh" na pasta raiz da Tv Box. Ele vai perguntar qual rede wifi (SSID) vc quer conectar e qual a senha. Ele irá salvar essa conexão (SSID e senha) para futuras conexões.
+
+Verifique em wlan0 se conectou na rede e recebeu algum endereço IP:
+
+- **"ip a"**
+
+Se a conexão do módulo Wi-Fi interno da Tv Box com o driver usado estiver muito ruim, recomenda-se procurar outro driver ou usar um adaptador USB-WiFi.
+
 ## 💻 │ Comandos úteis:
 Para que ninguém fique totalmente perdido nesse novo ambiente onde muitos provavelmente nunca tiveram contato, iremos deixar nessa seção, alguns comandos e atalhos úteis para a navegação e manipulação do sistema, para que assim desenvolvam melhor as suas ideias.
 
