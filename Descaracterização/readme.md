@@ -61,13 +61,13 @@ Outro ponto importante é que, o sistema muitas vezes pode precisar de algumas a
 ## ⚡📶 │ Comandos Atualização Wi-Fi Btv E10:
 Nesse momento é muito comum que tenham problemas relacionados ao Wi-Fi e drivers de rede utilizando essa imagem, para resolvê-los recomendamos que sigam os passos e listas de comandos presentes abaixo:
 
-**Obs:** O uso da imagem Debian Linux for Amlogic SOC já possui acesso root e os comandos não precisam usar o "sudo" no inicío
+**Obs:** O uso da imagem Debian Linux for Amlogic SOC já possui acesso root e os comandos não precisam usar o "sudo" no inicío.
 
-**Atualizando e instalando pacotes:**
+**1) Atualizando e instalando pacotes:**
 
 Atualizar pacotes:
 
-- **"apt update && apt upgrade"** - Já vistos anteriormente, servem para atualizar pacotes
+- **"apt update && apt upgrade"** - Já vistos anteriormente, servem para atualizar pacotes.
 
 Instalar pacotes básicos necessários:
 
@@ -110,6 +110,118 @@ Verifique em wlan0 se conectou na rede e recebeu algum endereço IP:
 - **"ip a"**
 
 Se a conexão do módulo Wi-Fi interno da Tv Box com o driver usado estiver muito ruim, recomenda-se procurar outro driver ou usar um adaptador USB-WiFi.
+
+**2) Verificação do pacote linux-headers:**
+
+apt-get install build-essential git dkms linux-headers-$(uname -r)
+
+Se tiver o erro: "unable to locate package linux-readers":
+Verifique a versão exata do seu kernel:
+
+- **"uname -r"**
+
+**"apt search linux-headers-"** - Seguido pelo número da versão geral para ver todos os pacotes disponíveis em seus repositórios. Ex: "apt search linux-headers-6.18.29".
+
+Se não tiver o pacote do header do seu Kernel no seu repositório, será necessário adicioná-lo manualmente:
+Localize o arquivo .deb correto para sua arquitetura (provavelmente arm64) na página de lançamentos do GitHub.
+
+- **"https://github.com/devmfc/debian-on-amlogic/releases"** - Ex: "https://github.com/devmfc/debian-on-amlogic/releases/tag/v6.18.29".
+
+Faça o download usando o wget:
+
+- **"wget <URL_do_arquivo_deb>"** - Ex: "wget https://github.com/devmfc/debian-on-amlogic/releases/download/v6.18.29/linux-headers-6.18.29-meson64_20260511_arm64.deb"
+
+Instale o pacote:
+
+- **"dpkg -i <nome_do_pacote_baixado>.deb"** - O nome do pacote que for entregue após terminar a busca e instalação pelo wget. Ex: "dpkg -i linux-headers-6.18.29-meson64_20260511_arm64.deb"
+
+- **"sudo apt install -f**" - "Corrigir possíveis dependências"
+
+**3) Recomendado - Desabilitar WiFi Interno da TV Box para uso de Adaptador USB-WiFi:**
+
+Cria um arquivo de configuração para desabilitar o módulo WiFi Interno:
+
+- **"nano /etc/modprobe.d/disable-wifi-interno.conf"**
+
+Liste o módulo para desabilitar:
+
+- **"blacklist 8189fs"**
+
+Reiniciar tv box:
+
+- **"reboot"**
+
+Checar conexões de rede:
+
+- **"ip a"**
+
+Somente deve ter uma conexão "wlan0" que corresponderá à interfave USB-WiFi conectada
+
+**4) Instalação Driver USB Wifi "n" com Antena externa (se necessário):**
+
+- **"https://github.com/kelebek333/rtl8188fu"**
+
+**5) Instalação Driver USB Wifi "AC" Dual Band (se necessário):**
+
+- **"https://www.youtube.com/watch?v=PGKRPWMglCs"**
+- **"https://github.com/bitcris/RealtekRTL8811CU"**
+
+Verifique se existe algum driver instaldo com o comando:
+
+- **"dkms status"**
+
+Se tiver, substitua pelo driver que aparece no seu terminal:
+Verifique o ID do driver:
+
+- **"lsusb"**
+Exemplo de saída esperada: (Bus 001 Device 002: ID 0bda:c811 Realtek Semiconductor Corp. 802.11ac NIC)
+
+Pacotes necessários:
+
+- **"apt install -y build-essential dkms git iw"**
+
+Cria o diretório para armazenar o driver e navega até o diretório:
+
+- **"mkdir -p ~/src ; cd src"**
+
+Baixa o driver:
+
+- **"git clone https://github.com/morrownr/8821cu-20210916.git"**
+
+Abre o diretório do driver:
+
+- **"cd ~/src/8821cu-20210916"**
+
+**ATENÇÃO:** Este script vai solicitar reiniar o computador.
+Executa o script de instalação, você pode pular a reinicialização, mas recomenda-se reiniar
+
+- **"./install-driver.sh"**
+
+Reiniciar tv box:
+
+- **"reboot"**
+
+**6) Conectar na rede Wi-Fi:**
+
+Verificar interfaces de rede disponíveis na box. Deve listar uma cabeada "eth0" e um sem fio "wlan0". Se tiver com o adaptador USB-WiFi reconhecido pode haver uma "wlan1":
+
+- **"ip a"**
+
+Escaneia redes wifi e imprimi lista com informações:
+
+- **"nmcli dev wifi rescan"**
+
+Verifique se sua rede wifi se encontra na lista:
+
+- **"nmcli dev wifi list"**
+
+Opções para conexão:
+
+- **"nmcli dev wifi connect <SSID> password <password>"** - Conectar de rede "SSID" com a senha "password". Troque pela credencial da sua rede wifi.
+
+Ou:
+
+Rodar o script "wifi-connect.sh" na pasta raiz da Tv Box. Ele vai perguntar qual rede wifi (SSID) vc quer conectar e qual a senha. Ele irá salvar essa conexão (SSID e senha) para futuras conexões.
 
 ## 💻 │ Comandos úteis:
 Para que ninguém fique totalmente perdido nesse novo ambiente onde muitos provavelmente nunca tiveram contato, iremos deixar nessa seção, alguns comandos e atalhos úteis para a navegação e manipulação do sistema, para que assim desenvolvam melhor as suas ideias.
