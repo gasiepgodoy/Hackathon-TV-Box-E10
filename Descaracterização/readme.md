@@ -21,7 +21,7 @@ A imagem que recomendamos se trata de um sistema derivado do Linux em uma versã
 
 ## 📦 │ Instalação
 A seguir iremos detalhar os passos a serem seguidos:
-- **Primeiro passo:** Faça o download do arquivo em [Imagens Recomendadas](Imagens%20pra%20uso/)
+- **Primeiro passo:** Faça o download do arquivo em [Imagens Recomendadas](main/Imagens%20pra%20uso/readme.md)
 - **Segundo passo:** Instale o programa chamado Balena Etcher ou outro software semelhante para gravar a imagem dentro do pen-drive ou cartão de memória.
 **Link para o Balena Etcher:** https://etcher.balena.io/
 - **Terceiro passo:** Após a gravação, retire e plugue-o novamente no Pc para evitar possíveis erros e em seguida abra o disco e acesse a partição principal criada, dentro dela abra o arquivo “boot.config” com o bloco de notas para poder modificá-lo e descomente a linha de configuração referente ao hardware da sua btv (em nosso caso: “box-s905x2_generic”), para isso remova a “#”.
