@@ -1,12 +1,14 @@
 # 📥 │ Download da imagem Pura (Debian 13):
 - https://github.com/devmfc/debian-on-amlogic
+
 Obs: A imagem apresentada costuma receber atualizações constantemente, por este motivo apresentamos o link do próprio github ao invés do arquivo de instalação.
 ## 🛠️ │ Tutorial de instalação e uso da imagem:
 - https://youtu.be/CHj3oQ6NWrk?si=qEjFNMQd9Fwh5Vss
 
 # 📥 │ Download da imagem Modificada/Pronta (Debian 13):
 - https://drive.google.com/file/d/1zeyZRLyZpribU1myd3DvLSqR--pgOzRY/view?usp=sharing
-Atenção: A imagem apresentada está com um problema relacinado ao armazenamento total do dispositivo de memória, siga o procedimento abordado abaixo se forem utilizar essa imagem.
+
+⚠️ Atenção: A imagem apresentada está com um problema relacinado ao armazenamento total do dispositivo de memória, siga o procedimento abordado abaixo se forem utilizar essa imagem.
 ## 🛠️ │ Tutorial para Realocação de 100% da Memória:
 **Visualizar os discos e partições da memória:**
 - 'lsblk'
