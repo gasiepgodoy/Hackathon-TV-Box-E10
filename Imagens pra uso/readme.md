@@ -7,6 +7,7 @@ Esse OS pode ser baseado em Linux ou em Android por exemplo. O grande desafio é
 Para auxiliar nesse processo, a comissão organziadora do evento está disponibilizando e indicando o uso de um OS Linux baseado numa distribuição Debian 13 para o desenvolvimento do projeto peelas equipes. A imagemd esse OS está otimizado e pronta para uso pela Tv Box BTV E10  usada no Hackathon. É uma recomendação e as equipes podem a seus critérios buscarem outros OS para serem usados.
 
 Essa imagem recomenda é do tipo "server" (sem interface gráfica) para minimizar o uso dos recursos computacionaios da TV Box.
+OBSERVAÇÃO: As equipes receberão as TV Box para desenvolvimento do seu projeto já com essa imagem recomendada pronta para uso em seus cartões de memória. Portantoi, a não ser que seja necessário trocar a imagem ou reiniciar (formatar) a imagem da TV Box para o desenvolvimento do projeto, não será necessário a reralização dos procedimentos abaixo. 
 
 # 📥 │ Download da imagem Pura (Debian 13):
 - https://github.com/devmfc/debian-on-amlogic
