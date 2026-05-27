@@ -2,13 +2,16 @@
 - https://github.com/devmfc/debian-on-amlogic
 
 Obs: A imagem apresentada costuma receber atualizações constantemente, por este motivo apresentamos o link do próprio github ao invés do arquivo de instalação.
+
+Essa imagem é do tipo "server" (sem interface gráfica) e bastante simlificada, não incorporando mesmo pacotes báscios do Linux. Para auxiliar no desenvolvimento, a comissão oirganizadora preparou uma imagem modificada, já incorporando pacotes báscios e funcionalidade de rede, a qual é recomendada para uso.
+
 ## 🛠️ │ Tutorial de instalação e uso da imagem:
 - https://youtu.be/CHj3oQ6NWrk?si=qEjFNMQd9Fwh5Vss
 
 # 📥 │ Download da imagem Modificada/Pronta (Debian 13):
 - https://drive.google.com/file/d/1zeyZRLyZpribU1myd3DvLSqR--pgOzRY/view?usp=sharing
 
-⚠️ Atenção: A imagem apresentada está com um problema relacinado ao armazenamento total do dispositivo de memória, siga o procedimento abordado abaixo se forem utilizar essa imagem.
+⚠️ Atenção: Essa imagem apresentada foi compactada (iumage.xz) para reduzir seu tamanho. Devido à essa compactação, ao gravar essa imagem no cartãso de memória da Tv Box, a imagem não é exppandida para o espaço disponívbel no cartão de memória. Isso não traz impactos de desempenhio da Tv Box, somente em espaço de armazenamento. Para expandir o espaço de armazenamento para todo o esçao disponível do casrtão de memória, siga o procedimento abordado abaixo.
 ## 🛠️ │ Tutorial para Realocação de 100% da Memória:
 **Visualizar os discos e partições da memória:**
 - `lsblk`
