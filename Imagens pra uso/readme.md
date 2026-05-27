@@ -1,18 +1,27 @@
+# 📥 │ Imagem do Sistema Operacional para a Tv Box
+
+O hardware da Tv Box necessita de um sistema operacional (OS) para habilitar seu uso e desenvolvimento do projeto. Esse software do OS deve ser adequado para permitr que a solução tecnológica a ser desenvolvida opere de maneira satisfatória considerando a capacidade de processamento do hardware da Tv Box.
+
+Esse OS pode ser baseado em Linux ou em Android por exemplo. O grande desafio é encontrar uma ditribuição do OS de interesse que rode de forma adequada no hardware da Tv Box. Consideranbdo que cada Tv Box possui um conjunto de hardware (processador, memória RAM, periféricos e interfaces áudio e vídeo e de conexão de rede) diferentes, a tarefa de encontrar um OS compatível pode se tornar desafiadora. Por exemplo versões difernetes de um mesmo OS Linux ou Android podem utilizar os recursos computacionais do hardware da Tv Box (% da memória RAM e da CPU) de maneira distintas, impactando o desenvolvimento. Adicionalmente, versões difernetes de um mesmo OS Linux ou Android não reconhecer (por ausêncioa de driver compatível ou otimizado por exemplo) algum recurso ou periférico da Tv Box.
+
+Para auxiliar nesse processo, a comissão organziadora do evento está disponibilizando e indicando o uso de um OS Linux baseado numa distribuição Debian 13 para o desenvolvimento do projeto peelas equipes. A imagemd esse OS está otimizado e pronta para uso pela Tv Box BTV E10  usada no Hackathon. É uma recomendação e as equipes podem a seus critérios buscarem outros OS para serem usados.
+
+Essa imagem recomenda é do tipo "server" (sem interface gráfica) para minimizar o uso dos recursos computacionaios da TV Box.
+
 # 📥 │ Download da imagem Pura (Debian 13):
 - https://github.com/devmfc/debian-on-amlogic
 
 Obs: A imagem apresentada costuma receber atualizações constantemente, por este motivo apresentamos o link do próprio github ao invés do arquivo de instalação.
+Essa imagem original do OS é bastante simlificada, não incorporando mesmo pacotes báscios do Linux. Para auxiliar no desenvolvimento, a comissão oirganizadora preparou uma imagem modificada, já incorporando pacotes báscios e funcionalidade de rede, a qual é recomendada para uso.
 
-Essa imagem é do tipo "server" (sem interface gráfica) e bastante simlificada, não incorporando mesmo pacotes báscios do Linux. Para auxiliar no desenvolvimento, a comissão oirganizadora preparou uma imagem modificada, já incorporando pacotes báscios e funcionalidade de rede, a qual é recomendada para uso.
-
-## 🛠️ │ Tutorial de instalação e uso da imagem:
+### 🛠️ │ Tutorial de instalação e uso da imagem:
 - https://youtu.be/CHj3oQ6NWrk?si=qEjFNMQd9Fwh5Vss
 
-# 📥 │ Download da imagem Modificada/Pronta (Debian 13):
+# 📥 │ Recomendado - Download da imagem Modificada/Pronta (Debian 13):
 - https://drive.google.com/file/d/1zeyZRLyZpribU1myd3DvLSqR--pgOzRY/view?usp=sharing
 
-⚠️ Atenção: Essa imagem apresentada foi compactada (iumage.xz) para reduzir seu tamanho. Devido à essa compactação, ao gravar essa imagem no cartãso de memória da Tv Box, a imagem não é exppandida para o espaço disponívbel no cartão de memória. Isso não traz impactos de desempenhio da Tv Box, somente em espaço de armazenamento. Para expandir o espaço de armazenamento para todo o esçao disponível do casrtão de memória, siga o procedimento abordado abaixo.
-## 🛠️ │ Tutorial para Realocação de 100% da Memória:
+⚠️ Atenção: Essa imagem apresentada foi compactada (iumage.xz) para reduzir seu tamanho. Devido à essa compactação, ao gravar essa imagem no cartãso de memória da Tv Box, a imagem não é exppandida para o espaço disponívbel no cartão de memória. Isso não traz impactos de desempenhio da Tv Box, somente em espaço de armazenamento. Para expandir o espaço de armazenamento para todo o espaço disponível do cartão de memória, siga o procedimento abordado abaixo.
+### 🛠️ │ Tutorial para Realocação de 100% da Memória:
 **Visualizar os discos e partições da memória:**
 - `lsblk`
 
