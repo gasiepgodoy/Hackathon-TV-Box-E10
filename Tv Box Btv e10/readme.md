@@ -17,7 +17,16 @@ Para esse acesso (ssh) será necessário utilizar os seguintes dados de acordo c
 4) Ligue a Tv Box na tomada com a fonte fornecida e o cartão de memória conectado no slot da Tv Box. A Tv Box irá ligar e inicializar o sistema operacional (OS) contido no cartão de memória. É possível verificar se a Tv Box ligou verificando se há três (3) luzes vermelhas acessas na fernte da Tv Box.
 <img width="225" height="400" alt="WhatsApp Image 2026-05-29 at 18 12 43" src="https://github.com/user-attachments/assets/3867ae70-5b82-4bcb-8354-3f274d7919d1" />
 
-5) e para acesso via ssh, como o Putty:
+5) Para acesso remoto via rede (ssh) do seu computador (tablet, notebook) para a Tv Box ligada, useu um software de acesso"ssh" como o Putty. Utilize o respectivo endereço de rede da sua Tv Box:
+<img width="640" height="360" alt="Putty-TvBox" src="https://github.com/user-attachments/assets/82941e07-85fd-4864-beaa-5efeaebf7d41" />
+
+6) Ao abrir a conexão 'ssh' com a Tv Box, digite o login e senha da Tv Box. O acesso será concedido ao Linux Debian da Tv Box e vc poderá ver informações sobre o SO rodando na Tv Box e acessar o prompt de comando para desenvolvimento.
+<img width="4759" height="1125" alt="image" src="https://github.com/user-attachments/assets/045dc5c2-2047-4c01-95ec-e3eac9dac64d" />
+
+7) Pronto!!! Sua Tv Box está pronta para desenvolvimento da sua aplicação. Mãos à obra!!!
+Obs: Caso seja necessário utilizar a Tv Box em outro local fora da Unesp, será necessário conectá-la a outra rede (ou Wi-Fi) e acessar seu endereço nessa rede via ssh.
+
+
    
    
 
