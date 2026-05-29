@@ -13,7 +13,7 @@ Para esse acesso (ssh) será necessário utilizar os seguintes dados de acordo c
 <img width="910" height="193" alt="image" src="https://github.com/user-attachments/assets/d969c068-b2f5-4950-9b66-33d786a4ece7" />
 
 3) Use o seu respectivo endereço de rede, depedendo da conexão usada na Unesp Sorocaba (via cabo de rede ou via Wi-Fi), para conexão via ssh com sua TV Box. No caso de uso do Wi-Fi, conectar o adaptador USB-WiFi na porta USB 2.0 (preta) da Tv Box conforme abaixo:
-<img width="450" height="800" alt="WhatsApp Image 2026-05-29 at 18 08 56" src="https://github.com/user-attachments/assets/1158949a-2f92-4dce-b200-7af3c2d50b2a" />
+<img width="225" height="400" alt="WhatsApp Image 2026-05-29 at 18 08 56" src="https://github.com/user-attachments/assets/1158949a-2f92-4dce-b200-7af3c2d50b2a" />
 
 4) Ligue a Tv Box na tomada com a fonte fornecida e o cartão de memória conectado no slot da Tv Box. A Tv Box irá ligar e inicializar o sistema operacional (OS) contido no cartão de memória. É possível verificar se a Tv Box ligou verificando se há três (3) luzes vermelhas acessas na fernte da Tv Box.
 <img width="899" height="1599" alt="WhatsApp Image 2026-05-29 at 18 12 43" src="https://github.com/user-attachments/assets/3867ae70-5b82-4bcb-8354-3f274d7919d1" />
