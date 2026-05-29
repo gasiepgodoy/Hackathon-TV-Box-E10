@@ -10,7 +10,7 @@ Para esse acesso (ssh) será necessário utilizar os seguintes dados de acordo c
 <img width="1280" height="720" alt="MAC-TvBox" src="https://github.com/user-attachments/assets/01846e24-450e-4fd3-9893-cd28b5c71888" />
 
 2) Verifique o endereço de rede a ser usado para a conexão com sua Tv Box:
-<img width="910" height="193" alt="image" src="https://github.com/user-attachments/assets/d969c068-b2f5-4950-9b66-33d786a4ece7" />
+<img width="455" height="96" alt="image" src="https://github.com/user-attachments/assets/d969c068-b2f5-4950-9b66-33d786a4ece7" />
 
 3) Use o seu respectivo endereço de rede, depedendo da conexão usada na Unesp Sorocaba (via cabo de rede ou via Wi-Fi), para conexão via ssh com sua TV Box. No caso de uso do Wi-Fi, conectar o adaptador USB-WiFi na porta USB 2.0 (preta) da Tv Box conforme abaixo:
 <img width="225" height="400" alt="WhatsApp Image 2026-05-29 at 18 08 56" src="https://github.com/user-attachments/assets/1158949a-2f92-4dce-b200-7af3c2d50b2a" />
