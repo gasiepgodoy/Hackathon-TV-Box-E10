@@ -1,0 +1,11 @@
+[Unit]
+Description=SecBox motion detection
+After=network.target mediamtx.service
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/secbox/motion.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

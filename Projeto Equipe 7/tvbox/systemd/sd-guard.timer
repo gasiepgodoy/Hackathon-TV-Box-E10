@@ -1,0 +1,9 @@
+[Unit]
+Description=Roda o guarda do SD a cada 5 min
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

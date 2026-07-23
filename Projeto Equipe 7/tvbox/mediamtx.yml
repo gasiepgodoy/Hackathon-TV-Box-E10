@@ -1,0 +1,12 @@
+# MediaMTX — captura da webcam, ao vivo (WebRTC/RTSP) + gravação + playback.
+# O ffmpeg lê MJPG da câmera (/dev/video1) e encoda H.264; grava em segmentos.
+playback: yes
+paths:
+  cam:
+    runOnInit: ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 30 -i /dev/video1 -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -b:v 1M -g 60 -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+    runOnInitRestart: yes
+    record: yes
+    recordPath: /opt/mediamtx/rec/%path/%Y-%m-%d_%H-%M-%S-%f
+    recordFormat: fmp4
+    recordSegmentDuration: 600s
+    recordDeleteAfter: 24h

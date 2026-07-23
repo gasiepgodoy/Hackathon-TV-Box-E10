@@ -1,0 +1,13 @@
+[Unit]
+Description=MediaMTX (camera streaming)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+WorkingDirectory=/opt/mediamtx
+ExecStart=/opt/mediamtx/mediamtx /opt/mediamtx/mediamtx.yml
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

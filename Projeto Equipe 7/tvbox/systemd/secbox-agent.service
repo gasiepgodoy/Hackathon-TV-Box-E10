@@ -1,0 +1,13 @@
+[Unit]
+Description=SecBox edge agent (MQTT)
+After=network-online.target mediamtx.service
+Wants=network-online.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/secbox/agent.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

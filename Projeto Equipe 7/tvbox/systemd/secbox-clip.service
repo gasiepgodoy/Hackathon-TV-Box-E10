@@ -1,0 +1,11 @@
+[Unit]
+Description=SecBox clip remux
+After=network.target mediamtx.service
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/secbox-clip/clip-server.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

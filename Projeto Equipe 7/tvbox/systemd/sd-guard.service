@@ -1,0 +1,6 @@
+[Unit]
+Description=Guarda de espaco do cartao SD
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mediamtx/sd-guard.sh

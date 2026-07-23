@@ -1,0 +1,9 @@
+{
+  "broker_host": "SEU_SERVIDOR",
+  "broker_port": 1883,
+  "broker_user": "serverapp",
+  "broker_pass": "SUA_SENHA_MQTT",
+  "rtsp_url": "rtsp://localhost:8554/cam",
+  "motion_threshold": 12,
+  "motion_cooldown": 30
+}

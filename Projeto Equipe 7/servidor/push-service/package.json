@@ -1,0 +1,13 @@
+{
+  "name": "secbox-push",
+  "version": "1.0.0",
+  "description": "Microserviço de envio de push (FCM) do SecBox",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "firebase-admin": "^12.0.0"
+  }
+}

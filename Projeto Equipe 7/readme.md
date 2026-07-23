@@ -6,6 +6,12 @@ Projeto do **Hackathon TV Box E10**. Uma **TV Box** (com Linux) faz o papel do e
 
 **Equipe:** Gustavo Henrique Bacci, Rafael Sanchez Nakamura da Silva, Enzo Kawan Da Rocha Vasconcelos, Fernando Toledo de Souza, Leonardo da Silva Paschoal, Victor Thiago Nogueira Ferreira.
 
+## Estrutura do repositório
+
+- [`app/`](app/) — aplicativo Android (Flutter)
+- [`tvbox/`](tvbox/) — scripts da borda: câmera (MediaMTX), agente, detecção de movimento, LEDs, remux e serviços systemd
+- [`servidor/`](servidor/) — banco de dados (`schema.sql`, `functions.sql`), broker, Node-RED e microserviço de push
+
 ---
 
 ## Visão geral
