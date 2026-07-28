@@ -1,0 +1,12 @@
+[Unit]
+Description=Load internal WiFi driver (rtl8189fs)
+After=sysinit.target
+Before=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/modprobe 8189fs
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

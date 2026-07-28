@@ -16,6 +16,7 @@ movimento, remux de clipes e LEDs de status.
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, limiar de movimento). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
+| [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
 
 ## Identidade do dispositivo
 
@@ -45,3 +46,11 @@ systemctl enable --now mediamtx secbox-agent secbox-motion secbox-clip secbox-le
 > barramento na porta da TV box — use um **hub USB com fonte própria**. Se a câmera
 > voltar com outro `/dev/videoN`, aponte o `mediamtx.yml` para um caminho estável
 > em `/dev/v4l/by-id/`.
+
+## Wi-Fi interno (opcional)
+
+Para liberar a porta USB ocupada por um dongle Wi-Fi, dá para ativar o **Wi-Fi
+interno** (chip RTL8189FTV) da TV box — inclusive no kernel 6.18, com o driver
+compilado e um ajuste de *device tree*. Passo a passo (com backup e reversão) em
+[`WIFI-INTERNO.md`](WIFI-INTERNO.md). O serviço [`systemd/rtl8189fs.service`](systemd/rtl8189fs.service)
+carrega o módulo no boot.
