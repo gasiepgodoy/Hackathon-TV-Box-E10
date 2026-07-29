@@ -115,9 +115,16 @@ def _storage():
     except Exception:
         pass
     hours = budget * 8 / (kbps * 1000) / 3600 if kbps else 0
+    # Sem codificador por hardware, a CPU é o recurso mais apertado: a carga
+    # acima do número de núcleos significa captura atrasando e replay lento.
+    try:
+        load = os.getloadavg()[0]
+    except OSError:
+        load = 0.0
     return {"total": total, "free": free, "used": used, "rec_used": rec,
             "budget": budget, "per_camera": per, "kbps_total": kbps,
-            "hours": round(hours, 1)}
+            "hours": round(hours, 1), "load": round(load, 2),
+            "cpus": os.cpu_count() or 1}
 
 
 def _load_settings():

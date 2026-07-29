@@ -10,11 +10,13 @@ MTX_YML = "/opt/mediamtx/mediamtx.yml"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
 
-# Presets de qualidade (o bitrate é o que determina o consumo de disco).
+# Presets de qualidade. O bitrate determina o consumo de disco; a resolução e o
+# fps determinam o consumo de CPU, que neste equipamento é o recurso mais
+# apertado — não há codificador por hardware, tudo passa pelo libx264.
 PRESETS = {
     "alta": {"size": "1280x720", "fps": 15, "kbps": 2000},
-    "media": {"size": "1280x720", "fps": 15, "kbps": 1000},
-    "baixa": {"size": "640x480", "fps": 15, "kbps": 500},
+    "media": {"size": "1280x720", "fps": 10, "kbps": 1000},
+    "baixa": {"size": "640x480", "fps": 10, "kbps": 500},
 }
 DEFAULT = {"quality": "media", "retention_h": 24,
            "motion": True, "sensitivity": "media"}

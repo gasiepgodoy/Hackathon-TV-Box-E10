@@ -91,6 +91,12 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   String _sizeOf(String quality) =>
       (_presets[quality] as Map?)?['size']?.toString() ?? '';
 
+  int _fps(String quality) =>
+      ((_presets[quality] as Map?)?['fps'] as num? ?? 15).toInt();
+
+  double get _cpuLoad => (_storage['load'] as num? ?? 0).toDouble();
+  int get _cpus => (_storage['cpus'] as num? ?? 4).toInt();
+
   // Espaço que a retenção pedida exige: bitrate × tempo.
   double _needBytes(String id) {
     final e = _edit[id]!;
@@ -156,6 +162,7 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
               : ListView(
                   padding: const EdgeInsets.all(12),
                   children: [
+                    if (_cpuLoad > _cpus) _loadWarning(),
                     _summary(),
                     const SizedBox(height: 8),
                     _notifyCard(),
@@ -230,6 +237,27 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
     );
   }
 
+  // A TV box não tem codificador por hardware: cada câmera é comprimida por
+  // software. Passando da capacidade, a captura atrasa e o replay fica lento.
+  Widget _loadWarning() => Card(
+        color: Colors.orange.withValues(alpha: 0.15),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            const Icon(Icons.memory, color: Colors.orange),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Processador no limite (carga ${_cpuLoad.toStringAsFixed(1)} para '
+                '$_cpus núcleos). Reduza a qualidade de uma câmera para o vídeo '
+                'e o replay voltarem a ficar fluidos.',
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ]),
+        ),
+      );
+
   Widget _notifyCard() => Card(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
@@ -300,7 +328,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
             ],
           ),
           const SizedBox(height: 4),
-          Text('${_sizeOf(q)} · ${_gb(_needBytes(id))} para ${_retLabel(ret)}',
+          Text(
+              '${_sizeOf(q)} · ${_fps(q)} fps · ${_gb(_needBytes(id))} para ${_retLabel(ret)}',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 12),
           const Text('Guardar por', style: TextStyle(fontSize: 13)),

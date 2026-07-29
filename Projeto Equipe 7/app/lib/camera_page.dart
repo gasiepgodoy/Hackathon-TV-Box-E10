@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'config.dart';
@@ -51,15 +48,14 @@ class _CameraPageState extends State<CameraPage> {
   bool _live = true;
   VideoPlayerController? _video;
   ChewieController? _chewie;
-  File? _temp;
   DateTime? _chunkStart;
   String _status = '';
   bool _loadingNext = false;
   double _speed = 1.0; // velocidade do replay (mantida entre trechos)
-  // Trecho seguinte baixado em segundo plano (virada sem pausa).
-  File? _preFile;
+  // Trecho seguinte já aberto em segundo plano (virada sem pausa).
+  VideoPlayerController? _preCtl;
   DateTime? _preStart;
-  Future<File?>? _preJob;
+  Future<VideoPlayerController?>? _preJob;
 
   final ScrollController _scroll = ScrollController();
   bool _userDragging = false;
@@ -194,30 +190,29 @@ class _CameraPageState extends State<CameraPage> {
     return avail < chunkSec ? avail : chunkSec;
   }
 
-  // Baixa um trecho para arquivo temporário (usado no play e no prefetch).
-  Future<File?> _download(DateTime start, int dur) async {
-    final url = Uri.parse('$clipBase/clip').replace(queryParameters: {
-      'path': _cam.path,
-      'start': start.toUtc().toIso8601String(),
-      'duration': dur.toString(),
-    }).toString();
+  // Endereço do trecho no servidor da TV box.
+  String _urlFor(DateTime start, int dur) =>
+      Uri.parse('$clipBase/clip').replace(queryParameters: {
+        'path': _cam.path,
+        'start': start.toUtc().toIso8601String(),
+        'duration': dur.toString(),
+      }).toString();
+
+  // Abre o trecho direto da rede: como o MP4 sai com +faststart, o player começa
+  // com os primeiros KB e segue carregando, em vez de esperar o arquivo inteiro.
+  Future<VideoPlayerController?> _openChunk(DateTime start, int dur) async {
+    final v = VideoPlayerController.networkUrl(Uri.parse(_urlFor(start, dur)));
     try {
-      final dir = await getTemporaryDirectory();
-      final file =
-          File('${dir.path}/seg_${DateTime.now().millisecondsSinceEpoch}.mp4');
-      final resp =
-          await http.Client().send(http.Request('GET', Uri.parse(url)));
-      if (resp.statusCode != 200) return null;
-      final sink = file.openWrite();
-      await resp.stream.pipe(sink);
-      await sink.close();
-      return file;
+      await v.initialize();
+      return v;
     } catch (_) {
+      await v.dispose();
       return null;
     }
   }
 
-  // Adianta o download do próximo trecho, enquanto o atual ainda toca.
+  // Prepara o trecho seguinte enquanto o atual toca: ele já inicializa e vai
+  // enchendo o buffer, então a virada não espera a rede.
   void _prefetch(DateTime raw) {
     final start = _snap(raw);
     if (_preStart == start) return;
@@ -225,10 +220,10 @@ class _CameraPageState extends State<CameraPage> {
     final dur = _durFor(start);
     if (dur <= 1) return;
     _preStart = start;
-    _preJob = _download(start, dur).then((f) {
-      _preFile = f;
+    _preJob = _openChunk(start, dur).then((c) {
+      _preCtl = c;
       _preJob = null;
-      return f;
+      return c;
     });
   }
 
@@ -242,8 +237,8 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   void _dropPrefetch() {
-    _preFile?.delete().ignore();
-    _preFile = null;
+    _preCtl?.dispose();
+    _preCtl = null;
     _preStart = null;
     _preJob = null;
   }
@@ -258,17 +253,17 @@ class _CameraPageState extends State<CameraPage> {
       setState(() => _status = 'fim da gravação');
       return;
     }
-    // Se este trecho já veio do prefetch, entra no ar sem esperar download.
-    File? file;
+    // Se este trecho já veio do prefetch, entra no ar sem esperar a rede.
+    VideoPlayerController? v;
     if (_preStart == start) {
       final job = _preJob;
       if (job != null) {
-        setState(() => _status = 'baixando...');
-        file = await job;
+        setState(() => _status = 'carregando...');
+        v = await job;
       } else {
-        file = _preFile;
+        v = _preCtl;
       }
-      _preFile = null;
+      _preCtl = null;
       _preStart = null;
       _preJob = null;
     } else {
@@ -277,18 +272,15 @@ class _CameraPageState extends State<CameraPage> {
     await _disposePlayer();
     setState(() {
       _live = false;
-      _status = file == null ? 'baixando...' : '';
+      _status = v == null ? 'carregando...' : '';
       _chunkStart = start;
     });
-    file ??= await _download(start, dur);
-    if (file == null) {
+    v ??= await _openChunk(start, dur);
+    if (v == null) {
       if (mounted) setState(() => _status = 'erro ao carregar');
       return;
     }
-    _temp = file;
     try {
-      final v = VideoPlayerController.file(file);
-      await v.initialize();
       if (seek > Duration.zero && seek < v.value.duration) {
         await v.seekTo(seek);
       }
@@ -362,7 +354,6 @@ class _CameraPageState extends State<CameraPage> {
     _video = null;
     c?.dispose();
     await v?.dispose();
-    _temp?.delete().ignore();
   }
 
   void _zoom(double factor) {
