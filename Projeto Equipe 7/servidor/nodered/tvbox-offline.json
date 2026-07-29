@@ -1,0 +1,37 @@
+[
+  {
+    "id": "tvbox_off_in",
+    "type": "mqtt in",
+    "name": "status das TV box",
+    "topic": "devices/+/status",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "",
+    "x": 200,
+    "y": 80,
+    "wires": [["tvbox_off_fn"]]
+  },
+  {
+    "id": "tvbox_off_fn",
+    "type": "function",
+    "name": "caiu? -> evento de alarme",
+    "func": "// A TV box publica um Last Will ({\"online\": false}) que o broker entrega\n// quando ela some da rede. Aqui isso vira um evento de alarme, para reusar\n// o flow de push que ja existe.\nlet p = msg.payload;\nif (Buffer.isBuffer(p)) p = p.toString();\nif (typeof p === 'string') {\n    try { p = JSON.parse(p); } catch (e) { return null; }\n}\nif (!p || typeof p !== 'object') return null;\n\nconst id = msg.topic.split('/')[1];\nif (!id) return null;\n\n// voltou: libera para alertar de novo na proxima queda\nif (p.online === true) { flow.set('off_' + id, 0); return null; }\nif (p.online !== false) return null;\n\n// status retido pode chegar repetido; nao repete o alerta em 1 min\nconst now = Date.now();\nif (now - (flow.get('off_' + id) || 0) < 60000) return null;\nflow.set('off_' + id, now);\n\nmsg.topic = 'devices/' + id + '/alarme/event';\nmsg.payload = JSON.stringify({ type: 'tvbox_offline', name: 'TV box' });\nmsg.qos = 1;\nmsg.retain = false;\nreturn msg;\n",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 470,
+    "y": 80,
+    "wires": [["tvbox_off_out"]]
+  },
+  {
+    "id": "tvbox_off_out",
+    "type": "mqtt out",
+    "name": "publica no alarme",
+    "topic": "",
+    "qos": "1",
+    "retain": "false",
+    "broker": "",
+    "x": 760,
+    "y": 80,
+    "wires": []
+  }
+]

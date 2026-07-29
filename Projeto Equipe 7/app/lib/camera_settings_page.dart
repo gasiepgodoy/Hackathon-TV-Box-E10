@@ -27,6 +27,9 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   Map<String, dynamic> _storage = {};
   final Map<String, Map<String, dynamic>> _edit = {}; // id -> preferências
   final Map<String, Map<String, dynamic>> _orig = {};
+  Map<String, bool> _notify = {};
+  Map<String, bool> _origNotify = {};
+  List<String> _sensitivities = ['baixa', 'media', 'alta'];
 
   @override
   void initState() {
@@ -59,13 +62,24 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
       final v = {
         'quality': cam['quality']?.toString() ?? 'media',
         'retention_h': (cam['retention_h'] as num? ?? 24).toInt(),
+        'motion': cam['motion'] as bool? ?? true,
+        'sensitivity': cam['sensitivity']?.toString() ?? 'media',
       };
       _edit[id] = Map.of(v);
       _orig[id] = Map.of(v);
     }
+    final n = (c['notify'] as Map?) ?? {};
     setState(() {
       _cams = cams;
       _presets = (c['presets'] as Map?)?.cast<String, dynamic>() ?? {};
+      _sensitivities = ((c['sensitivities'] as List?) ?? _sensitivities)
+          .map((e) => e.toString())
+          .toList();
+      _notify = {
+        'motion': n['motion'] as bool? ?? true,
+        'camera_offline': n['camera_offline'] as bool? ?? true,
+      };
+      _origNotify = Map.of(_notify);
       _storage = s;
       _loading = false;
     });
@@ -94,9 +108,9 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   double get _budget => (_storage['budget'] as num? ?? 0).toDouble();
   double get _autonomyH =>
       _kbpsTotal == 0 ? 0 : _budget * 8 / (_kbpsTotal * 1000) / 3600;
-  bool get _dirty => _edit.keys.any((id) =>
-      _edit[id]!['quality'] != _orig[id]?['quality'] ||
-      _edit[id]!['retention_h'] != _orig[id]?['retention_h']);
+  bool get _dirty =>
+      _edit.keys.any((id) => _edit[id].toString() != _orig[id].toString()) ||
+      _notify.toString() != _origNotify.toString();
 
   String _gb(num b) => '${(b / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   String _hours(double h) =>
@@ -105,7 +119,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    final ok = await ApiService.saveSettings(_edit);
+    final ok =
+        await ApiService.saveSettings({'cameras': _edit, 'notify': _notify});
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -142,6 +157,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                   padding: const EdgeInsets.all(12),
                   children: [
                     _summary(),
+                    const SizedBox(height: 8),
+                    _notifyCard(),
                     const SizedBox(height: 8),
                     for (final cam in _cams) _cameraCard(cam),
                   ],
@@ -213,6 +230,33 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
     );
   }
 
+  Widget _notifyCard() => Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Notificações',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+                'Desligado aqui, o alerta nem chega a ser enviado pela TV box.',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Movimento'),
+              subtitle: const Text('Quando alguma câmera detecta movimento'),
+              value: _notify['motion'] ?? true,
+              onChanged: (v) => setState(() => _notify['motion'] = v),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Câmera desconectada'),
+              subtitle: const Text('Quando uma câmera cai ou volta'),
+              value: _notify['camera_offline'] ?? true,
+              onChanged: (v) => setState(() => _notify['camera_offline'] = v),
+            ),
+          ]),
+        ),
+      );
+
   Widget _row(String k, String v, {bool dim = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(children: [
@@ -272,6 +316,35 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                 ),
             ],
           ),
+          const Divider(height: 24),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Detectar movimento'),
+            value: e['motion'] as bool? ?? true,
+            onChanged: (_notify['motion'] ?? true)
+                ? (v) => setState(() => e['motion'] = v)
+                : null, // notificação de movimento está desligada no geral
+          ),
+          if ((e['motion'] as bool? ?? true) && (_notify['motion'] ?? true)) ...[
+            const Text('Sensibilidade', style: TextStyle(fontSize: 13)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final s in _sensitivities)
+                  ChoiceChip(
+                    label: Text(_qualityLabel[s] ?? s),
+                    selected: (e['sensitivity'] as String? ?? 'media') == s,
+                    onSelected: (_) => setState(() => e['sensitivity'] = s),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+                'Alta dispara com pouco movimento; baixa evita alarme falso.',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
         ]),
       ),
     );

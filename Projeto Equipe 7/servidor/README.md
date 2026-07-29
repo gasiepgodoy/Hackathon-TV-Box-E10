@@ -49,6 +49,20 @@ banco (`functions.sql`); os flows só fazem a cola.
 - **Presença** — assina `devices/+/status` e `devices/+/heartbeat` → atualiza `devices.online` / `last_seen`.
 - **Provisionamento** — assina `provisioning/claim` → chama `claim_device(...)` → responde em `devices/{id}/provisioning/result`.
 - **Alarme → Push** — assina `devices/+/alarme/event` → busca os `push_tokens` do dono → chama o microserviço `localhost:3001/send`.
+- **TV box caiu** ([`nodered/tvbox-offline.json`](nodered/tvbox-offline.json)) — assina `devices/+/status`;
+  quando chega o *Last Will* (`online: false`) que o broker publica ao perder a TV box,
+  republica como `alarme/event` do tipo `tvbox_offline`, reaproveitando o flow de push
+  acima. Importar por **Menu → Import → Clipboard** e escolher o broker nos dois nós MQTT.
+
+### Tipos de evento em `alarme/event`
+| `type` | Origem | Significado |
+|---|---|---|
+| `movimento` | `motion.py` (borda) | Movimento na câmera indicada em `camera`/`name`. |
+| `tvbox_offline` | Node-RED (via LWT) | A TV box saiu do ar (energia ou rede). |
+
+Os eventos de câmera (`camera_offline` / `camera_online`) chegam em
+`devices/+/camera/event` e são gravados na tabela `events`; para virarem push,
+ligue esse tópico ao mesmo ramo de push do alarme.
 
 ### API HTTP (porta 1880)
 | Método | Rota | Descrição |
