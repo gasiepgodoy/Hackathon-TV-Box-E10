@@ -120,29 +120,52 @@ def _storage():
             "hours": round(hours, 1)}
 
 
+def _load_settings():
+    # {"cameras": {<id>: {...}}, "notify": {...}}; aceita o formato antigo, em
+    # que o arquivo inteiro era o mapa de câmeras.
+    try:
+        s = json.load(open(SETTINGS_JSON))
+    except Exception:
+        s = {}
+    if "cameras" not in s:
+        s = {"cameras": s}
+    s.setdefault("cameras", {})
+    s.setdefault("notify", {})
+    return s
+
+
 def _apply_settings(new):
     # Grava as preferências e manda o gerador reescrever o mediamtx.yml.
+    cur = _load_settings()
     try:
-        cur = json.load(open(SETTINGS_JSON))
+        meta = json.load(open(CAMERAS_JSON))
+        valid = set(meta.get("presets", {}))
+        sens = set(meta.get("sensitivities", []))
     except Exception:
-        cur = {}
-    try:
-        valid = set(json.load(open(CAMERAS_JSON)).get("presets", {}))
-    except Exception:
-        valid = {"alta", "media", "baixa"}
-    for cid, cfg in new.items():
-        if not isinstance(cfg, dict):
+        valid, sens = set(), set()
+    valid = valid or {"alta", "media", "baixa"}
+    sens = sens or {"alta", "media", "baixa"}
+    for k, v in (new.get("notify") or {}).items():
+        if k in ("motion", "camera_offline"):
+            cur["notify"][k] = bool(v)
+    cams = new.get("cameras") if isinstance(new.get("cameras"), dict) else new
+    for cid, cfg in (cams or {}).items():
+        if cid == "notify" or not isinstance(cfg, dict):
             continue
-        entry = cur.get(cid, {})
+        entry = cur["cameras"].get(cid, {})
         q = cfg.get("quality")
         if q in valid:
             entry["quality"] = q
+        if cfg.get("sensitivity") in sens:
+            entry["sensitivity"] = cfg["sensitivity"]
+        if isinstance(cfg.get("motion"), bool):
+            entry["motion"] = cfg["motion"]
         try:
             r = int(cfg.get("retention_h", entry.get("retention_h", 24)))
             entry["retention_h"] = max(1, min(r, 720))
         except (TypeError, ValueError):
             pass
-        cur[cid] = entry
+        cur["cameras"][cid] = entry
     tmp = SETTINGS_JSON + ".tmp"
     with open(tmp, "w") as f:
         json.dump(cur, f)

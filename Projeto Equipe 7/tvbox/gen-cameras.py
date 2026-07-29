@@ -16,7 +16,10 @@ PRESETS = {
     "media": {"size": "1280x720", "fps": 15, "kbps": 1000},
     "baixa": {"size": "640x480", "fps": 15, "kbps": 500},
 }
-DEFAULT = {"quality": "media", "retention_h": 24}
+DEFAULT = {"quality": "media", "retention_h": 24,
+           "motion": True, "sensitivity": "media"}
+# Sensibilidade do detector: limiar menor = dispara com menos movimento.
+SENSITIVITIES = {"alta": 8, "media": 12, "baixa": 20}
 
 
 def cam_id(link):
@@ -49,10 +52,17 @@ def list_cameras():
 
 
 def load_settings():
+    # {"cameras": {<id>: {...}}, "notify": {...}}. Aceita também o formato
+    # antigo, em que o arquivo inteiro era o mapa de câmeras.
     try:
-        return json.load(open(SETTINGS_JSON))
+        s = json.load(open(SETTINGS_JSON))
     except Exception:
-        return {}
+        s = {}
+    if "cameras" not in s:
+        s = {"cameras": s}
+    s.setdefault("cameras", {})
+    s.setdefault("notify", {})
+    return s
 
 
 def build(cams, settings):
@@ -60,7 +70,7 @@ def build(cams, settings):
     meta = []
     for i, (byid, sizes) in enumerate(cams[:MAX]):
         path = "cam" if i == 0 else "cam%d" % (i + 1)
-        cfg = dict(DEFAULT, **settings.get(cam_id(byid), {}))
+        cfg = dict(DEFAULT, **settings["cameras"].get(cam_id(byid), {}))
         p = PRESETS.get(cfg["quality"], PRESETS["media"])
         # cai para a maior resolução suportada se o preset não existir na câmera
         size = p["size"] if (not sizes or p["size"] in sizes) else sizes[0]
@@ -81,14 +91,20 @@ def build(cams, settings):
         meta.append({"name": "Câmera %d" % (i + 1), "path": path,
                      "id": cam_id(byid), "label": label(byid),
                      "quality": cfg["quality"], "retention_h": ret,
-                     "kbps": p["kbps"], "size": size, "sizes": sizes})
+                     "kbps": p["kbps"], "size": size, "sizes": sizes,
+                     "motion": bool(cfg["motion"]),
+                     "sensitivity": cfg["sensitivity"]})
     return "\n".join(lines) + "\n", meta
 
 
+settings = load_settings()
 cams = list_cameras()
-yml, meta = build(cams, load_settings())
+yml, meta = build(cams, settings)
 json.dump({"cameras": meta, "connected": len(cams), "limit": MAX,
-           "exceeded": len(cams) > MAX, "presets": PRESETS},
+           "exceeded": len(cams) > MAX, "presets": PRESETS,
+           "sensitivities": sorted(SENSITIVITIES),
+           "notify": dict({"motion": True, "camera_offline": True},
+                          **settings["notify"])},
           open(CAMERAS_JSON, "w"))
 old = open(MTX_YML).read() if os.path.exists(MTX_YML) else ""
 if old != yml:

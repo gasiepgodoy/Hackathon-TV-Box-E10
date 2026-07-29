@@ -106,6 +106,39 @@ def heartbeat(client):
                        json.dumps({"ts": int(time.time())}), qos=0)
         time.sleep(30)
 
+def notify_enabled(key):
+    try:
+        s = json.load(open(f"{BASE}/camera-settings.json"))
+        return bool(s.get("notify", {}).get(key, True))
+    except Exception:
+        return True
+
+def camera_watch(client):
+    # Avisa quando uma câmera some ou volta. A referência é o cameras.json, que
+    # o gen-cameras.py reescreve a cada 30s com o que está de fato conectado.
+    # Começa com known=None para não alarmar na primeira leitura (boot).
+    known = None
+    while True:
+        try:
+            cams = json.load(open(f"{BASE}/cameras.json")).get("cameras", [])
+            cur = {c.get("id") or c["path"]: c.get("name", "Câmera") for c in cams}
+        except Exception:
+            time.sleep(15)
+            continue
+        if known is not None and cur != known and notify_enabled("camera_offline"):
+            for cid, name in known.items():
+                if cid not in cur:
+                    publish_event(client, "camera", "camera_offline",
+                                  {"camera": cid, "name": name})
+                    print("Camera offline:", name, flush=True)
+            for cid, name in cur.items():
+                if cid not in known:
+                    publish_event(client, "camera", "camera_online",
+                                  {"camera": cid, "name": name})
+                    print("Camera online:", name, flush=True)
+        known = cur
+        time.sleep(15)
+
 try:
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=f"agent-{DEVICE_ID}")
 except (AttributeError, TypeError):
@@ -118,6 +151,7 @@ client.on_connect = on_connect
 client.on_message = on_message
 client.connect_async(cfg["broker_host"], int(cfg["broker_port"]), keepalive=60)
 threading.Thread(target=heartbeat, args=(client,), daemon=True).start()
+threading.Thread(target=camera_watch, args=(client,), daemon=True).start()
 if not os.path.exists(CLAIMED_FLAG):
     threading.Thread(target=provisioning_loop, args=(client,), daemon=True).start()
 client.loop_forever(retry_first_connection=True)
