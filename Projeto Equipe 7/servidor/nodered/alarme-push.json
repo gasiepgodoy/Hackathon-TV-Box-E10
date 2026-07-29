@@ -1,0 +1,100 @@
+[
+  {
+    "id": "tab_alarm",
+    "type": "tab",
+    "label": "Alarme -> Push",
+    "disabled": false,
+    "info": "Alarmes e eventos de camera viram push. Os nos de configuracao (broker MQTT e PostgreSQL) NAO estao neste arquivo de proposito: os nos abaixo apontam para os ids existentes (mqtt_broker_local, pg_secdb), entao as credenciais ja instaladas continuam valendo."
+  },
+  {
+    "id": "alarm_in",
+    "type": "mqtt in",
+    "z": "tab_alarm",
+    "name": "devices/+/alarme/event",
+    "topic": "devices/+/alarme/event",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "mqtt_broker_local",
+    "inputs": 0,
+    "x": 190,
+    "y": 100,
+    "wires": [["fn_alarm"]]
+  },
+  {
+    "id": "camera_in",
+    "type": "mqtt in",
+    "z": "tab_alarm",
+    "name": "devices/+/camera/event",
+    "topic": "devices/+/camera/event",
+    "qos": "1",
+    "datatype": "auto",
+    "broker": "mqtt_broker_local",
+    "inputs": 0,
+    "x": 190,
+    "y": 160,
+    "wires": [["fn_alarm"]]
+  },
+  {
+    "id": "fn_alarm",
+    "type": "function",
+    "z": "tab_alarm",
+    "name": "prep",
+    "func": "const parts = msg.topic.split('/');\nconst deviceId = parts[1];\nlet b = msg.payload;\nif (Buffer.isBuffer(b)) b = b.toString();\nif (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }\nif (typeof b !== 'object' || !b) b = {};\n\nmsg.deviceId = deviceId;\nmsg.alarmType = b.type || 'evento';\nmsg.camName = b.name || '';   // qual camera disparou\nmsg.params = [deviceId];\n\n// eventos que nao merecem push (ficam so no historico)\nconst mudos = ['snapshot_taken', 'recordings_cleared'];\nif (mudos.indexOf(msg.alarmType) >= 0) return null;\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 420,
+    "y": 130,
+    "wires": [["pg_tokens"]]
+  },
+  {
+    "id": "pg_tokens",
+    "type": "postgresql",
+    "z": "tab_alarm",
+    "name": "tokens do dono",
+    "query": "SELECT p.fcm_token, COALESCE(d.name, d.device_id) AS device_name FROM push_tokens p JOIN devices d ON d.owner_id = p.user_id WHERE d.device_id = $1",
+    "postgreSQLConfig": "pg_secdb",
+    "split": false,
+    "rowsPerMsg": 1,
+    "outputs": 1,
+    "x": 620,
+    "y": 130,
+    "wires": [["fn_build"]]
+  },
+  {
+    "id": "fn_build",
+    "type": "function",
+    "z": "tab_alarm",
+    "name": "monta push",
+    "func": "const rows = msg.payload || [];\nconst tokens = rows.map(r => r.fcm_token).filter(Boolean);\nif (tokens.length === 0) return null;\n\nconst dev = (rows[0] && rows[0].device_name) || msg.deviceId;\nconst cam = msg.camName || '';\nconst onde = cam ? cam + ' \\u00b7 ' + dev : dev;\n\nlet title, body;\nswitch (msg.alarmType) {\n    case 'movimento':\n        title = 'Movimento detectado';\n        body = onde;\n        break;\n    case 'tvbox_offline':\n        title = 'Equipamento fora do ar';\n        body = dev + ' parou de responder';\n        break;\n    case 'camera_offline':\n        title = 'C\\u00e2mera desconectada';\n        body = onde;\n        break;\n    case 'camera_online':\n        title = 'C\\u00e2mera reconectada';\n        body = onde;\n        break;\n    default:\n        title = 'Alarme';\n        body = dev + ': ' + msg.alarmType;\n}\n\nmsg.headers = { 'Content-Type': 'application/json' };\nmsg.payload = JSON.stringify({ tokens: tokens, title: title, body: body });\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "x": 810,
+    "y": 130,
+    "wires": [["http_push"]]
+  },
+  {
+    "id": "http_push",
+    "type": "http request",
+    "z": "tab_alarm",
+    "name": "enviar push",
+    "method": "POST",
+    "ret": "obj",
+    "url": "http://localhost:3001/send",
+    "persist": false,
+    "x": 1010,
+    "y": 130,
+    "wires": [["dbg_push"]]
+  },
+  {
+    "id": "dbg_push",
+    "type": "debug",
+    "z": "tab_alarm",
+    "name": "push",
+    "active": true,
+    "complete": "payload",
+    "targetType": "full",
+    "x": 1160,
+    "y": 130,
+    "wires": []
+  }
+]
