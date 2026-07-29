@@ -76,6 +76,31 @@ class ApiService {
     return null;
   }
 
+  // Espaço em disco da TV box e autonomia estimada de gravação.
+  static Future<Map<String, dynamic>?> storage() async {
+    try {
+      final r =
+          await http.get(Uri.parse('$clipBase/storage')).timeout(_timeout);
+      if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  // Grava qualidade/retenção por câmera. Demora mais: a TV box reinicia a
+  // captura para aplicar a nova configuração.
+  static Future<bool> saveSettings(Map<String, dynamic> body) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$clipBase/settings'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(body))
+          .timeout(const Duration(seconds: 40));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<List<dynamic>> recordings(String path) async {
     try {
       final r = await http

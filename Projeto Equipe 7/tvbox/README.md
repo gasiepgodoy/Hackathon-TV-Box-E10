@@ -11,7 +11,8 @@ movimento, remux de clipes e LEDs de status.
 | [`agent.py`](agent.py) | `/opt/secbox/` | Cliente MQTT: comandos, eventos e **modo pareamento** (QR + Wi-Fi). |
 | [`motion.py`](motion.py) | `/opt/secbox/` | Detecção de movimento → publica `alarme`. |
 | [`leds.py`](leds.py) | `/opt/secbox/` | LEDs de status (GPIO/libgpiod). |
-| [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Remux de gravações para MP4 navegável (porta 9997). |
+| [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Clipes em MP4 (com cache), câmeras, armazenamento e ajustes (porta 9997). |
+| [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, limiar de movimento). |

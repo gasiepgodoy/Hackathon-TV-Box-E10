@@ -8,6 +8,7 @@ import 'package:chewie/chewie.dart';
 import 'config.dart';
 import 'api.dart';
 import 'live_view.dart';
+import 'camera_settings_page.dart';
 
 class _Span {
   final DateTime start;
@@ -421,6 +422,17 @@ class _CameraPageState extends State<CameraPage> {
                 ]),
               ),
             ),
+          IconButton(
+            tooltip: 'Câmeras e armazenamento',
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CameraSettingsPage()));
+              _loadCameras(); // a qualidade pode ter mudado
+            },
+          ),
         ],
       ),
       body: Column(

@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
-# Serviço de clipes (porta 9997):
+# Serviço de clipes e configuração das câmeras (porta 9997):
 #   /cameras                        -> câmeras detectadas (JSON)
 #   /clip?path=&start=&duration=    -> trecho em MP4 navegável (+faststart)
+#   /storage                        -> espaço, uso por câmera e autonomia estimada
+#   /settings  (GET | POST)         -> qualidade e retenção de cada câmera
 #
 # O app pede trechos alinhados numa grade de tempo, então o mesmo minuto é
 # sempre a mesma chave: o remux roda uma única vez e as próximas requisições
 # são servidas direto do cache em disco.
-import hashlib, os, subprocess, tempfile, threading, urllib.parse
+import hashlib, json, os, subprocess, tempfile, threading, urllib.parse
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MEDIAMTX = "http://localhost:9996/get"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
+SETTINGS_JSON = "/opt/secbox/camera-settings.json"
+GEN_CAMERAS = "/opt/secbox/gen-cameras.py"
+REC_DIR = "/opt/mediamtx/rec"
 CACHE_DIR = "/opt/secbox-clip/cache"
 CACHE_MAX = 1024 * 1024 * 1024  # teto do cache em disco: 1 GB
 SETTLE = 15  # só entra no cache o trecho que já terminou há esse tempo
+DISK_LIMIT = 0.85  # acima disso o sd-guard começa a apagar gravação
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 _locks = {}
@@ -73,6 +79,79 @@ def _finished(start, dur):
     return t.timestamp() + dur < datetime.now(timezone.utc).timestamp() - SETTLE
 
 
+def _dir_size(p):
+    total = 0
+    for root, _, files in os.walk(p):
+        for n in files:
+            try:
+                total += os.path.getsize(os.path.join(root, n))
+            except OSError:
+                pass
+    return total
+
+
+def _storage():
+    # Autonomia = quanto ainda cabe de gravação dividido pelo consumo somado.
+    # O orçamento não é só o espaço livre: a gravação antiga é descartável, o
+    # que não pode passar é o teto em que o sd-guard começa a apagar.
+    st = os.statvfs("/")
+    total = st.f_blocks * st.f_frsize
+    free = st.f_bavail * st.f_frsize
+    used = total - st.f_bfree * st.f_frsize
+    per, rec = {}, 0
+    try:
+        for n in sorted(os.listdir(REC_DIR)):
+            p = os.path.join(REC_DIR, n)
+            if os.path.isdir(p):
+                per[n] = _dir_size(p)
+                rec += per[n]
+    except OSError:
+        pass
+    budget = max(0, int(total * DISK_LIMIT) - (used - rec))
+    kbps = 0
+    try:
+        kbps = sum(int(c.get("kbps", 0))
+                   for c in json.load(open(CAMERAS_JSON)).get("cameras", []))
+    except Exception:
+        pass
+    hours = budget * 8 / (kbps * 1000) / 3600 if kbps else 0
+    return {"total": total, "free": free, "used": used, "rec_used": rec,
+            "budget": budget, "per_camera": per, "kbps_total": kbps,
+            "hours": round(hours, 1)}
+
+
+def _apply_settings(new):
+    # Grava as preferências e manda o gerador reescrever o mediamtx.yml.
+    try:
+        cur = json.load(open(SETTINGS_JSON))
+    except Exception:
+        cur = {}
+    try:
+        valid = set(json.load(open(CAMERAS_JSON)).get("presets", {}))
+    except Exception:
+        valid = {"alta", "media", "baixa"}
+    for cid, cfg in new.items():
+        if not isinstance(cfg, dict):
+            continue
+        entry = cur.get(cid, {})
+        q = cfg.get("quality")
+        if q in valid:
+            entry["quality"] = q
+        try:
+            r = int(cfg.get("retention_h", entry.get("retention_h", 24)))
+            entry["retention_h"] = max(1, min(r, 720))
+        except (TypeError, ValueError):
+            pass
+        cur[cid] = entry
+    tmp = SETTINGS_JSON + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cur, f)
+    os.replace(tmp, SETTINGS_JSON)
+    subprocess.run(["python3", GEN_CAMERAS], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, timeout=60)
+    return cur
+
+
 def _build(src):
     # Remuxa o trecho para MP4 num arquivo temporário; None se falhar.
     fd, tmp = tempfile.mkstemp(suffix=".mp4", dir=CACHE_DIR)
@@ -95,6 +174,33 @@ def _build(src):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _send_json(self, obj):
+        data = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_POST(self):
+        if urllib.parse.urlparse(self.path).path != "/settings":
+            self.send_error(404)
+            return
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(n) or b"{}")
+            if not isinstance(body, dict):
+                raise ValueError
+        except Exception:
+            self.send_error(400)
+            return
+        try:
+            cur = _apply_settings(body)
+        except Exception:
+            self.send_error(500)
+            return
+        self._send_json({"ok": True, "settings": cur, "storage": _storage()})
+
     def _send_file(self, p):
         try:
             size = os.path.getsize(p)
@@ -118,11 +224,17 @@ class Handler(BaseHTTPRequestHandler):
                 data = open(CAMERAS_JSON, "rb").read()
             except Exception:
                 data = b'{"cameras":[],"connected":0,"limit":0,"exceeded":false}'
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            self._send_json(data)
+            return
+        if u.path == "/storage":
+            self._send_json(_storage())
+            return
+        if u.path == "/settings":
+            try:
+                data = open(SETTINGS_JSON, "rb").read()
+            except Exception:
+                data = b"{}"
+            self._send_json(data)
             return
         if u.path != "/clip":
             self.send_error(404)
