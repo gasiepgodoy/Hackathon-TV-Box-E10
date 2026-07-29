@@ -30,6 +30,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   Map<String, bool> _notify = {};
   Map<String, bool> _origNotify = {};
   List<String> _sensitivities = ['baixa', 'media', 'alta'];
+  List<int> _fpsOptions = [3, 5, 10, 15];
+  double _cpuPerMpps = 8.3;
 
   @override
   void initState() {
@@ -64,6 +66,7 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
         'retention_h': (cam['retention_h'] as num? ?? 24).toInt(),
         'motion': cam['motion'] as bool? ?? true,
         'sensitivity': cam['sensitivity']?.toString() ?? 'media',
+        'fps': (cam['fps'] as num? ?? 10).toInt(),
       };
       _edit[id] = Map.of(v);
       _orig[id] = Map.of(v);
@@ -75,6 +78,10 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
       _sensitivities = ((c['sensitivities'] as List?) ?? _sensitivities)
           .map((e) => e.toString())
           .toList();
+      _fpsOptions = ((c['fps_options'] as List?) ?? _fpsOptions)
+          .map((e) => (e as num).toInt())
+          .toList();
+      _cpuPerMpps = (c['cpu_per_mpps'] as num? ?? _cpuPerMpps).toDouble();
       _notify = {
         'motion': n['motion'] as bool? ?? true,
         'camera_offline': n['camera_offline'] as bool? ?? true,
@@ -91,11 +98,24 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   String _sizeOf(String quality) =>
       (_presets[quality] as Map?)?['size']?.toString() ?? '';
 
-  int _fps(String quality) =>
+  int _presetFps(String quality) =>
       ((_presets[quality] as Map?)?['fps'] as num? ?? 15).toInt();
 
   double get _cpuLoad => (_storage['load'] as num? ?? 0).toDouble();
   int get _cpus => (_storage['cpus'] as num? ?? 4).toInt();
+
+  // Custo estimado de codificação: proporcional a pixels por segundo. A
+  // constante vem da medição real feita neste equipamento.
+  double _cpuOf(String id) {
+    final e = _edit[id]!;
+    final size = _sizeOf(e['quality'] as String).split('x');
+    if (size.length != 2) return 0;
+    final px = (int.tryParse(size[0]) ?? 0) * (int.tryParse(size[1]) ?? 0);
+    final fps = (e['fps'] as num? ?? _presetFps(e['quality'] as String)).toInt();
+    return px * fps / 1e6 * _cpuPerMpps;
+  }
+
+  double get _cpuTotal => _edit.keys.fold(0.0, (a, id) => a + _cpuOf(id));
 
   // Espaço que a retenção pedida exige: bitrate × tempo.
   double _needBytes(String id) {
@@ -208,30 +228,24 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
           const Divider(height: 20),
           _row('Consumo somado', '${(_kbpsTotal / 1000).toStringAsFixed(1)} Mbps'),
           _row('Retenção pedida', _gb(_needTotal)),
+          _row('Processador (estimado)',
+              '${_cpuTotal.round()}% de ${_cpus * 100}%'),
           const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: (fits ? Colors.green : Colors.orange).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(children: [
-              Icon(fits ? Icons.check_circle : Icons.warning_amber,
-                  color: fits ? Colors.green : Colors.orange, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  fits
-                      ? 'Cabe. Sobram ${_gb(_budget - _needTotal)} de folga.'
-                      : 'Não cabe: faltam ${_gb(_needTotal - _budget)}. As gravações '
-                          'mais antigas serão apagadas antes de completar a retenção — '
-                          'na prática a TV box guarda ~${_hours(_autonomyH)}.',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ]),
-          ),
+          _banner(
+              fits,
+              fits
+                  ? 'Cabe. Sobram ${_gb(_budget - _needTotal)} de folga.'
+                  : 'Não cabe: faltam ${_gb(_needTotal - _budget)}. As gravações '
+                      'mais antigas serão apagadas antes de completar a retenção — '
+                      'na prática a TV box guarda ~${_hours(_autonomyH)}.'),
+          const SizedBox(height: 8),
+          _banner(
+              _cpuTotal <= _cpus * 75,
+              _cpuTotal <= _cpus * 75
+                  ? 'Processamento folgado para a captura.'
+                  : 'Processamento apertado: a captura pode atrasar e o replay '
+                      'ficar lento. Reduza os quadros por segundo ou a qualidade '
+                      'de uma câmera.'),
         ]),
       ),
     );
@@ -285,6 +299,21 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
         ),
       );
 
+  Widget _banner(bool ok, String text) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: (ok ? Colors.green : Colors.orange).withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(children: [
+          Icon(ok ? Icons.check_circle : Icons.warning_amber,
+              color: ok ? Colors.green : Colors.orange, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+        ]),
+      );
+
   Widget _row(String k, String v, {bool dim = false}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(children: [
@@ -328,9 +357,32 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-              '${_sizeOf(q)} · ${_fps(q)} fps · ${_gb(_needBytes(id))} para ${_retLabel(ret)}',
+          Text('${_sizeOf(q)} · ${_gb(_needBytes(id))} para ${_retLabel(ret)}',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          const SizedBox(height: 12),
+          Row(children: [
+            const Text('Quadros por segundo', style: TextStyle(fontSize: 13)),
+            const Spacer(),
+            Text('~${_cpuOf(id).round()}% de CPU',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ]),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final f in _fpsOptions)
+                ChoiceChip(
+                  label: Text('$f fps'),
+                  selected: (e['fps'] as int? ?? 10) == f,
+                  onSelected: (_) => setState(() => e['fps'] = f),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+              'É o que mais pesa no processador. Em vigilância, 5 fps já '
+              'costuma bastar.',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 12),
           const Text('Guardar por', style: TextStyle(fontSize: 13)),
           const SizedBox(height: 6),

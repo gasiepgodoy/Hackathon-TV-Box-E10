@@ -18,8 +18,13 @@ PRESETS = {
     "media": {"size": "1280x720", "fps": 10, "kbps": 1000},
     "baixa": {"size": "640x480", "fps": 10, "kbps": 500},
 }
+FPS_OPTIONS = [3, 5, 10, 15]
+# Custo de codificação medido neste equipamento: 1280x720 a 15 fps ocupou ~115%
+# de um núcleo, ou seja ~8,3% de CPU por megapixel por segundo. Serve para o app
+# estimar o consumo antes de aplicar uma mudança.
+CPU_PER_MPPS = 8.3
 DEFAULT = {"quality": "media", "retention_h": 24,
-           "motion": True, "sensitivity": "media"}
+           "motion": True, "sensitivity": "media", "fps": None}
 # Sensibilidade do detector: limiar menor = dispara com menos movimento.
 SENSITIVITIES = {"alta": 8, "media": 12, "baixa": 20}
 
@@ -77,11 +82,14 @@ def build(cams, settings):
         # cai para a maior resolução suportada se o preset não existir na câmera
         size = p["size"] if (not sizes or p["size"] in sizes) else sizes[0]
         ret = max(1, int(cfg["retention_h"]))
+        # fps é escolha independente da qualidade (é o que mais pesa na CPU);
+        # sem escolha, vale o do preset
+        fps = cfg["fps"] if cfg["fps"] in FPS_OPTIONS else p["fps"]
         run = ("ffmpeg -f v4l2 -input_format mjpeg -video_size %s -framerate %d "
                "-i %s -c:v libx264 -preset ultrafast -tune zerolatency "
-               "-pix_fmt yuv420p -b:v %dk -g 30 -f rtsp "
+               "-pix_fmt yuv420p -b:v %dk -g %d -f rtsp "
                "rtsp://localhost:$RTSP_PORT/$MTX_PATH"
-               % (size, p["fps"], byid, p["kbps"]))
+               % (size, fps, byid, p["kbps"], fps * 2))
         lines += ["  %s:" % path,
                   "    runOnInit: %s" % run,
                   "    runOnInitRestart: yes",
@@ -94,7 +102,7 @@ def build(cams, settings):
                      "id": cam_id(byid), "label": label(byid),
                      "quality": cfg["quality"], "retention_h": ret,
                      "kbps": p["kbps"], "size": size, "sizes": sizes,
-                     "motion": bool(cfg["motion"]),
+                     "fps": fps, "motion": bool(cfg["motion"]),
                      "sensitivity": cfg["sensitivity"]})
     return "\n".join(lines) + "\n", meta
 
@@ -104,6 +112,7 @@ cams = list_cameras()
 yml, meta = build(cams, settings)
 json.dump({"cameras": meta, "connected": len(cams), "limit": MAX,
            "exceeded": len(cams) > MAX, "presets": PRESETS,
+           "fps_options": FPS_OPTIONS, "cpu_per_mpps": CPU_PER_MPPS,
            "sensitivities": sorted(SENSITIVITIES),
            "notify": dict({"motion": True, "camera_offline": True},
                           **settings["notify"])},

@@ -148,10 +148,12 @@ def _apply_settings(new):
         meta = json.load(open(CAMERAS_JSON))
         valid = set(meta.get("presets", {}))
         sens = set(meta.get("sensitivities", []))
+        fpss = set(meta.get("fps_options", []))
     except Exception:
-        valid, sens = set(), set()
+        valid, sens, fpss = set(), set(), set()
     valid = valid or {"alta", "media", "baixa"}
     sens = sens or {"alta", "media", "baixa"}
+    fpss = fpss or {3, 5, 10, 15}
     for k, v in (new.get("notify") or {}).items():
         if k in ("motion", "camera_offline"):
             cur["notify"][k] = bool(v)
@@ -167,6 +169,11 @@ def _apply_settings(new):
             entry["sensitivity"] = cfg["sensitivity"]
         if isinstance(cfg.get("motion"), bool):
             entry["motion"] = cfg["motion"]
+        try:
+            if int(cfg["fps"]) in fpss:
+                entry["fps"] = int(cfg["fps"])
+        except (KeyError, TypeError, ValueError):
+            pass
         try:
             r = int(cfg.get("retention_h", entry.get("retention_h", 24)))
             entry["retention_h"] = max(1, min(r, 720))
