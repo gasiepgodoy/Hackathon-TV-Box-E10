@@ -66,10 +66,20 @@ class ApiService {
     } catch (_) {}
   }
 
-  static Future<List<dynamic>> recordings() async {
+  // Lista dinâmica de câmeras da TV box (detectadas automaticamente).
+  static Future<Map<String, dynamic>?> cameras() async {
+    try {
+      final r =
+          await http.get(Uri.parse('$clipBase/cameras')).timeout(_timeout);
+      if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<List<dynamic>> recordings(String path) async {
     try {
       final r = await http
-          .get(Uri.parse('$recBase/list?path=$recPath'))
+          .get(Uri.parse('$recBase/list?path=$path'))
           .timeout(_timeout);
       if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     } catch (_) {}

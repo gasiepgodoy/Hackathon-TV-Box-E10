@@ -32,7 +32,7 @@ class CameraPage extends StatefulWidget {
 
 class _CameraPageState extends State<CameraPage> {
   double _pxPerSec = 0.5; // 1px = 2s (ajustável com zoom)
-  static const int chunkSec = 120; // trechos de 2 min
+  static const int chunkSec = 60; // trechos de 1 min
 
   List<_Span> _spans = [];
   DateTime _rangeStart = DateTime.now().subtract(const Duration(hours: 1));
@@ -40,6 +40,12 @@ class _CameraPageState extends State<CameraPage> {
   bool _loadingList = true;
   List<DateTime> _motionMarks = [];
   Timer? _eventTimer;
+  int _camIndex = 0;
+  List<CamInfo> _cams = cameras; // fallback; substituído pela lista da TV box
+  int _connected = 0;
+  int _limit = 0;
+  bool _exceeded = false;
+  CamInfo get _cam => _cams[_camIndex.clamp(0, _cams.length - 1)];
 
   bool _live = true;
   VideoPlayerController? _video;
@@ -48,6 +54,11 @@ class _CameraPageState extends State<CameraPage> {
   DateTime? _chunkStart;
   String _status = '';
   bool _loadingNext = false;
+  double _speed = 1.0; // velocidade do replay (mantida entre trechos)
+  // Trecho seguinte baixado em segundo plano (virada sem pausa).
+  File? _preFile;
+  DateTime? _preStart;
+  Future<File?>? _preJob;
 
   final ScrollController _scroll = ScrollController();
   bool _userDragging = false;
@@ -56,10 +67,33 @@ class _CameraPageState extends State<CameraPage> {
   @override
   void initState() {
     super.initState();
-    _loadList();
+    _loadCameras();
     _loadEvents();
     _eventTimer =
         Timer.periodic(const Duration(seconds: 30), (_) => _loadEvents());
+  }
+
+  Future<void> _loadCameras() async {
+    final data = await ApiService.cameras();
+    if (data != null &&
+        data['cameras'] is List &&
+        (data['cameras'] as List).isNotEmpty) {
+      final list = (data['cameras'] as List).map((e) {
+        final m = e as Map<String, dynamic>;
+        return CamInfo(m['name']?.toString() ?? 'Câmera',
+            m['path']?.toString() ?? 'cam');
+      }).toList();
+      if (mounted) {
+        setState(() {
+          _cams = list;
+          _connected = (data['connected'] as num?)?.toInt() ?? list.length;
+          _limit = (data['limit'] as num?)?.toInt() ?? list.length;
+          _exceeded = data['exceeded'] == true;
+          if (_camIndex >= _cams.length) _camIndex = 0;
+        });
+      }
+    }
+    _loadList();
   }
 
   Future<void> _loadEvents() async {
@@ -76,7 +110,7 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _loadList() async {
-    final list = await ApiService.recordings();
+    final list = await ApiService.recordings(_cam.path);
     final spans = <_Span>[];
     for (final r in list) {
       final m = r as Map<String, dynamic>;
@@ -142,23 +176,27 @@ class _CameraPageState extends State<CameraPage> {
     await _playChunk(t);
   }
 
-  Future<void> _playChunk(DateTime start) async {
-    await _disposePlayer();
-    setState(() {
-      _live = false;
-      _status = 'baixando...';
-      _chunkStart = start;
-    });
+  // Alinha um instante ao início do trecho na grade (minuto cheio). Sem isso,
+  // trechos começariam onde o usuário clicou e se sobreporiam entre si.
+  DateTime _snap(DateTime t) {
+    const gridMs = chunkSec * 1000;
+    final ms = t.millisecondsSinceEpoch;
+    return DateTime.fromMillisecondsSinceEpoch(ms - ms % gridMs);
+  }
+
+  // Duração disponível do trecho que começa em [start].
+  int _durFor(DateTime start) {
     final span = _spans.firstWhere(
         (s) => !start.isBefore(s.start) && start.isBefore(s.end),
         orElse: () => _Span(start, start.add(const Duration(seconds: chunkSec))));
     final avail = span.end.difference(start).inSeconds;
-    final dur = avail < chunkSec ? avail : chunkSec;
-    if (dur <= 1) {
-      setState(() => _status = 'fim da gravação');
-      return;
-    }
+    return avail < chunkSec ? avail : chunkSec;
+  }
+
+  // Baixa um trecho para arquivo temporário (usado no play e no prefetch).
+  Future<File?> _download(DateTime start, int dur) async {
     final url = Uri.parse('$clipBase/clip').replace(queryParameters: {
+      'path': _cam.path,
       'start': start.toUtc().toIso8601String(),
       'duration': dur.toString(),
     }).toString();
@@ -166,18 +204,94 @@ class _CameraPageState extends State<CameraPage> {
       final dir = await getTemporaryDirectory();
       final file =
           File('${dir.path}/seg_${DateTime.now().millisecondsSinceEpoch}.mp4');
-      _temp = file;
       final resp =
           await http.Client().send(http.Request('GET', Uri.parse(url)));
-      if (resp.statusCode != 200) {
-        if (mounted) setState(() => _status = 'erro (${resp.statusCode})');
-        return;
-      }
+      if (resp.statusCode != 200) return null;
       final sink = file.openWrite();
       await resp.stream.pipe(sink);
       await sink.close();
+      return file;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Adianta o download do próximo trecho, enquanto o atual ainda toca.
+  void _prefetch(DateTime raw) {
+    final start = _snap(raw);
+    if (_preStart == start) return;
+    _dropPrefetch();
+    final dur = _durFor(start);
+    if (dur <= 1) return;
+    _preStart = start;
+    _preJob = _download(start, dur).then((f) {
+      _preFile = f;
+      _preJob = null;
+      return f;
+    });
+  }
+
+  String _speedLabel(double s) => s == s.roundToDouble()
+      ? '${s.toInt()}x'
+      : '${s.toString().replaceAll('.', ',')}x';
+
+  void _setSpeed(double s) {
+    setState(() => _speed = s);
+    _video?.setPlaybackSpeed(s);
+  }
+
+  void _dropPrefetch() {
+    _preFile?.delete().ignore();
+    _preFile = null;
+    _preStart = null;
+    _preJob = null;
+  }
+
+  // [target] é o horário desejado; o trecho carregado é o da grade que o contém
+  // e o player pula para o ponto exato dentro dele.
+  Future<void> _playChunk(DateTime target) async {
+    final start = _snap(target);
+    final seek = target.difference(start);
+    final dur = _durFor(start);
+    if (dur <= 1) {
+      setState(() => _status = 'fim da gravação');
+      return;
+    }
+    // Se este trecho já veio do prefetch, entra no ar sem esperar download.
+    File? file;
+    if (_preStart == start) {
+      final job = _preJob;
+      if (job != null) {
+        setState(() => _status = 'baixando...');
+        file = await job;
+      } else {
+        file = _preFile;
+      }
+      _preFile = null;
+      _preStart = null;
+      _preJob = null;
+    } else {
+      _dropPrefetch();
+    }
+    await _disposePlayer();
+    setState(() {
+      _live = false;
+      _status = file == null ? 'baixando...' : '';
+      _chunkStart = start;
+    });
+    file ??= await _download(start, dur);
+    if (file == null) {
+      if (mounted) setState(() => _status = 'erro ao carregar');
+      return;
+    }
+    _temp = file;
+    try {
       final v = VideoPlayerController.file(file);
       await v.initialize();
+      if (seek > Duration.zero && seek < v.value.duration) {
+        await v.seekTo(seek);
+      }
+      await v.setPlaybackSpeed(_speed);
       final c = ChewieController(
         videoPlayerController: v,
         autoPlay: true,
@@ -210,20 +324,25 @@ class _CameraPageState extends State<CameraPage> {
       _scroll.jumpTo(off);
     }
     setState(() {});
-    // fim do trecho → carrega o próximo automaticamente
     final dur = v.value.duration;
-    if (!_loadingNext &&
-        dur.inMilliseconds > 0 &&
-        pos >= dur - const Duration(milliseconds: 400)) {
-      final next = cs.add(dur);
-      if (_isRecorded(next)) {
-        _loadingNext = true;
-        _playChunk(next).whenComplete(() => _loadingNext = false);
-      }
+    if (_loadingNext || dur.inMilliseconds <= 0) return;
+    // próximo trecho da grade (não a duração real do arquivo, que varia uns ms
+    // e faria a emenda derivar/sobrepor)
+    final next = cs.add(const Duration(seconds: chunkSec));
+    if (!_isRecorded(next)) return;
+    // adianta o download do próximo trecho antes do fim
+    // (a antecedência acompanha a velocidade: em 4x sobra menos tempo real)
+    final lead = Duration(seconds: (20 * _speed).round());
+    if (pos >= dur - lead) _prefetch(next);
+    // fim do trecho → troca (instantânea, se o prefetch já terminou)
+    if (pos >= dur - const Duration(milliseconds: 400)) {
+      _loadingNext = true;
+      _playChunk(next).whenComplete(() => _loadingNext = false);
     }
   }
 
   void _goLive() {
+    _dropPrefetch();
     _disposePlayer();
     setState(() {
       _live = true;
@@ -259,6 +378,19 @@ class _CameraPageState extends State<CameraPage> {
 
   Widget _legendDot(Color c) => Container(width: 10, height: 10, color: c);
 
+  void _switchCamera(int i) {
+    if (i == _camIndex) return;
+    _dropPrefetch();
+    _disposePlayer();
+    setState(() {
+      _camIndex = i;
+      _live = true;
+      _loadingList = true;
+      _motionMarks = [];
+    });
+    _loadList();
+  }
+
   String _fmtDT(DateTime t) {
     final l = t.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
@@ -270,15 +402,53 @@ class _CameraPageState extends State<CameraPage> {
     final label = _fmtDT(_centerTime);
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: Text(widget.name)),
+      appBar: AppBar(
+        title: Text(widget.name),
+        actions: [
+          if (_cams.length > 1)
+            PopupMenuButton<int>(
+              initialValue: _camIndex,
+              onSelected: _switchCamera,
+              itemBuilder: (_) => [
+                for (int i = 0; i < _cams.length; i++)
+                  PopupMenuItem(value: i, child: Text(_cams[i].name)),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(_cam.name),
+                  const Icon(Icons.arrow_drop_down),
+                ]),
+              ),
+            ),
+        ],
+      ),
       body: Column(
         children: [
+          if (_exceeded)
+            Container(
+              width: double.infinity,
+              color: Colors.orange.shade800,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(children: [
+                const Icon(Icons.warning_amber, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$_connected câmeras conectadas, mas só $_limit são suportadas — as extras não são transmitidas.',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ]),
+            ),
           // vídeo
           Expanded(
             child: Container(
               color: Colors.black,
               child: _live
-                  ? const LiveView(whepUrl: whepUrl)
+                  ? LiveView(
+                      key: ValueKey(_cam.path),
+                      whepUrl: '$whepBase/${_cam.path}/whep')
                   : (_chewie != null
                       ? Chewie(controller: _chewie!)
                       : Center(
@@ -299,6 +469,26 @@ class _CameraPageState extends State<CameraPage> {
                 Text(_live ? 'AO VIVO' : label,
                     style: const TextStyle(color: Colors.white)),
                 const Spacer(),
+                if (!_live)
+                  PopupMenuButton<double>(
+                    tooltip: 'Velocidade',
+                    initialValue: _speed,
+                    onSelected: _setSpeed,
+                    itemBuilder: (_) => [
+                      for (final s in const [0.5, 1.0, 1.5, 2.0, 4.0])
+                        PopupMenuItem(value: s, child: Text(_speedLabel(s))),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.speed,
+                            size: 18, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text(_speedLabel(_speed),
+                            style: const TextStyle(color: Colors.white70)),
+                      ]),
+                    ),
+                  ),
                 TextButton.icon(
                   onPressed: _live ? null : _goLive,
                   icon: const Icon(Icons.sensors, size: 18),
@@ -381,6 +571,7 @@ class _CameraPageState extends State<CameraPage> {
   @override
   void dispose() {
     _eventTimer?.cancel();
+    _dropPrefetch();
     _disposePlayer();
     _scroll.dispose();
     super.dispose();
