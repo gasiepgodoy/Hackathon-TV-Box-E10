@@ -60,6 +60,10 @@ class _CameraPageState extends State<CameraPage> {
   final ScrollController _scroll = ScrollController();
   bool _userDragging = false;
   double _viewWidth = 300;
+  // Enquanto troca de trecho, a régua não segue o player: o vídeo antigo ainda
+  // reporta posição e puxaria a régua de volta para o horário anterior.
+  bool _seeking = false;
+  DateTime? _shown; // último horário exibido, para filtrar recuos espúrios
 
   @override
   void initState() {
@@ -158,11 +162,14 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _seekTo(DateTime t) async {
+    _seeking = true; // congela a régua já na soltura, antes de qualquer await
     if (_rangeEnd.difference(t).inSeconds < 15) {
+      _seeking = false;
       _goLive();
       return;
     }
     if (!_isRecorded(t)) {
+      _seeking = false;
       setState(() {
         _live = false;
         _status = 'sem gravação neste horário';
@@ -249,7 +256,9 @@ class _CameraPageState extends State<CameraPage> {
     final start = _snap(target);
     final seek = target.difference(start);
     final dur = _durFor(start);
+    _seeking = true;
     if (dur <= 1) {
+      _seeking = false;
       setState(() => _status = 'fim da gravação');
       return;
     }
@@ -277,6 +286,7 @@ class _CameraPageState extends State<CameraPage> {
     });
     v ??= await _openChunk(start, dur);
     if (v == null) {
+      _seeking = false;
       if (mounted) setState(() => _status = 'erro ao carregar');
       return;
     }
@@ -293,6 +303,8 @@ class _CameraPageState extends State<CameraPage> {
         aspectRatio: v.value.aspectRatio == 0 ? 16 / 9 : v.value.aspectRatio,
       );
       v.addListener(_onTick);
+      _shown = start.add(seek);
+      _seeking = false;
       if (mounted) {
         setState(() {
           _video = v;
@@ -301,6 +313,7 @@ class _CameraPageState extends State<CameraPage> {
         });
       }
     } catch (e) {
+      _seeking = false;
       if (mounted) setState(() => _status = 'erro ao carregar');
     }
   }
@@ -310,11 +323,21 @@ class _CameraPageState extends State<CameraPage> {
     final cs = _chunkStart;
     if (v == null || cs == null || !v.value.isInitialized) return;
     final pos = v.value.position;
-    // segue a régua com o horário tocando (sem mexer se o usuário arrasta)
-    if (!_userDragging && _scroll.hasClients) {
-      final off = _timeToOffset(cs.add(pos))
-          .clamp(0.0, _scroll.position.maxScrollExtent);
-      _scroll.jumpTo(off);
+    // segue a régua com o horário tocando (sem mexer se o usuário arrasta nem
+    // durante uma troca de trecho)
+    if (!_userDragging && !_seeking && _scroll.hasClients) {
+      final t = cs.add(pos);
+      final prev = _shown;
+      // logo após um seek o player reporta a posição antiga por um instante;
+      // recuo pequeno é ruído, recuo grande é salto de verdade
+      final ruido = prev != null &&
+          t.isBefore(prev) &&
+          prev.difference(t) < const Duration(seconds: 3);
+      if (!ruido) {
+        _shown = t;
+        _scroll.jumpTo(
+            _timeToOffset(t).clamp(0.0, _scroll.position.maxScrollExtent));
+      }
     }
     setState(() {});
     final dur = v.value.duration;
@@ -453,7 +476,13 @@ class _CameraPageState extends State<CameraPage> {
                       key: ValueKey(_cam.path),
                       whepUrl: '$whepBase/${_cam.path}/whep')
                   : (_chewie != null
-                      ? Chewie(controller: _chewie!)
+                      ? Stack(alignment: Alignment.center, children: [
+                          Chewie(controller: _chewie!),
+                          // sem isto, uma pausa de buffer parece o vídeo travado
+                          if (_video?.value.isBuffering ?? false)
+                            const CircularProgressIndicator(
+                                color: Colors.white70),
+                        ])
                       : Center(
                           child: Text(
                               _status.isEmpty ? 'selecione um horário' : _status,
