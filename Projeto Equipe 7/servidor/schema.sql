@@ -10,6 +10,9 @@ CREATE TABLE users (
     name          TEXT,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- O UNIQUE acima distingue maiúsculas, então 'Ana@x.com' e 'ana@x.com' passariam
+-- como contas diferentes. Este índice impede o cadastro duplicado.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower ON users (lower(email));
 
 -- Dispositivos (TV box)
 CREATE TABLE devices (

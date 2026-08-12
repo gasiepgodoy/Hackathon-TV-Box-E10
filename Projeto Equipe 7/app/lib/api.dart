@@ -19,6 +19,26 @@ class ApiService {
     return null;
   }
 
+  // Cria a conta e já devolve a sessão. Em caso de recusa, devolve o motivo
+  // ('email_taken', 'weak_password', 'invalid_email' ou 'network').
+  static Future<({String? token, String? error})> register(
+      String email, String password, String name) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$apiBase/register'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(
+                  {'email': email, 'password': password, 'name': name}))
+          .timeout(_timeout);
+      final b = jsonDecode(r.body) as Map<String, dynamic>;
+      final t = b['token']?.toString();
+      if (r.statusCode == 200 && t != null) return (token: t, error: null);
+      return (token: null, error: b['error']?.toString() ?? 'invalid');
+    } catch (_) {
+      return (token: null, error: 'network');
+    }
+  }
+
   // Lança exceção em falha (rede ou status != 200).
   static Future<List<dynamic>> devices(String token) async {
     final r = await http

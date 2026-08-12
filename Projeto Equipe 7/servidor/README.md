@@ -73,6 +73,7 @@ banco (`functions.sql`); os flows só fazem a cola.
 ### API HTTP (porta 1880)
 | Método | Rota | Descrição |
 |---|---|---|
+| POST | `/api/register` | `{email, password, name}` → `{token, user_id, name}`; recusa com `409 email_taken`, `400 invalid_email` ou `400 weak_password`. Flow em [`nodered/api-cadastro.json`](nodered/api-cadastro.json). |
 | POST | `/api/login` | `{email, password}` → `{token, user_id, name}` (via `login()`). |
 | GET | `/api/devices` | Header `Authorization: Bearer <token>` → dispositivos do usuário. |
 | POST | `/api/claim-token` | Gera um token de pareamento (expira em 15 min). |

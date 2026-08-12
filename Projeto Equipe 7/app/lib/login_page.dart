@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
 import 'session.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   final void Function(String token) onLoggedIn;
@@ -10,7 +11,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _email = TextEditingController(text: 'teste@exemplo.com');
+  final _email = TextEditingController();
   final _pass = TextEditingController();
   bool _busy = false;
   String? _error;
@@ -82,6 +83,18 @@ class _LoginPageState extends State<LoginPage> {
                         child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Entrar'),
               ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                RegisterPage(onLoggedIn: widget.onLoggedIn)),
+                      ),
+              child: const Text('Criar uma conta'),
             ),
           ],
         ),
