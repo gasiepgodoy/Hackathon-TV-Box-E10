@@ -23,20 +23,27 @@ class ApiService {
   // ('email_taken', 'weak_password', 'invalid_email' ou 'network').
   static Future<({String? token, String? error})> register(
       String email, String password, String name) async {
+    http.Response r;
     try {
-      final r = await http
+      r = await http
           .post(Uri.parse('$apiBase/register'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(
                   {'email': email, 'password': password, 'name': name}))
           .timeout(_timeout);
-      final b = jsonDecode(r.body) as Map<String, dynamic>;
-      final t = b['token']?.toString();
-      if (r.statusCode == 200 && t != null) return (token: t, error: null);
-      return (token: null, error: b['error']?.toString() ?? 'invalid');
     } catch (_) {
-      return (token: null, error: 'network');
+      return (token: null, error: 'network'); // só aqui é falha de conexão
     }
+    // Uma rota ausente responde em HTML: tratar isso como "sem conexão"
+    // mandaria procurar o problema no lugar errado.
+    Map<String, dynamic>? b;
+    try {
+      b = jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {}
+    final t = b?['token']?.toString();
+    if (r.statusCode == 200 && t != null) return (token: t, error: null);
+    final e = b?['error']?.toString();
+    return (token: null, error: e ?? 'http_${r.statusCode}');
   }
 
   // Lança exceção em falha (rede ou status != 200).
@@ -77,6 +84,20 @@ class ApiService {
     try {
       await http.post(
         Uri.parse('$apiBase/register-push'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcm_token': fcmToken}),
+      ).timeout(_timeout);
+    } catch (_) {}
+  }
+
+  // Ao sair da conta: sem isto o aparelho continuaria recebendo os alertas.
+  static Future<void> unregisterPush(String token, String fcmToken) async {
+    try {
+      await http.post(
+        Uri.parse('$apiBase/unregister-push'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

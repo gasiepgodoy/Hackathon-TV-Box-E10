@@ -25,4 +25,15 @@ class PushService {
     fm.onTokenRefresh
         .listen((t) => ApiService.registerPush(sessionToken, t));
   }
+
+  // Chamado ao sair da conta, antes de descartar a sessão: o servidor precisa
+  // do token de sessão para saber de quem é o aparelho.
+  static Future<void> unregister(String sessionToken) async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await ApiService.unregisterPush(sessionToken, fcmToken);
+      }
+    } catch (_) {}
+  }
 }

@@ -78,7 +78,8 @@ banco (`functions.sql`); os flows só fazem a cola.
 | GET | `/api/devices` | Header `Authorization: Bearer <token>` → dispositivos do usuário. |
 | POST | `/api/claim-token` | Gera um token de pareamento (expira em 15 min). |
 | GET | `/api/events?device=<id>` | Histórico de eventos do dispositivo. |
-| POST | `/api/register-push` | `{fcm_token}` → registra o token do celular. |
+| POST | `/api/register-push` | `{fcm_token}` → registra o token do celular (via `set_push()`). |
+| POST | `/api/unregister-push` | `{fcm_token}` → para de notificar este aparelho (chamado ao sair da conta). Flow em [`nodered/api-push.json`](nodered/api-push.json). |
 
 > Nota de implementação: no nó `mqtt in` do Node-RED, o payload chega como Buffer;
 > as funções fazem parse defensivo (`Buffer` → string → `JSON.parse`) antes de usar.

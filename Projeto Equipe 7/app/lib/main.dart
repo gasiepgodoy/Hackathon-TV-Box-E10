@@ -65,6 +65,8 @@ class _RootPageState extends State<RootPage> {
     return DevicesPage(
       token: _token!,
       onLogout: () async {
+        // desliga as notificações deste aparelho antes de perder a sessão
+        await PushService.unregister(_token!);
         await Session.clear();
         setState(() => _token = null);
       },

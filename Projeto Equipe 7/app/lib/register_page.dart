@@ -29,7 +29,18 @@ class _RegisterPageState extends State<RegisterPage> {
     'weak_password': 'A senha precisa de pelo menos $minSenha caracteres.',
     'network': 'Não foi possível conectar ao servidor.\n'
         'Verifique a conexão (o Tailscale está ligado?).',
+    'http_404': 'O servidor não tem a rota de cadastro.\n'
+        'Falta importar o flow "api-cadastro" no Node-RED.',
   };
+
+  String _mensagem(String? code) {
+    final m = _mensagens[code];
+    if (m != null) return m;
+    if (code != null && code.startsWith('http_')) {
+      return 'O servidor recusou o cadastro (HTTP ${code.substring(5)}).';
+    }
+    return 'Não foi possível criar a conta.';
+  }
 
   bool get _emailOk =>
       RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(_email.text.trim());
@@ -65,7 +76,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
     setState(() {
       _busy = false;
-      _error = _mensagens[r.error] ?? 'Não foi possível criar a conta.';
+      _error = _mensagem(r.error);
     });
   }
 

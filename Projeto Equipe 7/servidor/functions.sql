@@ -56,6 +56,26 @@ RETURNS BIGINT AS $$
     SELECT user_id FROM sessions WHERE token = p_token AND expires_at > now();
 $$ LANGUAGE sql;
 
+-- set_push: liga ou desliga as notificações deste aparelho para a conta da
+-- sessão. Dois cuidados que evitam alerta indo para quem não devia:
+--   * ON CONFLICT: se outra pessoa entrar no mesmo celular, o token muda de
+--     dono em vez de continuar entregando os alertas da conta anterior;
+--   * remoção no logout: sem isso o aparelho segue recebendo depois de sair.
+CREATE OR REPLACE FUNCTION set_push(p_session TEXT, p_fcm TEXT, p_remove BOOLEAN)
+RETURNS TEXT AS $$
+DECLARE v_user BIGINT;
+BEGIN
+    v_user := user_from_token(p_session);
+    IF v_user IS NULL THEN RETURN 'unauthorized'; END IF;
+    IF p_remove THEN
+        DELETE FROM push_tokens WHERE fcm_token = p_fcm AND user_id = v_user;
+    ELSE
+        INSERT INTO push_tokens(fcm_token, user_id) VALUES (p_fcm, v_user)
+        ON CONFLICT (fcm_token) DO UPDATE SET user_id = EXCLUDED.user_id;
+    END IF;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;
+
 -- claim_device: valida o token de pareamento e vincula o aparelho ao dono
 CREATE OR REPLACE FUNCTION claim_device(p_device_id TEXT, p_secret TEXT, p_token TEXT)
 RETURNS TEXT AS $$
