@@ -54,6 +54,11 @@ snapshot() {
         # Se o chip sumiu do barramento, o problema é o SDIO e não o 802.11 —
         # é a diferença entre "caiu do AP" e "o rádio morreu".
         echo "    [sdio]";  ls /sys/bus/sdio/devices/ 2>&1 | sed 's/^/        /'
+        # E se o próprio módulo saiu de cena, o rádio não volta sozinho: um
+        # "blacklist 8189fs" em /etc/modprobe.d impede o recarregamento
+        # automático por alias, e só o modprobe explícito traz de volta.
+        echo "    [modulo]"; lsmod 2>/dev/null | grep -E '^8189fs' | sed 's/^/        /'
+        echo "    [netdev]"; ls -d "/sys/class/net/$IFACE" 2>&1 | sed 's/^/        /'
         echo "    [dmesg]"; dmesg | grep -iE 'RTW|8189|mmc2' | tail -20 | sed 's/^/        /'
     } >> "$LOG" 2>&1
     return 0

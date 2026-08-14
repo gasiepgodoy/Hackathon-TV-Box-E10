@@ -158,6 +158,35 @@ NM força a sair.
 > gerar MAC aleatório, o DHCP entrega outro IP e as reservas do roteador param
 > de valer.
 
+### O `blacklist` esquecido da época do dongle
+
+Quando o Wi-Fi interno ainda não funcionava, era comum ter isto para impedir o
+driver meio pronto de subir:
+
+```
+/etc/modprobe.d/disable-wifi-interno.conf:  blacklist 8189fs
+```
+
+Depois que o chip interno passou a ser **o** rádio, esse arquivo vira armadilha.
+Ele não impede o [`rtl8189fs.service`](systemd/rtl8189fs.service) de carregar o
+módulo — `blacklist` só bloqueia a carga automática **por alias**, e o serviço
+chama `modprobe 8189fs` pelo nome. Por isso tudo parece normal no boot.
+
+O problema aparece depois: se o módulo for descarregado ou o dispositivo SDIO
+for reenumerado em runtime, o udev tenta recarregar pelo alias
+(`sdio:c00v024Cdf179`) e o `blacklist` **barra**. O rádio não volta sozinho — e
+o único caminho de volta é o `modprobe` explícito, que só roda no boot. Ou
+seja: uma queda que só termina com reinício.
+
+```bash
+grep -r . /etc/modprobe.d/ /lib/modprobe.d/ /run/modprobe.d/ 2>/dev/null | grep -i 8189
+mv /etc/modprobe.d/disable-wifi-interno.conf ~/disable-wifi-interno.conf.bak
+depmod -a
+```
+
+O serviço pode continuar: ele resolve o timing de boot, e agora a carga por
+alias serve de rede de segurança em runtime.
+
 Outra causa que vale descartar cedo, se houver **um só** ponto de acesso:
 roaming. Procurar outro AP é motivo de queda, não de cura.
 
