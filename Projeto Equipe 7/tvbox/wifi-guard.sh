@@ -19,8 +19,10 @@ log() {
     # O journal desta box é volátil e este script pode causar reboot: o
     # histórico das quedas precisa sobreviver ao reinício. Corta para não
     # crescer sem fim no cartão.
-    if [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 500 ]; then
-        tail -n 200 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+    # Folgado de propósito: cada queda gera ~35 linhas de diagnóstico, e
+    # perder episódios antigos é perder justamente a série que queremos ler.
+    if [ "$(wc -l < "$LOG" 2>/dev/null || echo 0)" -gt 4000 ]; then
+        tail -n 2000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
     fi
     return 0
 }
@@ -35,6 +37,26 @@ link_ok() {
     [ -z "$gw" ] && gw=$(ip route show dev "$IFACE" 2>/dev/null | awk '/via/{print $3; exit}')
     [ -z "$gw" ] && return 1
     ping -I "$IFACE" -c 2 -W 3 "$gw" >/dev/null 2>&1
+}
+
+snapshot() {
+    # Fotografia do estado no instante da queda, ANTES de mexer em qualquer
+    # coisa: a partir do nível 1 o vigia começa a alterar o que quisermos
+    # observar, e no nível 3 a recarga do módulo zera o rastro de vez.
+    {
+        echo "    --- estado no momento da queda ---"
+        echo "    [iw]";    iw dev "$IFACE" link 2>&1 | sed 's/^/        /'
+        echo "    [nmcli]"; nmcli -t -f DEVICE,STATE,CONNECTION dev status 2>&1 \
+                              | grep -E "^$IFACE" | sed 's/^/        /'
+        echo "    [addr]";  ip -br addr show dev "$IFACE" 2>&1 | sed 's/^/        /'
+        echo "    [rota]";  ip route show dev "$IFACE" 2>&1 | sed 's/^/        /'
+        echo "    [sinal]"; grep -E "^ *$IFACE" /proc/net/wireless 2>/dev/null | sed 's/^/        /'
+        # Se o chip sumiu do barramento, o problema é o SDIO e não o 802.11 —
+        # é a diferença entre "caiu do AP" e "o rádio morreu".
+        echo "    [sdio]";  ls /sys/bus/sdio/devices/ 2>&1 | sed 's/^/        /'
+        echo "    [dmesg]"; dmesg | grep -iE 'RTW|8189|mmc2' | tail -20 | sed 's/^/        /'
+    } >> "$LOG" 2>&1
+    return 0
 }
 
 step_reconnect() {
@@ -114,6 +136,13 @@ while true; do
     else
         [ "$down_since" -eq 0 ] && down_since=$(date +%s)
         fails=$((fails + 1))
+        # Fotografa na 2ª falha seguida: pula o soluço de uma checagem só e
+        # ainda acontece antes de qualquer ação, que começa na 3ª. O teste de
+        # level garante uma foto por episódio, e não uma a cada escalada.
+        if [ "$fails" -eq 2 ] && [ "$level" -eq 0 ]; then
+            log "queda detectada em $IFACE"
+            snapshot
+        fi
         if [ "$fails" -ge "$FAILS_TO_ACT" ]; then
             level=$((level + 1))
             case "$level" in

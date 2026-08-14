@@ -100,34 +100,73 @@ Depois de trocar o dongle pelo chip interno, aparecem **quedas que não se
 recuperam sozinhas** — para o NetworkManager a `wlan1` continua conectada, mas
 nenhum pacote passa, e só o reboot devolvia a rede.
 
-### Primeiro, tente matar a causa
+### Power save: o suspeito óbvio — e por que aqui ele foi descartado
 
-O suspeito número um nos drivers da família `rtl8189` é o **gerenciamento de
-energia**: o rádio entra em economia e não acorda direito. Desligue nos dois
-níveis e observe por alguns dias.
+O primeiro palpite em driver `rtl8189` é sempre **gerenciamento de energia**, e
+a leitura do fonte reforça: com `CONFIG_POWER_SAVING = y` (padrão do Makefile),
+o `autoconf.h` liga `CONFIG_LPS_LCLK` **só no caminho SDIO** —
+
+```c
+#if defined(CONFIG_LPS) && (defined(CONFIG_GSPI_HCI) || defined(CONFIG_SDIO_HCI))
+    #define CONFIG_LPS_LCLK          /* LPS com clock gating */
+#endif
+```
+
+— e o `os_intfs.c` dá `rtw_lps_level = RTW_LPS_MODE - 1` para SDIO, contra
+`LPS_NORMAL` fixo para USB. Ou seja: trocar o dongle pelo chip interno **troca o
+caminho de código**, e o novo faz clock gating no mesmo barramento que já
+precisou cair para 25 MHz. Encaixa perfeitamente no sintoma.
+
+**Só que não era isso.** Conferindo antes de mexer:
 
 ```bash
-# 1) no driver
-cat > /etc/modprobe.d/8189fs.conf <<'EOF'
-options 8189fs rtw_power_mgnt=0 rtw_ips_mode=0
-EOF
+grep . /sys/module/8189fs/parameters/rtw_power_mgnt \
+       /sys/module/8189fs/parameters/rtw_lps_level \
+       /sys/module/8189fs/parameters/rtw_ips_mode
+```
 
-# 2) no NetworkManager (2 = desligado)
-nmcli connection modify wifi-interna 802-11-wireless.powersave 2
+Nesta box veio `0 / 1 / 0`, e não o `2 / 1 / 1` que os defaults do fonte
+produziriam. Com `rtw_power_mgnt = 0` (`PS_MODE_ACTIVE`), o driver faz
+`bLeisurePs = (PS_MODE_ACTIVE != power_mgnt)` → falso, e **nunca entra em LPS**;
+o `rtw_lps_level` só escolhe qual nível usar *quando* entra, então fica inerte.
+Com `rtw_ips_mode = 0` junto, IPS e LPS já estavam ambos desligados durante as
+quedas.
 
-# 3) sem roaming: com um AP só, procurar outro é motivo de queda e não de cura
-BSSID=$(iw dev wlan1 link | awk '/Connected to/{print $3}')
-nmcli connection modify wifi-interna wifi.bssid "$BSSID"
+> **Fica a lição:** leia os parâmetros em `/sys/module/` antes de "desligar" o
+> que talvez já esteja desligado. O default do fonte não é necessariamente o
+> que está rodando.
 
+Se na sua box os valores vierem diferentes, aí sim vale desligar e observar —
+não custa nada, já que a box vive na tomada e economia de rádio não compra
+disponibilidade:
+
+```bash
+printf 'options 8189fs rtw_power_mgnt=0 rtw_lps_level=0 rtw_ips_mode=0\n' \
+  > /etc/modprobe.d/8189fs.conf
+nmcli connection modify wifi-interna 802-11-wireless.powersave 2   # 2 = desligado
 reboot
 ```
 
-> A `wifi.bssid` só faz sentido se houver **um** ponto de acesso. Com mesh ou
-> repetidor, pule esse passo — você estaria proibindo o roaming legítimo.
+A linha do NetworkManager não é redundante: o driver implementa
+`cfg80211_rtw_set_power_mgmt` e, ao receber "desabilitado", dispara
+`LPS_CTRL_LEAVE_CFG80211_PWRMGMT`. O parâmetro de módulo impede de entrar; o do
+NM força a sair.
 
-Vale também fixar o MAC (`rtw_initmac`, ver Notas): sem isso cada recarga do
-módulo gera um MAC novo, o DHCP entrega outro IP e as reservas do roteador
-param de valer — o que faz a recuperação parecer pior do que é.
+> ⚠️ Antes de sobrescrever o `8189fs.conf`, veja o que já existe
+> (`grep -r . /etc/modprobe.d/ | grep -i 8189`): se houver um `rtw_initmac`, ele
+> precisa ser preservado na mesma linha, senão cada recarga do módulo volta a
+> gerar MAC aleatório, o DHCP entrega outro IP e as reservas do roteador param
+> de valer.
+
+Outra causa que vale descartar cedo, se houver **um só** ponto de acesso:
+roaming. Procurar outro AP é motivo de queda, não de cura.
+
+```bash
+BSSID=$(iw dev wlan1 link | awk '/Connected to/{print $3}')
+nmcli connection modify wifi-interna wifi.bssid "$BSSID"
+```
+
+> Com mesh ou repetidor, pule — você estaria proibindo o roaming legítimo.
 
 ### Depois, o vigia
 
@@ -155,6 +194,17 @@ cp systemd/wifi-guard.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now wifi-guard
 ```
+
+Na segunda checagem falha — antes de qualquer ação, portanto — ele grava uma
+**fotografia do estado**: `iw link`, `nmcli`, endereço, rota, sinal, os
+dispositivos em `/sys/bus/sdio/devices/` e as últimas linhas de `dmesg` com
+`RTW|8189|mmc2`. Sem isso não há diagnóstico possível: a partir do nível 1 o
+próprio vigia altera o que queremos observar, e o nível 3 recarrega o módulo e
+zera o rastro.
+
+A linha `[sdio]` é a que separa os dois mundos: se o dispositivo sumiu do
+barramento, o problema é o SDIO e não o 802.11 — "o rádio morreu" e não "caiu
+do AP".
 
 O histórico fica em `/var/log/wifi-guard.log` — em arquivo de propósito, já que
 o journal desta box é volátil e o próprio vigia pode causar o reboot que
