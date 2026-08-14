@@ -94,6 +94,72 @@ lsmod | grep 8189
 nmcli -t -f DEVICE,STATE,CONNECTION dev status | grep wlan1
 ```
 
+## Parte 4 — Quedas de rede: causa e rede de segurança
+
+Depois de trocar o dongle pelo chip interno, aparecem **quedas que não se
+recuperam sozinhas** — para o NetworkManager a `wlan1` continua conectada, mas
+nenhum pacote passa, e só o reboot devolvia a rede.
+
+### Primeiro, tente matar a causa
+
+O suspeito número um nos drivers da família `rtl8189` é o **gerenciamento de
+energia**: o rádio entra em economia e não acorda direito. Desligue nos dois
+níveis e observe por alguns dias.
+
+```bash
+# 1) no driver
+cat > /etc/modprobe.d/8189fs.conf <<'EOF'
+options 8189fs rtw_power_mgnt=0 rtw_ips_mode=0
+EOF
+
+# 2) no NetworkManager (2 = desligado)
+nmcli connection modify wifi-interna 802-11-wireless.powersave 2
+
+# 3) sem roaming: com um AP só, procurar outro é motivo de queda e não de cura
+BSSID=$(iw dev wlan1 link | awk '/Connected to/{print $3}')
+nmcli connection modify wifi-interna wifi.bssid "$BSSID"
+
+reboot
+```
+
+> A `wifi.bssid` só faz sentido se houver **um** ponto de acesso. Com mesh ou
+> repetidor, pule esse passo — você estaria proibindo o roaming legítimo.
+
+Vale também fixar o MAC (`rtw_initmac`, ver Notas): sem isso cada recarga do
+módulo gera um MAC novo, o DHCP entrega outro IP e as reservas do roteador
+param de valer — o que faz a recuperação parecer pior do que é.
+
+### Depois, o vigia
+
+[`wifi-guard.sh`](wifi-guard.sh) é a rede de segurança para quando a causa não
+morre de todo. Ele testa o **gateway** (não a internet — se quem caiu foi o
+provedor, mexer no rádio não ajuda) a cada 20 s e, após ~1 min sem resposta,
+escala:
+
+| Nível | Ação | Custo |
+|---|---|---|
+| 1 | `nmcli connection up wifi-interna` | segundos, nada mais cai |
+| 2 | `ip link` down/up + reconectar | idem |
+| 3 | `modprobe -r 8189fs` + `modprobe 8189fs` | ~20 s, o rádio renasce |
+| 4 | `systemctl reboot` | último recurso |
+
+Cada nível só entra se o anterior não resolveu. O reboot é bloqueado nos
+primeiros 15 min de uptime, para uma falha permanente não virar laço de
+reinício. Ao voltar, publica `devices/{id}/rede/event` (`wifi_recovered`, com
+quanto tempo ficou fora e em que nível resolveu) — evento comum, sem push, que
+serve para medir a frequência real do problema.
+
+```bash
+install -Dm755 wifi-guard.sh /opt/secbox/wifi-guard.sh
+cp systemd/wifi-guard.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now wifi-guard
+```
+
+O histórico fica em `/var/log/wifi-guard.log` — em arquivo de propósito, já que
+o journal desta box é volátil e o próprio vigia pode causar o reboot que
+apagaria a evidência.
+
 ## Notas
 
 - **MAC aleatório:** o efuse do módulo pode não ter MAC gravado; o driver gera

@@ -1,0 +1,12 @@
+[Unit]
+Description=Vigia do Wi-Fi interno (rtl8189fs)
+After=NetworkManager.service rtl8189fs.service
+Wants=NetworkManager.service
+
+[Service]
+ExecStart=/opt/secbox/wifi-guard.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
