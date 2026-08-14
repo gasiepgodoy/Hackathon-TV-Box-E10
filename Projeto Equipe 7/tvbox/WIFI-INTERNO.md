@@ -98,9 +98,84 @@ nmcli -t -f DEVICE,STATE,CONNECTION dev status | grep wlan1
 
 Depois de trocar o dongle pelo chip interno, aparecem **quedas que não se
 recuperam sozinhas** — para o NetworkManager a `wlan1` continua conectada, mas
-nenhum pacote passa, e só o reboot devolvia a rede.
+nenhum pacote passa.
 
-### Power save: o suspeito óbvio — e por que aqui ele foi descartado
+### A causa (confirmada)
+
+São duas, somadas, e nenhuma tem a ver com o driver:
+
+**1. Duas vifs do mesmo rádio associadas à mesma rede.** O Makefile liga
+`CONFIG_CONCURRENT_MODE` incondicionalmente (`ccflags-y`, sem opção), então o
+driver **sempre** cria duas interfaces — e os dois nomes saem do mesmo molde:
+
+```c
+char *ifname  = "wlan%d";   /* primeira */
+char *if2name = "wlan%d";   /* segunda  */
+```
+
+Viram `wlan0` e `wlan1`, com MACs derivados um do outro (`3c:…:e2:9b` /
+`3e:…:e0:9b` — o segundo com o bit de "administrado localmente" ligado). Se o
+NetworkManager tiver perfil para as duas, **as duas associam ao mesmo AP** e
+disputam o único caminho de TX do rádio. O resultado no `dmesg`:
+
+```
+RTW: cfg80211_rtw_scan (wlan0) : scan abort!! buddy_intf under survey
+RTW: rtw_sctx_wait timeout: dump_mgntframe_and_wait_ack_timeout
+RTW: rtl8188f_sreset_xmit_status_check REG_TXDMA_STATUS:0x00000010
+```
+
+O modo concorrente existe para STA + P2P/AP, não para dois STA no mesmo AP.
+
+**2. Roaming entre APs em sub-redes diferentes.** O SSID é servido por mais de
+um AP, e eles não estão no mesmo segmento IP:
+
+```
+default via 186.217.145.33 dev wlan0 src 186.217.145.56    ← rede .32/27
+default via 186.217.145.97 dev wlan1 src 186.217.145.110   ← rede .96/27
+```
+
+Com a box na borda da cobertura (−70 dBm), ela troca de AP; a associação
+continua de pé, mas o IP passa a pertencer à sub-rede do AP anterior. Endereço
+inválido, rota morta — e o `iw` continua dizendo "Connected", que é o que torna
+o sintoma confuso. O conserto certo é **reativar o perfil**, que força
+concessão DHCP nova.
+
+Isso é configuração da rede, não da box: um SSID servido por APs em sub-redes
+distintas, sem suporte de mobilidade. Quem administra a rede resolve na origem.
+
+**As correções:**
+
+```bash
+# 1) uma vif só: apague os perfis órfãos e tire a segunda do NetworkManager
+nmcli connection delete "<perfil-orfao>"
+nmcli device set wlan0 managed no      # runtime; ver abaixo como persistir
+
+# 2) sem roaming no meio da sessão: um perfil por AP, com prioridade
+nmcli connection modify wifi-interna 802-11-wireless.bssid <BSSID-melhor> \
+                                     connection.autoconnect-priority 10
+nmcli connection clone wifi-interna wifi-interna-alt
+nmcli connection modify wifi-interna-alt 802-11-wireless.bssid <BSSID-outro> \
+                                         connection.autoconnect-priority 5
+```
+
+Com BSSID fixo o NM não troca de AP no meio da sessão — só troca quando a
+conexão cai de verdade, e ativar outro perfil dispara DHCP novo.
+
+> **Para persistir**, não basta o `nmcli device set … managed no`, que é
+> runtime. E não dá para amarrar a regra a "wlan0" enquanto as duas interfaces
+> se chamarem `wlan%d`, porque os nomes podem trocar numa recarga do módulo e
+> a regra acabaria desligando a interface boa. Dê nomes distintos primeiro:
+>
+> ```
+> options 8189fs ifname=wlan1 if2name=wlanaux rtw_initmac=<MAC-FIXO>
+> ```
+>
+> e só então `unmanaged-devices=interface-name:wlanaux` em
+> `/etc/NetworkManager/conf.d/`. O `rtw_initmac` importa porque o efuse não tem
+> MAC: sem ele cada recarga sorteia um novo, muda a identidade DHCP e invalida
+> as reservas do roteador.
+
+### Descartado: power save
 
 O primeiro palpite em driver `rtl8189` é sempre **gerenciamento de energia**, e
 a leitura do fonte reforça: com `CONFIG_POWER_SAVING = y` (padrão do Makefile),
@@ -158,7 +233,7 @@ NM força a sair.
 > gerar MAC aleatório, o DHCP entrega outro IP e as reservas do roteador param
 > de valer.
 
-### O `blacklist` esquecido da época do dongle
+### Descartado: o `blacklist` esquecido da época do dongle
 
 Quando o Wi-Fi interno ainda não funcionava, era comum ter isto para impedir o
 driver meio pronto de subir:
@@ -201,21 +276,30 @@ nmcli connection modify wifi-interna wifi.bssid "$BSSID"
 
 [`wifi-guard.sh`](wifi-guard.sh) é a rede de segurança para quando a causa não
 morre de todo. Ele testa o **gateway** (não a internet — se quem caiu foi o
-provedor, mexer no rádio não ajuda) a cada 20 s e, após ~1 min sem resposta,
+provedor, mexer no rádio não ajuda) a cada 10 s e, após ~30 s sem resposta,
 escala:
 
-| Nível | Ação | Custo |
+| Nível | Ação | Por quê nesta ordem |
 |---|---|---|
-| 1 | `nmcli connection up wifi-interna` | segundos, nada mais cai |
-| 2 | `ip link` down/up + reconectar | idem |
-| 3 | `modprobe -r 8189fs` + `modprobe 8189fs` | ~20 s, o rádio renasce |
-| 4 | `systemctl reboot` | último recurso |
+| 1–3 | `nmcli connection up wifi-interna` | é o conserto certo do caso comum (DHCP novo); insiste três vezes |
+| 4 | diagnóstico completo + `ip link` down/up | reconectar falhou: caso incomum, vale registrar |
+| 5 | `nmcli connection up` de novo | depois do bounce a reativação costuma pegar |
+| 6 | `modprobe -r 8189fs` + `modprobe` | recria as duas vifs e **sorteia MAC novo** — remédio caro |
+| 7 | `systemctl reboot` | último recurso |
 
-Cada nível só entra se o anterior não resolveu. O reboot é bloqueado nos
-primeiros 15 min de uptime, para uma falha permanente não virar laço de
-reinício. Ao voltar, publica `devices/{id}/rede/event` (`wifi_recovered`, com
-quanto tempo ficou fora e em que nível resolveu) — evento comum, sem push, que
-serve para medir a frequência real do problema.
+A ordem não é acidental. No histórico desta box, recarregar o módulo foi
+seguido de outra queda em ~45 s: ele troca o MAC, recria as vifs e faz o NM
+correr atrás de tudo de novo. Por isso ficou lá atrás, e reconectar — que é o
+que de fato resolve — ganhou três tentativas.
+
+O reboot tem duas travas: não acontece nos primeiros 15 min de uptime (para
+falha permanente não virar laço) nem enquanto a queda não passar de 10 min (a
+box grava vídeo 24/7, e reiniciar corta a gravação — custa mais que ficar
+alguns minutos sem rede).
+
+Ao voltar publica `devices/{id}/rede/event` (`wifi_recovered`), mas só nas
+quedas acima de 2 min ou que precisaram de mais que reconectar: com queda a
+cada poucos minutos, publicar todas afogaria os eventos que importam.
 
 ```bash
 install -Dm755 wifi-guard.sh /opt/secbox/wifi-guard.sh
@@ -224,16 +308,16 @@ systemctl daemon-reload
 systemctl enable --now wifi-guard
 ```
 
-Na segunda checagem falha — antes de qualquer ação, portanto — ele grava uma
-**fotografia do estado**: `iw link`, `nmcli`, endereço, rota, sinal, os
-dispositivos em `/sys/bus/sdio/devices/` e as últimas linhas de `dmesg` com
-`RTW|8189|mmc2`. Sem isso não há diagnóstico possível: a partir do nível 1 o
-próprio vigia altera o que queremos observar, e o nível 3 recarrega o módulo e
-zera o rastro.
+Na segunda checagem falha ele registra **uma linha** com BSSID, sinal, IP e
+rota. Esses quatro campos separam os casos sem afogar o log: BSSID diferente do
+episódio anterior é roaming; BSSID igual e sem IP é concessão perdida; sem
+BSSID é desassociação.
 
-A linha `[sdio]` é a que separa os dois mundos: se o dispositivo sumiu do
-barramento, o problema é o SDIO e não o 802.11 — "o rádio morreu" e não "caiu
-do AP".
+O **diagnóstico completo** (`iw`, `nmcli`, rota, `/sys/bus/sdio/devices/`,
+`lsmod`, `dmesg` filtrado) sai só no nível 4, quando reconectar três vezes não
+resolveu — aí sim é um caso diferente do de sempre e vale o custo em linhas. A
+linha `[sdio]` é a que separa os mundos: se o dispositivo sumiu do barramento,
+o problema é o SDIO e não o 802.11.
 
 O histórico fica em `/var/log/wifi-guard.log` — em arquivo de propósito, já que
 o journal desta box é volátil e o próprio vigia pode causar o reboot que
