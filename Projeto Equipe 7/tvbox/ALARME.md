@@ -41,6 +41,42 @@ sem destino, as amostras são escritas no vazio em silêncio.
 | HDMI | zero, se houver TV/receiver ligado | não serve para caixa no AV |
 | Habilitar o `t9015` no device tree | alto — ver abaixo | o DTB já foi editado à mão para o SDIO a 25 MHz; errar impede o boot |
 
+### Ligar o analogico: o patcher
+
+[`enable-av-audio.py`](enable-av-audio.py) faz as cinco edicoes automaticamente
+e **se recusa a instalar** se o resultado nao passar na verificacao — inclusive
+conferindo que a correcao de 25 MHz do SDIO sobreviveu, sem a qual o Wi-Fi
+interno nao sobe.
+
+```bash
+D=$(ls /boot/dtb-*/amlogic/meson-g12a-u2xx-generic.dtb | head -1)
+python3 enable-av-audio.py "$D"            # simulacao: mostra e verifica
+python3 enable-av-audio.py "$D" --apply    # instala, guardando .orig e .pre-av
+reboot
+```
+
+Depois do boot, os controles novos aparecem — e vem mudos e sem rota escolhida:
+
+```bash
+aplay -l
+amixer -c 0 scontrols | grep -iE 'acodec|toacodec'
+amixer -c 0 sset 'ACODEC' 100% unmute
+amixer -c 0 sset 'TOACODEC SRC' 'I2S B'    # o nome exato sai no scontents
+aplay -D plughw:0,3 /opt/secbox/sounds/sirene.wav
+```
+
+**Se nao bootar**, nada foi bricado: cartao no leitor do PC e
+
+```bash
+cp meson-g12a-u2xx-generic.dtb.orig meson-g12a-u2xx-generic.dtb
+```
+
+> Expectativa honesta: entre as placas g12a da mainline, **so o `u200` liga o
+> analogico**, e ele tem um amplificador na propria placa entre o codec e o
+> conector. O `x96-max`, que e uma TV box do mesmo SoC, nao liga. Pode ser que
+> esta caixa nao leve a trilha do audio ate o jack — e nesse caso os controles
+> aparecem, o ALSA aceita tudo, e mesmo assim nao sai som.
+
 ### Por que o caminho do device tree não compensa
 
 Tomando o `meson-g12a-u200.dts` da mainline como referência, ligar o analógico
@@ -64,7 +100,7 @@ amplificador, e há caixa que traz o conector sem sequer levar a trilha do
 áudio. Ou seja: dá para fazer todo o trabalho, arriscar o boot, e ainda assim
 não sair som — por motivo que nenhum patch resolve.
 
-O adaptador USB é o recomendado. Descubra o dispositivo com `aplay -l` e ponha
+O adaptador USB é o caminho sem risco; o patcher acima é o caminho para quem quer tirar o máximo da própria box. Descubra o dispositivo com `aplay -l` e ponha
 em `config.json`:
 
 ```json

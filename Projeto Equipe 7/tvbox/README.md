@@ -13,6 +13,7 @@ movimento, remux de clipes e LEDs de status.
 | [`leds.py`](leds.py) | `/opt/secbox/` | LEDs de status (GPIO/libgpiod). |
 | [`alarm.py`](alarm.py) | `/opt/secbox/` | Sirene do alarme por MQTT (`alarme/command`), com tempo máximo. |
 | [`gen-sirene.py`](gen-sirene.py) | `/opt/secbox/` | Gera o WAV da sirene localmente, sem depender de download. |
+| [`enable-av-audio.py`](enable-av-audio.py) | (ferramenta) | Liga a saída de áudio analógica (jack AV) no device tree. |
 | [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Clipes em MP4 (com cache), câmeras, armazenamento e ajustes (porta 9997). |
 | [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
