@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
 import 'session.dart';
+import 'verify_email_page.dart';
 
 // Criação de conta. Valida no aparelho o que dá para validar sem ida ao
 // servidor, para o usuário não descobrir um erro banal depois da espera.
@@ -69,6 +70,15 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!mounted) return;
     if (r.token != null) {
       await Session.save(r.token!);
+      if (!mounted) return;
+      // A confirmação vem logo após criar a conta, que é quando o e-mail está
+      // fresco na cabeça e o usuário ainda está disposto. Deixar para depois
+      // significa nunca, e conta sem e-mail confirmado é conta perdível.
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => VerifyEmailPage(email: _email.text.trim())),
+      );
       if (!mounted) return;
       Navigator.pop(context);
       widget.onLoggedIn(r.token!);

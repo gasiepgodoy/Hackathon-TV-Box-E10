@@ -60,3 +60,20 @@ CREATE TABLE push_tokens (
     user_id    BIGINT NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Marca se o dono provou controlar a caixa de e-mail. Contas antigas ficam
+-- como não verificadas; o app avisa, mas o login continua funcionando.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
+
+-- Códigos de 6 dígitos enviados por e-mail (confirmação e recuperação de senha).
+-- Código, e não link: o servidor só é alcançável pela Tailscale, então um link
+-- no e-mail abriria no navegador do celular e não chegaria a lugar nenhum.
+CREATE TABLE IF NOT EXISTS email_codes (
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    purpose    TEXT   NOT NULL,          -- 'verify' | 'reset'
+    code_hash  TEXT   NOT NULL,          -- bcrypt: o código nunca fica em claro
+    attempts   INT    NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (user_id, purpose)       -- um código ativo por finalidade
+);

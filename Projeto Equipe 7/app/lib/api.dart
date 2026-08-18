@@ -151,4 +151,53 @@ class ApiService {
     } catch (_) {}
     return [];
   }
+
+  // Pede o código de 6 dígitos por e-mail. purpose: 'verify' ou 'reset'.
+  //
+  // Responde sempre sucesso, mesmo quando o e-mail não tem conta: se a resposta
+  // distinguisse os casos, qualquer pessoa poderia usar esta rota para
+  // descobrir quem tem cadastro.
+  static Future<bool> requestEmailCode(String email, String purpose) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$apiBase/email/request-code'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'email': email, 'purpose': purpose}))
+          .timeout(_timeout);
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Confirma o e-mail. Devolve null em sucesso, ou o motivo da recusa.
+  static Future<String?> confirmEmail(String email, String code) async {
+    return _codigo('$apiBase/email/confirm', {'email': email, 'code': code});
+  }
+
+  // Redefine a senha provando controle da caixa de e-mail.
+  static Future<String?> resetPassword(
+      String email, String code, String password) async {
+    return _codigo('$apiBase/password-reset',
+        {'email': email, 'code': code, 'password': password});
+  }
+
+  static Future<String?> _codigo(String url, Map<String, String> body) async {
+    http.Response r;
+    try {
+      r = await http
+          .post(Uri.parse(url),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(body))
+          .timeout(_timeout);
+    } catch (_) {
+      return 'network';
+    }
+    if (r.statusCode == 200) return null;
+    Map<String, dynamic>? b;
+    try {
+      b = jsonDecode(r.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return b?['error']?.toString() ?? 'http_${r.statusCode}';
+  }
 }

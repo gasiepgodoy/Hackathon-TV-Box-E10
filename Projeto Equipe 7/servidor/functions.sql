@@ -4,16 +4,18 @@
 -- O e-mail é comparado sem diferenciar maiúsculas: o cadastro grava em minúsculas
 -- e ninguém deveria ficar de fora da conta por ter digitado "Fulano@..." .
 CREATE OR REPLACE FUNCTION login(p_email TEXT, p_password TEXT)
-RETURNS TABLE(token TEXT, user_id BIGINT, name TEXT) AS $$
-DECLARE v_id BIGINT; v_name TEXT; v_token TEXT;
+RETURNS TABLE(token TEXT, user_id BIGINT, name TEXT, email_verified BOOLEAN) AS $$
+DECLARE v_id BIGINT; v_name TEXT; v_token TEXT; v_ver BOOLEAN;
 BEGIN
-    SELECT u.id, u.name INTO v_id, v_name FROM users u
+    SELECT u.id, u.name, u.email_verified INTO v_id, v_name, v_ver FROM users u
         WHERE lower(u.email) = lower(btrim(p_email))
           AND u.password_hash = crypt(p_password, u.password_hash);
     IF v_id IS NULL THEN RETURN; END IF;
     v_token := encode(gen_random_bytes(24), 'hex');
     INSERT INTO sessions(token, user_id) VALUES (v_token, v_id);
-    RETURN QUERY SELECT v_token, v_id, v_name;
+    -- O app usa email_verified para insistir na confirmacao sem bloquear o
+    -- acesso: barrar o login de quem nao confirmou puniria contas antigas.
+    RETURN QUERY SELECT v_token, v_id, v_name, v_ver;
 END; $$ LANGUAGE plpgsql;
 
 -- register_user: cria a conta e já devolve uma sessão, para o app entrar direto
@@ -97,3 +99,114 @@ END; $$ LANGUAGE plpgsql;
 -- Exemplo de criação de usuário (senha com hash bcrypt):
 -- INSERT INTO users (email, password_hash, name)
 --   VALUES ('voce@exemplo.com', crypt('SUA_SENHA', gen_salt('bf')), 'Seu Nome');
+
+-- ---------------------------------------------------------------------------
+-- Verificação de e-mail e recuperação de senha
+--
+-- Sem e-mail confirmado a conta é perdível: esquecida a senha, não há caminho
+-- de volta, e o dispositivo fica preso a um dono que não consegue mais entrar.
+-- ---------------------------------------------------------------------------
+
+-- request_email_code: gera o código de 6 dígitos e devolve em claro para quem
+-- vai enviá-lo (o Node-RED, do lado do servidor). No banco fica só o hash.
+--
+-- Devolve sempre 'ok' quando o e-mail não existe: quem pede recuperação não
+-- pode descobrir, pela resposta, se um endereço tem conta.
+CREATE OR REPLACE FUNCTION request_email_code(p_email TEXT, p_purpose TEXT)
+RETURNS TABLE(status TEXT, code TEXT, name TEXT) AS $$
+DECLARE v_id BIGINT; v_name TEXT; v_code TEXT; v_recente TIMESTAMPTZ;
+BEGIN
+    IF p_purpose NOT IN ('verify', 'reset') THEN
+        RETURN QUERY SELECT 'invalid_purpose', NULL::TEXT, NULL::TEXT; RETURN;
+    END IF;
+
+    SELECT u.id, u.name INTO v_id, v_name FROM users u
+        WHERE lower(u.email) = lower(btrim(p_email));
+    IF v_id IS NULL THEN
+        RETURN QUERY SELECT 'ok', NULL::TEXT, NULL::TEXT; RETURN;
+    END IF;
+
+    -- Um pedido por minuto: sem isto, o endpoint vira gerador de spam para
+    -- terceiros, e é o e-mail do servidor que paga a reputação.
+    SELECT created_at INTO v_recente FROM email_codes
+        WHERE user_id = v_id AND purpose = p_purpose;
+    IF v_recente IS NOT NULL AND v_recente > now() - interval '1 minute' THEN
+        RETURN QUERY SELECT 'too_soon', NULL::TEXT, NULL::TEXT; RETURN;
+    END IF;
+
+    v_code := lpad((floor(random() * 1000000))::INT::TEXT, 6, '0');
+    INSERT INTO email_codes(user_id, purpose, code_hash, expires_at)
+         VALUES (v_id, p_purpose, crypt(v_code, gen_salt('bf')),
+                 now() + interval '15 minutes')
+    ON CONFLICT (user_id, purpose) DO UPDATE
+        SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at,
+            created_at = now(), attempts = 0;
+
+    RETURN QUERY SELECT 'ok', v_code, v_name;
+END; $$ LANGUAGE plpgsql;
+
+-- check_email_code: confere o código e o consome. Uso interno das duas funções
+-- abaixo. Limita a 5 tentativas — 6 dígitos são 1 milhão de combinações, e sem
+-- limite dá para varrer todas antes de expirar.
+CREATE OR REPLACE FUNCTION check_email_code(p_user BIGINT, p_purpose TEXT, p_code TEXT)
+RETURNS TEXT AS $$
+DECLARE v_hash TEXT; v_exp TIMESTAMPTZ; v_try INT;
+BEGIN
+    SELECT code_hash, expires_at, attempts INTO v_hash, v_exp, v_try
+        FROM email_codes WHERE user_id = p_user AND purpose = p_purpose;
+    IF v_hash IS NULL THEN RETURN 'no_code'; END IF;
+    IF v_exp < now() THEN
+        DELETE FROM email_codes WHERE user_id = p_user AND purpose = p_purpose;
+        RETURN 'expired';
+    END IF;
+    IF v_try >= 5 THEN
+        DELETE FROM email_codes WHERE user_id = p_user AND purpose = p_purpose;
+        RETURN 'too_many_attempts';
+    END IF;
+    IF v_hash <> crypt(coalesce(p_code, ''), v_hash) THEN
+        UPDATE email_codes SET attempts = attempts + 1
+            WHERE user_id = p_user AND purpose = p_purpose;
+        RETURN 'invalid_code';
+    END IF;
+    DELETE FROM email_codes WHERE user_id = p_user AND purpose = p_purpose;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;
+
+-- confirm_email: o usuário digita o código no app e o e-mail passa a valer.
+CREATE OR REPLACE FUNCTION confirm_email(p_email TEXT, p_code TEXT)
+RETURNS TEXT AS $$
+DECLARE v_id BIGINT; v_r TEXT;
+BEGIN
+    SELECT id INTO v_id FROM users WHERE lower(email) = lower(btrim(p_email));
+    IF v_id IS NULL THEN RETURN 'invalid_code'; END IF;  -- não revela a ausência
+    v_r := check_email_code(v_id, 'verify', p_code);
+    IF v_r <> 'ok' THEN RETURN v_r; END IF;
+    UPDATE users SET email_verified = true WHERE id = v_id;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;
+
+-- reset_password: troca a senha provando controle da caixa de e-mail.
+--
+-- Três efeitos além da troca, todos deliberados:
+--   * apaga as sessões: se a conta foi tomada, o invasor perde o acesso agora,
+--     e não daqui a 30 dias quando o token dele expirar;
+--   * apaga os push_tokens: senão o aparelho do invasor segue recebendo os
+--     alertas da casa de quem acabou de recuperar a conta;
+--   * marca o e-mail como verificado, já que digitar o código prova isso.
+CREATE OR REPLACE FUNCTION reset_password(p_email TEXT, p_code TEXT, p_new TEXT)
+RETURNS TEXT AS $$
+DECLARE v_id BIGINT; v_r TEXT;
+BEGIN
+    IF length(coalesce(p_new, '')) < 8 THEN RETURN 'weak_password'; END IF;
+    SELECT id INTO v_id FROM users WHERE lower(email) = lower(btrim(p_email));
+    IF v_id IS NULL THEN RETURN 'invalid_code'; END IF;
+    v_r := check_email_code(v_id, 'reset', p_code);
+    IF v_r <> 'ok' THEN RETURN v_r; END IF;
+
+    UPDATE users SET password_hash = crypt(p_new, gen_salt('bf')),
+                     email_verified = true
+        WHERE id = v_id;
+    DELETE FROM sessions    WHERE user_id = v_id;
+    DELETE FROM push_tokens WHERE user_id = v_id;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;

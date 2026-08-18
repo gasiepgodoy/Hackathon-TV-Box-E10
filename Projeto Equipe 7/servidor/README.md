@@ -9,7 +9,7 @@ Stack: **Mosquitto** (broker MQTT) + **PostgreSQL** + **Node-RED** (API/regras) 
 | [`schema.sql`](schema.sql) | Estrutura do banco (tabelas). |
 | [`functions.sql`](functions.sql) | Funções: `login`, `user_from_token`, `claim_device`. |
 | [`mosquitto/default.conf`](mosquitto/default.conf) | Config do broker (auth por senha, sem TLS no piloto). |
-| [`push-service/`](push-service/) | Microserviço Node.js que envia os push (FCM). |
+| [`push-service/`](push-service/) | Microserviço Node.js de saída: push (FCM) e e-mail (SMTP). |
 
 ## Instalação (resumo)
 
@@ -33,9 +33,11 @@ sudo apt install -y nodejs npm
 sudo npm install -g --unsafe-perm node-red@4
 # instalar o nó node-red-contrib-postgresql pelo Manage Palette
 
-# Push (FCM)
+# Saída: push (FCM) + e-mail (SMTP)
 cd push-service && npm install
 # colocar a chave do Firebase em push-service/secbox-sa.json
+cp .env.example .env   # preencher as credenciais SMTP; carregar com
+                       # EnvironmentFile no systemd do serviço
 ```
 
 ## Node-RED — regras e API
@@ -80,6 +82,43 @@ banco (`functions.sql`); os flows só fazem a cola.
 | GET | `/api/events?device=<id>` | Histórico de eventos do dispositivo. |
 | POST | `/api/register-push` | `{fcm_token}` → registra o token do celular (via `set_push()`). |
 | POST | `/api/unregister-push` | `{fcm_token}` → para de notificar este aparelho (chamado ao sair da conta). Flow em [`nodered/api-push.json`](nodered/api-push.json). |
+| POST | `/api/email/request-code` | `{email, purpose}` (`verify`\|`reset`) → envia código de 6 dígitos. **Responde sempre `200 {status:ok}`**, exista ou não a conta. Flow em [`nodered/api-email.json`](nodered/api-email.json). |
+| POST | `/api/email/confirm` | `{email, code}` → marca o e-mail como verificado. |
+| POST | `/api/password-reset` | `{email, code, password}` → troca a senha, encerra todas as sessões e remove os push tokens do usuário. |
 
 > Nota de implementação: no nó `mqtt in` do Node-RED, o payload chega como Buffer;
 > as funções fazem parse defensivo (`Buffer` → string → `JSON.parse`) antes de usar.
+
+## Verificação de e-mail e recuperação de senha
+
+Sem e-mail confirmado a conta é perdível: esquecida a senha não há caminho de
+volta, e o dispositivo fica preso a um dono que não consegue mais entrar — que
+foi exatamente o que aconteceu com uma das câmeras do piloto.
+
+**Código de 6 dígitos, não link.** O servidor só é alcançável pela Tailscale;
+um link no e-mail abriria no navegador do celular e não chegaria a lugar
+nenhum. O app já fala com a API, então o código digitado usa o caminho que
+existe e funciona.
+
+Decisões que valem registro:
+
+- **A resposta de `/api/email/request-code` é sempre a mesma**, exista ou não a
+  conta, e inclusive quando o limite de um pedido por minuto barra o envio. Se
+  as respostas diferissem, a rota viraria consulta pública de quem tem
+  cadastro. Falha de SMTP também responde `200` — o erro fica no log do
+  microserviço, que é onde alguém consegue agir sobre ele.
+- **O código vive só como hash** (`bcrypt`) e expira em 15 minutos, com no
+  máximo 5 tentativas. Seis dígitos são um milhão de combinações: sem limite,
+  dá para varrer todas antes de expirar.
+- **Redefinir a senha apaga as sessões e os push tokens do usuário.** Se a
+  conta tinha sido tomada, quem estava dentro sai agora — e não daqui a 30 dias
+  quando o token expirasse — e o aparelho do invasor para de receber os alertas
+  da casa de quem acabou de recuperar a conta.
+- **O login não é bloqueado para quem não confirmou.** Barrar puniria as contas
+  criadas antes desta mudança; `login()` passou a devolver `email_verified`
+  para o app insistir sem impedir.
+
+> Ao aplicar o `functions.sql`, note que `login()` ganhou uma quarta coluna. O
+> flow atual faz `SELECT token, user_id, name FROM login($1,$2)` e continua
+> funcionando — para o app usar o aviso de e-mail não confirmado, basta
+> acrescentar `email_verified` a esse SELECT.

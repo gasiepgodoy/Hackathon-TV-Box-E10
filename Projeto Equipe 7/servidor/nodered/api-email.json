@@ -1,0 +1,283 @@
+[
+ {
+  "id": "tab_email",
+  "type": "tab",
+  "label": "API - E-mail",
+  "disabled": false,
+  "info": "Verificacao de e-mail e recuperacao de senha, por codigo de 6 digitos. Codigo e nao link: o servidor so e alcancavel pela Tailscale, entao um link no e-mail abriria no navegador do celular e nao chegaria a lugar nenhum.\n\nPOST /api/email/request-code {email, purpose}\nPOST /api/email/confirm      {email, code}\nPOST /api/password-reset     {email, code, password}\n\nO no de configuracao do PostgreSQL NAO esta neste arquivo: ele aponta para o id existente (pg_secdb)."
+ },
+ {
+  "id": "em_req_in",
+  "type": "http in",
+  "z": "tab_email",
+  "name": "POST /api/email/request-code",
+  "url": "/api/email/request-code",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 190,
+  "y": 100,
+  "wires": [
+   [
+    "em_req_prep"
+   ]
+  ]
+ },
+ {
+  "id": "em_req_prep",
+  "type": "function",
+  "z": "tab_email",
+  "name": "prep",
+  "func": "const b = msg.payload || {};\nmsg.params = [String(b.email || ''), String(b.purpose || 'verify')];\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 430,
+  "y": 100,
+  "wires": [
+   [
+    "em_req_pg"
+   ]
+  ]
+ },
+ {
+  "id": "em_req_pg",
+  "type": "postgresql",
+  "z": "tab_email",
+  "name": "request_email_code",
+  "query": "SELECT status, code, name FROM request_email_code($1, $2)",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 640,
+  "y": 100,
+  "wires": [
+   [
+    "em_req_rota"
+   ]
+  ]
+ },
+ {
+  "id": "em_req_rota",
+  "type": "function",
+  "z": "tab_email",
+  "name": "tem codigo?",
+  "func": "const r = (msg.payload && msg.payload[0]) || {};\n// A resposta e sempre a mesma, exista ou nao a conta: se 'nao existe'\n// respondesse diferente, o endpoint viraria consulta de quem tem cadastro.\n// too_soon (limite de 1/min) tambem sai como ok, pelo mesmo motivo.\nconst ok = { statusCode: 200, payload: { status: 'ok' } };\nif (r.status !== 'ok' || !r.code) { return [null, Object.assign(msg, ok)]; }\nmsg.url = 'http://127.0.0.1:3001/mail';\nmsg.method = 'POST';\nmsg.headers = { 'content-type': 'application/json' };\nmsg.payload = {\n    to: String((msg.req && msg.req.body && msg.req.body.email) || ''),\n    name: r.name || null,\n    code: r.code,\n    purpose: String((msg.req && msg.req.body && msg.req.body.purpose) || 'verify')\n};\nreturn [msg, null];",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 850,
+  "y": 100,
+  "wires": [
+   [
+    "em_mail"
+   ],
+   [
+    "em_req_resp"
+   ]
+  ]
+ },
+ {
+  "id": "em_mail",
+  "type": "http request",
+  "z": "tab_email",
+  "name": "microservico /mail",
+  "method": "use",
+  "ret": "obj",
+  "paytoqs": "ignore",
+  "url": "",
+  "tls": "",
+  "persist": false,
+  "proxy": "",
+  "authType": "",
+  "x": 1010,
+  "y": 60,
+  "wires": [
+   [
+    "em_req_ok"
+   ]
+  ]
+ },
+ {
+  "id": "em_req_ok",
+  "type": "function",
+  "z": "tab_email",
+  "name": "resposta",
+  "func": "// Falha de SMTP nao vira erro para o app: a resposta ja tem de ser\n// indistinguivel do caso 'conta nao existe'. O erro fica no log do\n// microservico, que e onde alguem consegue agir sobre ele.\nmsg.statusCode = 200;\nmsg.payload = { status: 'ok' };\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 1010,
+  "y": 60,
+  "wires": [
+   [
+    "em_req_resp"
+   ]
+  ]
+ },
+ {
+  "id": "em_req_resp",
+  "type": "http response",
+  "z": "tab_email",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 1160,
+  "y": 100,
+  "wires": []
+ },
+ {
+  "id": "em_conf_in",
+  "type": "http in",
+  "z": "tab_email",
+  "name": "POST /api/email/confirm",
+  "url": "/api/email/confirm",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 190,
+  "y": 220,
+  "wires": [
+   [
+    "em_conf_prep"
+   ]
+  ]
+ },
+ {
+  "id": "em_conf_prep",
+  "type": "function",
+  "z": "tab_email",
+  "name": "prep",
+  "func": "const b = msg.payload || {};\nmsg.params = [String(b.email || ''), String(b.code || '')];\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 430,
+  "y": 220,
+  "wires": [
+   [
+    "em_conf_pg"
+   ]
+  ]
+ },
+ {
+  "id": "em_conf_pg",
+  "type": "postgresql",
+  "z": "tab_email",
+  "name": "confirm_email",
+  "query": "SELECT confirm_email($1, $2) AS r",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 640,
+  "y": 220,
+  "wires": [
+   [
+    "em_conf_out"
+   ]
+  ]
+ },
+ {
+  "id": "em_conf_out",
+  "type": "function",
+  "z": "tab_email",
+  "name": "resposta",
+  "func": "const r = ((msg.payload && msg.payload[0]) || {}).r || 'invalid_code';\nmsg.statusCode = (r === 'ok') ? 200 : 400;\nmsg.payload = (r === 'ok') ? { status: 'ok' } : { error: r };\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 850,
+  "y": 220,
+  "wires": [
+   [
+    "em_conf_resp"
+   ]
+  ]
+ },
+ {
+  "id": "em_conf_resp",
+  "type": "http response",
+  "z": "tab_email",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 1160,
+  "y": 220,
+  "wires": []
+ },
+ {
+  "id": "em_rst_in",
+  "type": "http in",
+  "z": "tab_email",
+  "name": "POST /api/password-reset",
+  "url": "/api/password-reset",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 190,
+  "y": 320,
+  "wires": [
+   [
+    "em_rst_prep"
+   ]
+  ]
+ },
+ {
+  "id": "em_rst_prep",
+  "type": "function",
+  "z": "tab_email",
+  "name": "prep",
+  "func": "const b = msg.payload || {};\nmsg.params = [String(b.email || ''), String(b.code || ''),\n              String(b.password || '')];\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 430,
+  "y": 320,
+  "wires": [
+   [
+    "em_rst_pg"
+   ]
+  ]
+ },
+ {
+  "id": "em_rst_pg",
+  "type": "postgresql",
+  "z": "tab_email",
+  "name": "reset_password",
+  "query": "SELECT reset_password($1, $2, $3) AS r",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 640,
+  "y": 320,
+  "wires": [
+   [
+    "em_rst_out"
+   ]
+  ]
+ },
+ {
+  "id": "em_rst_out",
+  "type": "function",
+  "z": "tab_email",
+  "name": "resposta",
+  "func": "const r = ((msg.payload && msg.payload[0]) || {}).r || 'invalid_code';\nmsg.statusCode = (r === 'ok') ? 200 : 400;\nmsg.payload = (r === 'ok') ? { status: 'ok' } : { error: r };\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 850,
+  "y": 320,
+  "wires": [
+   [
+    "em_rst_resp"
+   ]
+  ]
+ },
+ {
+  "id": "em_rst_resp",
+  "type": "http response",
+  "z": "tab_email",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 1160,
+  "y": 320,
+  "wires": []
+ }
+]
