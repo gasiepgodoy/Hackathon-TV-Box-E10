@@ -1,5 +1,12 @@
 -- Funções do SecBox (PostgreSQL / plpgsql)
 
+-- O PostgreSQL nao aceita CREATE OR REPLACE quando o tipo de retorno muda, e o
+-- login() ganhou a coluna email_verified. Sem este DROP, reaplicar o arquivo
+-- numa base ja instalada aborta aqui e nada abaixo e criado.
+-- Rode o arquivo com "psql -1" para que o drop e o create sejam atomicos: sem
+-- isso existe uma janela, ainda que curta, em que ninguem consegue entrar.
+DROP FUNCTION IF EXISTS login(TEXT, TEXT);
+
 -- login: valida a senha (bcrypt) e emite um token de sessão.
 -- O e-mail é comparado sem diferenciar maiúsculas: o cadastro grava em minúsculas
 -- e ninguém deveria ficar de fora da conta por ter digitado "Fulano@..." .

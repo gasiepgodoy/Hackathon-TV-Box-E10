@@ -20,7 +20,7 @@ sudo -u postgres psql -c "CREATE USER secadmin WITH PASSWORD '...';"
 sudo -u postgres psql -c "CREATE DATABASE secdb OWNER secadmin;"
 sudo -u postgres psql -d secdb -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 psql -h localhost -U secadmin -d secdb -f schema.sql
-psql -h localhost -U secadmin -d secdb -f functions.sql
+psql -h localhost -U secadmin -d secdb -1 -f functions.sql   # -1: tudo numa transacao
 
 # Mosquitto
 sudo apt install -y mosquitto mosquitto-clients
@@ -122,3 +122,9 @@ Decisões que valem registro:
 > flow atual faz `SELECT token, user_id, name FROM login($1,$2)` e continua
 > funcionando — para o app usar o aviso de e-mail não confirmado, basta
 > acrescentar `email_verified` a esse SELECT.
+>
+> **Rode sempre com `psql -1`.** O PostgreSQL não aceita `CREATE OR REPLACE`
+> quando o tipo de retorno muda, então o arquivo precisa dar `DROP FUNCTION` no
+> `login()` antes de recriá-lo. Fora de uma transação isso abre uma janela em
+> que ninguém consegue entrar — e, se algo falhar no meio, o banco fica sem a
+> função de login.
