@@ -11,14 +11,17 @@ movimento, remux de clipes e LEDs de status.
 | [`agent.py`](agent.py) | `/opt/secbox/` | Cliente MQTT: comandos, eventos e **modo pareamento** (QR + Wi-Fi). |
 | [`motion.py`](motion.py) | `/opt/secbox/` | Detecção de movimento → publica `alarme`. |
 | [`leds.py`](leds.py) | `/opt/secbox/` | LEDs de status (GPIO/libgpiod). |
+| [`alarm.py`](alarm.py) | `/opt/secbox/` | Sirene do alarme por MQTT (`alarme/command`), com tempo máximo. |
+| [`gen-sirene.py`](gen-sirene.py) | `/opt/secbox/` | Gera o WAV da sirene localmente, sem depender de download. |
 | [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Clipes em MP4 (com cache), câmeras, armazenamento e ajustes (porta 9997). |
 | [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
-| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, limiar de movimento). |
+| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, áudio da sirene). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
 | [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
+| [`ALARME.md`](ALARME.md) | (documentação) | Sirene por MQTT — e por que o jack AV não toca com o DTB genérico. |
 
 ## Identidade do dispositivo
 
@@ -42,6 +45,8 @@ apt install -y ffmpeg v4l-utils zbar-tools python3 python3-paho-mqtt python3-lib
 cp systemd/*.service systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now mediamtx secbox-agent secbox-motion secbox-clip secbox-leds sd-guard.timer
+# alarme sonoro (precisa de uma saida de audio funcional, ver ALARME.md):
+systemctl enable --now secbox-alarm
 # se estiver usando o Wi-Fi interno, some o vigia da rede:
 systemctl enable --now wifi-guard
 ```

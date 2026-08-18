@@ -1,0 +1,12 @@
+[Unit]
+Description=SecBox alarm siren
+After=network.target sound.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /opt/secbox/alarm.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

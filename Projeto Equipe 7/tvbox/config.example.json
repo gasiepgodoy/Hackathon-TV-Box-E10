@@ -5,5 +5,8 @@
   "broker_pass": "SUA_SENHA_MQTT",
   "rtsp_url": "rtsp://localhost:8554/cam",
   "motion_threshold": 12,
-  "motion_cooldown": 30
+  "motion_cooldown": 30,
+  "alsa_device": "default",
+  "siren_file": "/opt/secbox/sounds/sirene.wav",
+  "siren_max_seconds": 300
 }
