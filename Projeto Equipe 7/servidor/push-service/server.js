@@ -40,9 +40,15 @@ app.post('/send', async (req, res) => {
 
 // --- e-mail -----------------------------------------------------------------
 
+// Exige host, usuário e senha: com o .env copiado do exemplo e não preenchido,
+// checar só o host faria o log anunciar "smtp: ok" e a falha só apareceria na
+// hora do envio — quando alguém está esperando o código para entrar na conta.
+const smtpPronto = Boolean(
+  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
 // Criado uma vez só: abrir conexão SMTP a cada envio é lento e alguns
 // provedores tratam a rajada de conexões como abuso.
-const mailer = process.env.SMTP_HOST
+const mailer = smtpPronto
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT || 587),
@@ -92,5 +98,15 @@ app.post('/mail', async (req, res) => {
   }
 });
 
-app.listen(3001, '127.0.0.1', () =>
-  console.log(`secbox out on 3001 (smtp: ${mailer ? 'ok' : 'desligado'})`));
+app.listen(3001, '127.0.0.1', () => {
+  console.log('secbox out on 3001');
+  if (mailer) {
+    console.log(`smtp: ${process.env.SMTP_USER}@${process.env.SMTP_HOST}:` +
+                `${process.env.SMTP_PORT || 587}`);
+  } else {
+    const faltam = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS']
+      .filter((v) => !process.env[v]).join(', ');
+    console.log(`smtp: DESLIGADO — faltam ${faltam}. ` +
+                'Os pedidos de codigo vao responder 200 e nenhum e-mail sai.');
+  }
+});
