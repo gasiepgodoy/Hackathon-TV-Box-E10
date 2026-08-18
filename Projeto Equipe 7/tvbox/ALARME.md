@@ -20,9 +20,13 @@ tem três PCMs, mas o mixer só oferece:
 SPDIFOUT_A   SPDIFOUT_B   TDMOUT_B   TOHDMITX
 ```
 
-Ou seja: **HDMI e SPDIF apenas**. Não há `ACODEC`, `TOACODEC`, `T9015` nem
-`Lineout` — o codec analógico interno, que alimenta o jack AV, não está mapeado
-neste DTB.
+Ou seja: **HDMI e SPDIF apenas**. Não aparecem `ACODEC`, `TOACODEC` nem
+`Lineout`.
+
+O codec analógico **está descrito** no device tree — `amlogic,t9015` em
+`audio-controller@32000` e `amlogic,g12a-toacodec` em `audio-controller@740` —
+mas ambos com `status = "disabled"`, e o nó `sound` não tem dai-link para eles.
+Sem caminho, não há controle de mixer nem PCM.
 
 O sintoma engana: `mpg123` e `aplay` decodificam o arquivo inteiro e terminam
 **sem erro nenhum**. É que no G12A o FRDDR (o bloco que lê as amostras da
@@ -35,7 +39,30 @@ sem destino, as amostras são escritas no vazio em silêncio.
 |---|---|---|
 | **Adaptador USB de áudio** (CM108, PCM2704) | ~R$ 20, vira `card 1` na hora | nenhum |
 | HDMI | zero, se houver TV/receiver ligado | não serve para caixa no AV |
-| Habilitar o `t9015` no device tree | trabalhoso | o DTB já foi editado à mão para o SDIO a 25 MHz; errar impede o boot |
+| Habilitar o `t9015` no device tree | alto — ver abaixo | o DTB já foi editado à mão para o SDIO a 25 MHz; errar impede o boot |
+
+### Por que o caminho do device tree não compensa
+
+Tomando o `meson-g12a-u200.dts` da mainline como referência, ligar o analógico
+não é trocar `disabled` por `okay`. É preciso, **tudo à mão num DTS
+decompilado**:
+
+1. dar `phandle` aos nós `acodec` e `toacodec` — como estão desabilitados e
+   ninguém os referencia, eles não têm phandle no DTB compilado, e é preciso
+   inventar números que não colidam com os existentes;
+2. `AVDD-supply` no t9015, apontando para o phandle de um regulador;
+3. acrescentar um `codec-1` no `dai-link-3` com `<toacodec TOACODEC_IN_B>`, ao
+   lado do `tohdmitx` que já está lá;
+4. criar um dai-link novo com `<toacodec TOACODEC_OUT>` tendo `acodec` como
+   codec;
+5. estender `audio-routing` e acrescentar `audio-widgets = "Line", "Lineout"`.
+
+E há um detalhe do hardware que fecha a questão: no `u200` o caminho não vai do
+`ACODEC` direto ao conector — passa por um amplificador na placa
+(`"10U2 INL", "ACODEC LOLP"`). TV box popular não costuma trazer esse
+amplificador, e há caixa que traz o conector sem sequer levar a trilha do
+áudio. Ou seja: dá para fazer todo o trabalho, arriscar o boot, e ainda assim
+não sair som — por motivo que nenhum patch resolve.
 
 O adaptador USB é o recomendado. Descubra o dispositivo com `aplay -l` e ponha
 em `config.json`:
