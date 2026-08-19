@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'device_detail_page.dart';
 import 'claim_page.dart';
+import 'verify_email_page.dart';
 
 class DevicesPage extends StatefulWidget {
   final String token;
@@ -15,6 +16,7 @@ class _DevicesPageState extends State<DevicesPage> {
   List<dynamic> _devices = [];
   bool _loading = true;
   String? _error;
+  Map<String, dynamic>? _conta;
 
   @override
   void initState() {
@@ -29,9 +31,13 @@ class _DevicesPageState extends State<DevicesPage> {
     });
     try {
       final d = await ApiService.devices(widget.token);
+      // Em paralelo, e sem deixar a lista depender disso: se /api/me falhar
+      // (rota nao importada, rede instavel), a tela continua util.
+      final c = await ApiService.me(widget.token);
       if (mounted) {
         setState(() {
           _devices = d;
+          _conta = c;
           _loading = false;
         });
       }
@@ -44,6 +50,37 @@ class _DevicesPageState extends State<DevicesPage> {
         });
       }
     }
+  }
+
+  // Aparece so quando o servidor confirma que o e-mail nao foi verificado.
+  // Silencio quando nao sabemos: alarmar por falha de rede treina o usuario a
+  // ignorar o aviso, e ai ele nao serve para nada no dia em que importa.
+  Widget? _avisoEmail() {
+    final c = _conta;
+    if (c == null || c['email_verified'] == true) return null;
+    final email = (c['email'] ?? '').toString();
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      color: Colors.amber.shade50,
+      child: ListTile(
+        leading: Icon(Icons.warning_amber, color: Colors.amber.shade800),
+        title: const Text('E-mail não confirmado'),
+        subtitle: const Text(
+            'Sem confirmar, não há como recuperar a conta se você esquecer a '
+            'senha — e os dispositivos ficam presos a ela.'),
+        isThreeLine: true,
+        trailing: TextButton(
+          onPressed: () async {
+            await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(builder: (_) => VerifyEmailPage(email: email)),
+            );
+            _load(); // volta e reavalia: pode ter sido confirmado agora
+          },
+          child: const Text('Confirmar'),
+        ),
+      ),
+    );
   }
 
   Widget _errorView() => Center(
@@ -68,6 +105,7 @@ class _DevicesPageState extends State<DevicesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final aviso = _avisoEmail();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus dispositivos'),
@@ -80,50 +118,55 @@ class _DevicesPageState extends State<DevicesPage> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _errorView()
-              : RefreshIndicator(
-              onRefresh: _load,
-              child: _devices.isEmpty
-                  ? ListView(children: const [
-                      Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Center(
-                            child: Text('Nenhum dispositivo.\nAdicione um com o botão +',
-                                textAlign: TextAlign.center)),
-                      )
-                    ])
-                  : ListView.builder(
-                      itemCount: _devices.length,
-                      itemBuilder: (_, i) {
-                        final d = _devices[i] as Map<String, dynamic>;
-                        final online = d['online'] == true;
-                        final name = (d['name'] ?? d['device_id']).toString();
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          child: ListTile(
-                            leading: Icon(Icons.videocam,
-                                color: online ? Colors.green : Colors.grey),
-                            title: Text(name),
-                            subtitle: Text(
-                                '${d['device_id']} · ${online ? 'online' : 'offline'}'),
-                            trailing: Icon(Icons.circle,
-                                size: 14,
-                                color: online ? Colors.green : Colors.red),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DeviceDetailPage(
-                                  token: widget.token,
-                                  deviceId: d['device_id'].toString(),
-                                  name: name,
-                                ),
-                              ),
+              : Column(children: [
+                  ?aviso,
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: _devices.isEmpty
+                          ? ListView(children: const [
+                              Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Center(
+                                    child: Text('Nenhum dispositivo.\nAdicione um com o botão +',
+                                        textAlign: TextAlign.center)),
+                              )
+                            ])
+                          : ListView.builder(
+                              itemCount: _devices.length,
+                              itemBuilder: (_, i) {
+                                final d = _devices[i] as Map<String, dynamic>;
+                                final online = d['online'] == true;
+                                final name = (d['name'] ?? d['device_id']).toString();
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  child: ListTile(
+                                    leading: Icon(Icons.videocam,
+                                        color: online ? Colors.green : Colors.grey),
+                                    title: Text(name),
+                                    subtitle: Text(
+                                        '${d['device_id']} · ${online ? 'online' : 'offline'}'),
+                                    trailing: Icon(Icons.circle,
+                                        size: 14,
+                                        color: online ? Colors.green : Colors.red),
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => DeviceDetailPage(
+                                          token: widget.token,
+                                          deviceId: d['device_id'].toString(),
+                                          name: name,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        );
-                      },
-                    ),
-            ),
+                  ),
+                ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await Navigator.push(

@@ -1,0 +1,87 @@
+[
+ {
+  "id": "tab_conta",
+  "type": "tab",
+  "label": "API - Conta",
+  "disabled": false,
+  "info": "GET /api/me -> dados do dono da sessao (email, nome, email_verified).\n\nExiste porque o app guarda o token e nas aberturas seguintes nao passa pelo login: sem esta rota, quem ja estava logado com e-mail nao confirmado nunca ficaria sabendo.\n\nO no de configuracao do PostgreSQL NAO esta neste arquivo: aponta para o id existente (pg_secdb)."
+ },
+ {
+  "id": "me_in",
+  "type": "http in",
+  "z": "tab_conta",
+  "name": "GET /api/me",
+  "url": "/api/me",
+  "method": "get",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 180,
+  "y": 100,
+  "wires": [
+   [
+    "me_prep"
+   ]
+  ]
+ },
+ {
+  "id": "me_prep",
+  "type": "function",
+  "z": "tab_conta",
+  "name": "token do header",
+  "func": "const h = String((msg.req.headers || {}).authorization || '');\nmsg.params = [h.replace(/^Bearer\\s+/i, '').trim()];\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 390,
+  "y": 100,
+  "wires": [
+   [
+    "me_pg"
+   ]
+  ]
+ },
+ {
+  "id": "me_pg",
+  "type": "postgresql",
+  "z": "tab_conta",
+  "name": "user_account",
+  "query": "SELECT user_id, email, name, email_verified FROM user_account($1)",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 590,
+  "y": 100,
+  "wires": [
+   [
+    "me_out"
+   ]
+  ]
+ },
+ {
+  "id": "me_out",
+  "type": "function",
+  "z": "tab_conta",
+  "name": "resposta",
+  "func": "const row = (msg.payload && msg.payload[0]) || null;\n// Sem linha = token invalido ou expirado. 401 para o app saber que a\n// sessao morreu, em vez de tratar como falha de rede e insistir.\nif (!row) { msg.statusCode = 401; msg.payload = { error: 'unauthorized' }; return msg; }\nmsg.statusCode = 200;\nmsg.payload = row;\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 780,
+  "y": 100,
+  "wires": [
+   [
+    "me_resp"
+   ]
+  ]
+ },
+ {
+  "id": "me_resp",
+  "type": "http response",
+  "z": "tab_conta",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 950,
+  "y": 100,
+  "wires": []
+ }
+]

@@ -200,4 +200,22 @@ class ApiService {
     } catch (_) {}
     return b?['error']?.toString() ?? 'http_${r.statusCode}';
   }
+
+  // Dono da sessão atual. Necessário porque o app guarda o token e nas
+  // aberturas seguintes não passa pelo login — sem isto, quem já estava logado
+  // com e-mail não confirmado nunca ficaria sabendo.
+  //
+  // Devolve null quando a sessão morreu (401) ou o servidor não respondeu; o
+  // chamador trata os dois casos igual, escondendo o aviso em vez de alarmar
+  // por um problema de rede.
+  static Future<Map<String, dynamic>?> me(String token) async {
+    try {
+      final r = await http.get(Uri.parse('$apiBase/me'),
+          headers: {'Authorization': 'Bearer $token'}).timeout(_timeout);
+      if (r.statusCode == 200) {
+        return jsonDecode(r.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
 }

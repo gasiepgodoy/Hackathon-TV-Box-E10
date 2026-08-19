@@ -217,3 +217,20 @@ BEGIN
     DELETE FROM push_tokens WHERE user_id = v_id;
     RETURN 'ok';
 END; $$ LANGUAGE plpgsql;
+
+-- user_account: quem é o dono desta sessão.
+--
+-- Existe por um motivo específico: o login() devolve email_verified, mas o app
+-- guarda o token e nas aberturas seguintes não passa pelo login — e sem isto
+-- quem já estava logado com e-mail não confirmado nunca ficaria sabendo, que é
+-- justamente o caso das contas criadas antes desta funcionalidade.
+--
+-- (Nome deliberadamente explícito: "session_user" é palavra reservada no
+-- PostgreSQL, e "user" sozinho também.)
+CREATE OR REPLACE FUNCTION user_account(p_token TEXT)
+RETURNS TABLE(user_id BIGINT, email TEXT, name TEXT, email_verified BOOLEAN) AS $$
+    SELECT u.id, u.email, u.name, u.email_verified
+      FROM sessions s
+      JOIN users u ON u.id = s.user_id
+     WHERE s.token = p_token AND s.expires_at > now();
+$$ LANGUAGE sql;

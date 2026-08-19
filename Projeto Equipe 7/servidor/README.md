@@ -85,6 +85,7 @@ banco (`functions.sql`); os flows só fazem a cola.
 | POST | `/api/email/request-code` | `{email, purpose}` (`verify`\|`reset`) → envia código de 6 dígitos. **Responde sempre `200 {status:ok}`**, exista ou não a conta. Flow em [`nodered/api-email.json`](nodered/api-email.json). |
 | POST | `/api/email/confirm` | `{email, code}` → marca o e-mail como verificado. |
 | POST | `/api/password-reset` | `{email, code, password}` → troca a senha, encerra todas as sessões e remove os push tokens do usuário. |
+| GET | `/api/me` | Header `Authorization: Bearer <token>` → `{user_id, email, name, email_verified}`; `401` se a sessão morreu. Flow em [`nodered/api-conta.json`](nodered/api-conta.json). |
 
 > Nota de implementação: no nó `mqtt in` do Node-RED, o payload chega como Buffer;
 > as funções fazem parse defensivo (`Buffer` → string → `JSON.parse`) antes de usar.
@@ -114,6 +115,11 @@ Decisões que valem registro:
   conta tinha sido tomada, quem estava dentro sai agora — e não daqui a 30 dias
   quando o token expirasse — e o aparelho do invasor para de receber os alertas
   da casa de quem acabou de recuperar a conta.
+- **Existe `/api/me` porque o app guarda o token** e nas aberturas seguintes
+  não passa pelo login. Sem essa rota, quem já estava logado com e-mail não
+  confirmado nunca ficaria sabendo — que é o caso de todas as contas criadas
+  antes desta mudança, inclusive a que segura a câmera do piloto. O app mostra
+  um aviso na lista de dispositivos, com atalho para confirmar.
 - **O login não é bloqueado para quem não confirmou.** Barrar puniria as contas
   criadas antes desta mudança; `login()` passou a devolver `email_verified`
   para o app insistir sem impedir.
