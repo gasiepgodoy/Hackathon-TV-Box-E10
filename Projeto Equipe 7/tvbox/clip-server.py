@@ -4,15 +4,23 @@
 #   /clip?path=&start=&duration=    -> trecho em MP4 navegável (+faststart)
 #   /storage                        -> espaço, uso por câmera e autonomia estimada
 #   /settings  (GET | POST)         -> qualidade e retenção de cada câmera
+#   /health                         -> vivo? autenticação ligada? (sempre aberto)
+#
+# AUTENTICAÇÃO: se "api_token" existir no config.json, toda rota (menos /health)
+# exige `Authorization: Bearer <token>` ou `?token=`. Sem token configurado o
+# serviço fica aberto e avisa no log — era o comportamento do piloto atrás da
+# Tailscale, e é inaceitável assim que a porta for publicada na internet, porque
+# /settings ESCREVE a configuração das câmeras.
 #
 # O app pede trechos alinhados numa grade de tempo, então o mesmo minuto é
 # sempre a mesma chave: o remux roda uma única vez e as próximas requisições
 # são servidas direto do cache em disco.
-import hashlib, json, os, subprocess, tempfile, threading, urllib.parse
+import hashlib, hmac, json, os, subprocess, tempfile, threading, urllib.parse
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MEDIAMTX = "http://localhost:9996/get"
+CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
 GEN_CAMERAS = "/opt/secbox/gen-cameras.py"
@@ -21,6 +29,15 @@ CACHE_DIR = "/opt/secbox-clip/cache"
 CACHE_MAX = 1024 * 1024 * 1024  # teto do cache em disco: 1 GB
 SETTLE = 15  # só entra no cache o trecho que já terminou há esse tempo
 DISK_LIMIT = 0.85  # acima disso o sd-guard começa a apagar gravação
+
+def _read_token():
+    try:
+        return (json.load(open(CONFIG_JSON)).get("api_token") or "").strip()
+    except Exception:
+        return ""
+
+
+TOKEN = _read_token()
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 _locks = {}
@@ -211,6 +228,30 @@ def _build(src):
 
 
 class Handler(BaseHTTPRequestHandler):
+    def _autorizado(self):
+        # Sem token configurado, mantém o comportamento antigo: o piloto roda
+        # atrás da Tailscale e travar tudo num upgrade deixaria o app cego.
+        if not TOKEN:
+            return True
+        cab = self.headers.get("Authorization", "")
+        if cab.startswith("Bearer "):
+            dado = cab[7:]
+        else:
+            # O player baixa o clipe pela URL; aceitar ?token= evita ter de
+            # injetar cabeçalho em todo caminho de download do vídeo.
+            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            dado = q.get("token", [""])[0]
+        # compare_digest: comparação de tempo constante, para o tempo de
+        # resposta não revelar quantos caracteres do token estão certos.
+        return hmac.compare_digest(dado, TOKEN)
+
+    def _nega(self):
+        self.send_response(401)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", "24")
+        self.end_headers()
+        self.wfile.write(b'{"error":"unauthorized"}')
+
     def _send_json(self, obj):
         data = obj if isinstance(obj, bytes) else json.dumps(obj).encode()
         self.send_response(200)
@@ -220,6 +261,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
+        if not self._autorizado():
+            self._nega()
+            return
         if urllib.parse.urlparse(self.path).path != "/settings":
             self.send_error(404)
             return
@@ -256,6 +300,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
+        # /health fica aberto de propósito: é o que permite ao monitoramento
+        # descobrir que o serviço subiu SEM token, que é o estado perigoso.
+        if u.path == "/health":
+            self._send_json({"ok": True, "auth": bool(TOKEN)})
+            return
+        if not self._autorizado():
+            self._nega()
+            return
         if u.path == "/cameras":
             try:
                 data = open(CAMERAS_JSON, "rb").read()
@@ -328,5 +380,12 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+
+if TOKEN:
+    print("clip-server 9997: autenticacao LIGADA", flush=True)
+else:
+    print("clip-server 9997: SEM AUTENTICACAO — qualquer um que alcance esta "
+          "porta le as cameras e ESCREVE a configuracao. Defina 'api_token' em "
+          + CONFIG_JSON + " antes de publicar na internet.", flush=True)
 
 ThreadingHTTPServer(("0.0.0.0", 9997), Handler).serve_forever()

@@ -14,12 +14,12 @@ movimento, remux de clipes e LEDs de status.
 | [`alarm.py`](alarm.py) | `/opt/secbox/` | Sirene do alarme por MQTT (`alarme/command`), com tempo máximo. |
 | [`gen-sirene.py`](gen-sirene.py) | `/opt/secbox/` | Gera o WAV da sirene localmente, sem depender de download. |
 | [`enable-av-audio.py`](enable-av-audio.py) | (ferramenta) | Liga a saída de áudio analógica (jack AV) no device tree. |
-| [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Clipes em MP4 (com cache), câmeras, armazenamento e ajustes (porta 9997). |
+| [`clip-server.py`](clip-server.py) | `/opt/secbox-clip/` | Clipes em MP4 (com cache), câmeras, armazenamento e ajustes (porta 9997, **com token**). |
 | [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
-| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, áudio da sirene). |
+| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, sirene, token da 9997). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
 | [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
 | [`ALARME.md`](ALARME.md) | (documentação) | Sirene por MQTT — e por que o jack AV não toca com o DTB genérico. |
@@ -64,3 +64,29 @@ interno** (chip RTL8189FTV) da TV box — inclusive no kernel 6.18, com o driver
 compilado e um ajuste de *device tree*. Passo a passo (com backup e reversão) em
 [`WIFI-INTERNO.md`](WIFI-INTERNO.md). O serviço [`systemd/rtl8189fs.service`](systemd/rtl8189fs.service)
 carrega o módulo no boot.
+
+## Autenticação da porta 9997
+
+O `clip-server` lê `api_token` do `config.json`. Com o token definido, toda rota
+(menos `/health`) exige `Authorization: Bearer <token>` ou `?token=` na URL — o
+segundo existe porque o player baixa o clipe pela URL, sem lugar para cabeçalho.
+
+**Sem `api_token` o serviço fica aberto**, que era o comportamento do piloto
+atrás da Tailscale. Ele avisa no log ao subir, e `/health` responde
+`{"ok":true,"auth":false}` — é assim que o monitoramento descobre que a porta
+está publicada sem proteção. Isso precisa estar ligado **antes** de expor a box
+à internet: `/settings` não apenas lê, **escreve** a configuração das câmeras.
+
+```bash
+# gerar e gravar o token na box, sem ele passar por lugar nenhum
+python3 - <<'PY'
+import json, secrets
+p = "/opt/secbox/config.json"
+c = json.load(open(p))
+c["api_token"] = secrets.token_urlsafe(32)
+json.dump(c, open(p, "w"), indent=2)
+print("token gravado; leia com: jq -r .api_token", p)
+PY
+systemctl restart secbox-clip
+curl -s http://localhost:9997/health   # deve dizer "auth": true
+```

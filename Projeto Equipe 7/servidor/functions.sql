@@ -85,20 +85,34 @@ BEGIN
     RETURN 'ok';
 END; $$ LANGUAGE plpgsql;
 
--- claim_device: valida o token de pareamento e vincula o aparelho ao dono
+-- claim_device: valida o token de pareamento E o segredo de fábrica, e vincula
+-- o aparelho ao dono.
+--
+-- A validação do segredo não é detalhe: sem ela, qualquer pessoa com uma conta
+-- (que gera token de pareamento à vontade) reivindica qualquer aparelho cujo
+-- device_id ela conheça. Atrás da Tailscale isso era teórico; publicado na
+-- internet é "roube a câmera do vizinho sabendo o ID dela".
 CREATE OR REPLACE FUNCTION claim_device(p_device_id TEXT, p_secret TEXT, p_token TEXT)
 RETURNS TEXT AS $$
-DECLARE v_user BIGINT;
+DECLARE v_user BIGINT; v_hash TEXT;
 BEGIN
     SELECT user_id INTO v_user FROM claim_tokens
         WHERE token = p_token AND used_at IS NULL AND expires_at > now();
     IF v_user IS NULL THEN RETURN 'invalid_token'; END IF;
 
-    -- (validação do secret via hash pode entrar aqui)
+    SELECT secret_hash INTO v_hash FROM devices WHERE device_id = p_device_id;
+    IF v_hash IS NULL THEN RETURN 'unknown_device'; END IF;
+
+    -- secret_hash que não é bcrypt é resquício de cadastro manual (o piloto
+    -- gravou o literal 'pendente-hash'). Recusar com erro próprio, em vez de
+    -- deixar passar: falha explícita e corrigível é melhor que buraco silencioso.
+    IF left(v_hash, 2) <> '$2' THEN RETURN 'device_not_provisioned'; END IF;
+    IF v_hash <> crypt(coalesce(p_secret, ''), v_hash) THEN
+        RETURN 'invalid_secret';
+    END IF;
+
     UPDATE devices SET owner_id = v_user, claimed_at = now()
         WHERE device_id = p_device_id;
-    IF NOT FOUND THEN RETURN 'unknown_device'; END IF;
-
     UPDATE claim_tokens SET used_at = now() WHERE token = p_token;
     RETURN 'ok';
 END; $$ LANGUAGE plpgsql;

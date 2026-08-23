@@ -7,7 +7,7 @@ Stack: **Mosquitto** (broker MQTT) + **PostgreSQL** + **Node-RED** (API/regras) 
 | Arquivo | Descrição |
 |---|---|
 | [`schema.sql`](schema.sql) | Estrutura do banco (tabelas). |
-| [`functions.sql`](functions.sql) | Funções: `login`, `user_from_token`, `claim_device`. |
+| [`functions.sql`](functions.sql) | Funções: `login`, `register_user`, `user_from_token`, `user_account`, `set_push`, `claim_device`, e as de e-mail. |
 | [`mosquitto/default.conf`](mosquitto/default.conf) | Config do broker (auth por senha, sem TLS no piloto). |
 | [`push-service/`](push-service/) | Microserviço Node.js de saída: push (FCM) e e-mail (SMTP). |
 
@@ -134,3 +134,32 @@ Decisões que valem registro:
 > `login()` antes de recriá-lo. Fora de uma transação isso abre uma janela em
 > que ninguém consegue entrar — e, se algo falhar no meio, o banco fica sem a
 > função de login.
+
+## Pareamento: o segredo passou a ser validado
+
+`claim_device` agora confere o segredo de fábrica contra `devices.secret_hash`,
+além do token de pareamento. Sem isso, qualquer pessoa com uma conta — e
+qualquer conta gera token de pareamento à vontade — reivindicaria qualquer
+aparelho cujo `device_id` conhecesse. Atrás da Tailscale era risco teórico;
+publicado na internet, não.
+
+| Retorno | Significado |
+|---|---|
+| `ok` | vinculado |
+| `invalid_token` | token de pareamento inexistente, usado ou expirado |
+| `unknown_device` | `device_id` não está na tabela `devices` |
+| `device_not_provisioned` | o `secret_hash` não é bcrypt (resquício de cadastro manual) |
+| `invalid_secret` | o segredo não confere |
+
+> **Atenção ao aplicar:** o piloto gravou o literal `pendente-hash` no
+> `secret_hash` do `TVB-C90BB3`. Enquanto ele não for substituído por um hash de
+> verdade, o pareamento desse aparelho responde `device_not_provisioned`. É
+> falha proposital e explícita — melhor que continuar aceitando qualquer um.
+> Para corrigir, com o segredo saindo da própria box e sem passar por terceiros:
+>
+> ```bash
+> # na TV box
+> jq -r .secret /opt/secbox/device.json
+> # no servidor, colando o valor:
+> psql -h localhost -U secadmin -d secdb -c >   "UPDATE devices SET secret_hash = crypt('COLE_AQUI', gen_salt('bf')) WHERE device_id='TVB-C90BB3'"
+> ```

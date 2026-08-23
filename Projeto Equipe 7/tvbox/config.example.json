@@ -8,5 +8,6 @@
   "motion_cooldown": 30,
   "alsa_device": "default",
   "siren_file": "/opt/secbox/sounds/sirene.wav",
-  "siren_max_seconds": 300
+  "siren_max_seconds": 300,
+  "api_token": "GERE_UM_TOKEN_LONGO_E_UNICO"
 }
