@@ -134,6 +134,5 @@ Depois de reiniciar, confirme que a publicação voltou (`pgrep -af libx264` tem
 de mostrar o ffmpeg da câmera) e que o acesso anônimo caiu:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}
-' http://localhost:8889/cam/   # 401
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8889/cam/   # 401
 ```
