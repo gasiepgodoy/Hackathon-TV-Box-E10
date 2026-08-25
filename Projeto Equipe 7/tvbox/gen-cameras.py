@@ -7,6 +7,7 @@ import os, glob, json, re, subprocess
 MAX = 2  # câmeras suportadas simultaneamente (limite de banda USB)
 BYID = "/dev/v4l/by-id"
 MTX_YML = "/opt/mediamtx/mediamtx.yml"
+CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
 
@@ -72,8 +73,47 @@ def load_settings():
     return s
 
 
+def api_token():
+    try:
+        return (json.load(open(CONFIG_JSON)).get("api_token") or "").strip()
+    except Exception:
+        return ""
+
+
+def auth_block(token):
+    """Autenticação do MediaMTX. Sem ela, quem alcançar a porta 8889 recebe o
+    vídeo ao vivo, e a 9996 entrega as gravações — inaceitável assim que a box
+    for publicada na internet.
+
+    O usuário 'any' restrito a localhost é o que mantém a casa funcionando: é
+    dali que o ffmpeg do runOnInit publica e que o clip-server lê o playback.
+    Sem essa exceção, a própria box perderia acesso a si mesma.
+
+    Sem token configurado não escreve bloco nenhum — mesmo critério do
+    clip-server, para um upgrade não deixar o piloto cego."""
+    if not token:
+        return []
+    return [
+        "authInternalUsers:",
+        "  - user: any",
+        "    pass:",
+        "    ips: ['127.0.0.1', '::1']",
+        "    permissions:",
+        "      - action: publish",
+        "      - action: read",
+        "      - action: playback",
+        "      - action: api",
+        "      - action: metrics",
+        "  - user: app",
+        "    pass: %s" % token,
+        "    permissions:",
+        "      - action: read",
+        "      - action: playback",
+    ]
+
+
 def build(cams, settings):
-    lines = ["playback: yes", "paths:"]
+    lines = ["playback: yes"] + auth_block(api_token()) + ["paths:"]
     meta = []
     for i, (byid, sizes) in enumerate(cams[:MAX]):
         path = "cam" if i == 0 else "cam%d" % (i + 1)

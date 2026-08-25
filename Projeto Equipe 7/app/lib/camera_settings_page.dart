@@ -4,7 +4,9 @@ import 'api.dart';
 // Configuração das câmeras: qualidade e por quanto tempo guardar a gravação.
 // A cada ajuste mostra quanto espaço a escolha exige e se cabe no cartão.
 class CameraSettingsPage extends StatefulWidget {
-  const CameraSettingsPage({super.key});
+  // Token de mídia da box; sem ele a 9997 responde 401.
+  final String? token;
+  const CameraSettingsPage({super.key, this.token});
 
   @override
   State<CameraSettingsPage> createState() => _CameraSettingsPageState();
@@ -44,8 +46,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
       _loading = true;
       _error = null;
     });
-    final c = await ApiService.cameras();
-    final s = await ApiService.storage();
+    final c = await ApiService.cameras(widget.token);
+    final s = await ApiService.storage(widget.token);
     if (!mounted) return;
     if (c == null || s == null) {
       setState(() {
@@ -146,7 +148,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   Future<void> _save() async {
     setState(() => _saving = true);
     final ok =
-        await ApiService.saveSettings({'cameras': _edit, 'notify': _notify});
+        await ApiService.saveSettings(
+            {'cameras': _edit, 'notify': _notify}, widget.token);
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(

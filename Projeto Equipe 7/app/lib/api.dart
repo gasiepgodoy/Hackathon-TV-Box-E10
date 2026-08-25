@@ -107,21 +107,41 @@ class ApiService {
     } catch (_) {}
   }
 
-  // Lista dinâmica de câmeras da TV box (detectadas automaticamente).
-  static Future<Map<String, dynamic>?> cameras() async {
+  // Cabeçalho de acesso aos serviços da box. O token vem de deviceToken().
+  static Map<String, String> _midia(String? token) =>
+      token == null ? {} : {'Authorization': 'Bearer $token'};
+
+  // Token de mídia do aparelho, entregue pelo servidor só ao dono. É ele que
+  // abre a 9997 e o MediaMTX; embutir no app seria publicá-lo.
+  static Future<String?> deviceToken(String session, String deviceId) async {
     try {
-      final r =
-          await http.get(Uri.parse('$clipBase/cameras')).timeout(_timeout);
+      final r = await http.get(
+          Uri.parse('$apiBase/device-token?device=$deviceId'),
+          headers: {'Authorization': 'Bearer $session'}).timeout(_timeout);
+      if (r.statusCode == 200) {
+        return (jsonDecode(r.body) as Map<String, dynamic>)['token'] as String?;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // Lista dinâmica de câmeras da TV box (detectadas automaticamente).
+  static Future<Map<String, dynamic>?> cameras([String? token]) async {
+    try {
+      final r = await http
+          .get(Uri.parse('$clipBase/cameras'), headers: _midia(token))
+          .timeout(_timeout);
       if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
   }
 
   // Espaço em disco da TV box e autonomia estimada de gravação.
-  static Future<Map<String, dynamic>?> storage() async {
+  static Future<Map<String, dynamic>?> storage([String? token]) async {
     try {
-      final r =
-          await http.get(Uri.parse('$clipBase/storage')).timeout(_timeout);
+      final r = await http
+          .get(Uri.parse('$clipBase/storage'), headers: _midia(token))
+          .timeout(_timeout);
       if (r.statusCode == 200) return jsonDecode(r.body) as Map<String, dynamic>;
     } catch (_) {}
     return null;
@@ -129,11 +149,12 @@ class ApiService {
 
   // Grava qualidade/retenção por câmera. Demora mais: a TV box reinicia a
   // captura para aplicar a nova configuração.
-  static Future<bool> saveSettings(Map<String, dynamic> body) async {
+  static Future<bool> saveSettings(Map<String, dynamic> body,
+      [String? token]) async {
     try {
       final r = await http
           .post(Uri.parse('$clipBase/settings'),
-              headers: {'Content-Type': 'application/json'},
+              headers: {'Content-Type': 'application/json', ..._midia(token)},
               body: jsonEncode(body))
           .timeout(const Duration(seconds: 40));
       return r.statusCode == 200;
@@ -142,10 +163,12 @@ class ApiService {
     }
   }
 
-  static Future<List<dynamic>> recordings(String path) async {
+  // A listagem passou a vir do clip-server: a porta 9996 do MediaMTX não tem
+  // autenticação e, por isso, não é publicada — quem sai da box é só a 9997.
+  static Future<List<dynamic>> recordings(String path, [String? token]) async {
     try {
       final r = await http
-          .get(Uri.parse('$recBase/list?path=$path'))
+          .get(Uri.parse('$clipBase/list?path=$path'), headers: _midia(token))
           .timeout(_timeout);
       if (r.statusCode == 200) return jsonDecode(r.body) as List<dynamic>;
     } catch (_) {}

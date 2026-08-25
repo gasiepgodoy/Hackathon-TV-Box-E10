@@ -77,3 +77,8 @@ CREATE TABLE IF NOT EXISTS email_codes (
     expires_at TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (user_id, purpose)       -- um código ativo por finalidade
 );
+
+-- Token de acesso aos serviços de mídia da própria box (clip-server na 9997 e
+-- MediaMTX na 8889). Fica aqui, e não no app, porque o app só pode recebê-lo
+-- depois de provar que é o dono do aparelho.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS access_token TEXT;

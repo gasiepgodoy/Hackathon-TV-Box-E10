@@ -65,17 +65,28 @@ class _CameraPageState extends State<CameraPage> {
   bool _seeking = false;
   DateTime? _shown; // último horário exibido, para filtrar recuos espúrios
 
+  // Token de mídia da box, buscado no servidor com a sessão do usuário.
+  String? _mediaTok;
+
   @override
   void initState() {
     super.initState();
-    _loadCameras();
-    _loadEvents();
+    _iniciar();
     _eventTimer =
         Timer.periodic(const Duration(seconds: 30), (_) => _loadEvents());
   }
 
+  // O token precisa chegar ANTES das chamadas à box: a 9997 e o MediaMTX
+  // passaram a exigir autenticação, e sem ele a tela subiria vazia com 401.
+  Future<void> _iniciar() async {
+    _mediaTok = await ApiService.deviceToken(widget.token, widget.deviceId);
+    if (!mounted) return;
+    await _loadCameras();
+    await _loadEvents();
+  }
+
   Future<void> _loadCameras() async {
-    final data = await ApiService.cameras();
+    final data = await ApiService.cameras(_mediaTok);
     if (data != null &&
         data['cameras'] is List &&
         (data['cameras'] as List).isNotEmpty) {
@@ -111,7 +122,7 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<void> _loadList() async {
-    final list = await ApiService.recordings(_cam.path);
+    final list = await ApiService.recordings(_cam.path, _mediaTok);
     final spans = <_Span>[];
     for (final r in list) {
       final m = r as Map<String, dynamic>;
@@ -203,6 +214,8 @@ class _CameraPageState extends State<CameraPage> {
         'path': _cam.path,
         'start': start.toUtc().toIso8601String(),
         'duration': dur.toString(),
+        // na query porque quem baixa é o player, que não aceita cabeçalho
+        'token': ?_mediaTok,
       }).toString();
 
   // Abre o trecho direto da rede: como o MP4 sai com +faststart, o player começa
@@ -443,7 +456,7 @@ class _CameraPageState extends State<CameraPage> {
               await Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const CameraSettingsPage()));
+                      builder: (_) => CameraSettingsPage(token: _mediaTok)));
               _loadCameras(); // a qualidade pode ter mudado
             },
           ),
@@ -474,7 +487,8 @@ class _CameraPageState extends State<CameraPage> {
               child: _live
                   ? LiveView(
                       key: ValueKey(_cam.path),
-                      whepUrl: '$whepBase/${_cam.path}/whep')
+                      whepUrl: '$whepBase/${_cam.path}/whep',
+                      token: _mediaTok)
                   : (_chewie != null
                       ? Stack(alignment: Alignment.center, children: [
                           Chewie(controller: _chewie!),

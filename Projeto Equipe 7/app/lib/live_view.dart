@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
+import 'config.dart';
 
 // Widget de vídeo ao vivo (WHEP/WebRTC), pra embutir na tela unificada.
 class LiveView extends StatefulWidget {
   final String whepUrl;
-  const LiveView({super.key, required this.whepUrl});
+  // Token de mídia do aparelho. O MediaMTX passou a exigir autenticação: sem
+  // ela, quem alcançasse a porta 8889 receberia o vídeo ao vivo.
+  final String? token;
+  const LiveView({super.key, required this.whepUrl, this.token});
   @override
   State<LiveView> createState() => _LiveViewState();
 }
@@ -48,8 +53,14 @@ class _LiveViewState extends State<LiveView> {
       await pc.setLocalDescription(offer);
       await _waitIce(pc);
       final local = await pc.getLocalDescription();
+      final cab = <String, String>{'Content-Type': 'application/sdp'};
+      if (widget.token != null) {
+        // MediaMTX usa HTTP Basic; o usuário é fixo e a senha é o token.
+        final cred = base64Encode(utf8.encode('$mediaUser:${widget.token}'));
+        cab['Authorization'] = 'Basic $cred';
+      }
       final resp = await http.post(Uri.parse(widget.whepUrl),
-          headers: {'Content-Type': 'application/sdp'}, body: local!.sdp);
+          headers: cab, body: local!.sdp);
       if (resp.statusCode == 201 || resp.statusCode == 200) {
         await pc.setRemoteDescription(
             RTCSessionDescription(resp.body, 'answer'));

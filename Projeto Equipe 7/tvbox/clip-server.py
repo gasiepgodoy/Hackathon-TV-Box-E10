@@ -2,6 +2,7 @@
 # Serviço de clipes e configuração das câmeras (porta 9997):
 #   /cameras                        -> câmeras detectadas (JSON)
 #   /clip?path=&start=&duration=    -> trecho em MP4 navegável (+faststart)
+#   /list?path=                     -> trechos gravados (repassa do MediaMTX)
 #   /storage                        -> espaço, uso por câmera e autonomia estimada
 #   /settings  (GET | POST)         -> qualidade e retenção de cada câmera
 #   /health                         -> vivo? autenticação ligada? (sempre aberto)
@@ -15,11 +16,13 @@
 # O app pede trechos alinhados numa grade de tempo, então o mesmo minuto é
 # sempre a mesma chave: o remux roda uma única vez e as próximas requisições
 # são servidas direto do cache em disco.
-import hashlib, hmac, json, os, subprocess, tempfile, threading, urllib.parse
+import hashlib, hmac, json, os, subprocess, tempfile, threading
+import urllib.parse, urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MEDIAMTX = "http://localhost:9996/get"
+MEDIAMTX_LIST = "http://localhost:9996/list"
 CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
@@ -323,6 +326,24 @@ class Handler(BaseHTTPRequestHandler):
                 data = open(SETTINGS_JSON, "rb").read()
             except Exception:
                 data = b"{}"
+            self._send_json(data)
+            return
+        if u.path == "/list":
+            # Repassa a listagem do MediaMTX. Existe para a porta 9996 não
+            # precisar ser publicada: ela não tem autenticação, e aqui a
+            # listagem passa a herdar o token desta porta.
+            q = urllib.parse.parse_qs(u.query)
+            path = q.get("path", ["cam"])[0]
+            if not path.replace("_", "").isalnum():
+                self.send_error(400)
+                return
+            try:
+                with urllib.request.urlopen(
+                        MEDIAMTX_LIST + "?path=" + urllib.parse.quote(path),
+                        timeout=15) as r:
+                    data = r.read()
+            except Exception:
+                data = b"[]"
             self._send_json(data)
             return
         if u.path != "/clip":

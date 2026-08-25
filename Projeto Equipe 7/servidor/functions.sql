@@ -248,3 +248,16 @@ RETURNS TABLE(user_id BIGINT, email TEXT, name TEXT, email_verified BOOLEAN) AS 
       JOIN users u ON u.id = s.user_id
      WHERE s.token = p_token AND s.expires_at > now();
 $$ LANGUAGE sql;
+
+-- device_token: entrega o token de mídia da box, e só ao dono.
+--
+-- Sem esta rota o app não teria como falar com a box depois que a 9997 e o
+-- MediaMTX passaram a exigir autenticação — e embutir o token no APK seria
+-- publicá-lo, já que qualquer pessoa desmonta um APK.
+CREATE OR REPLACE FUNCTION device_token(p_session TEXT, p_device_id TEXT)
+RETURNS TEXT AS $$
+    SELECT d.access_token
+      FROM devices d
+     WHERE d.device_id = p_device_id
+       AND d.owner_id = user_from_token(p_session);
+$$ LANGUAGE sql;

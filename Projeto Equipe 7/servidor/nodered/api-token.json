@@ -1,0 +1,87 @@
+[
+ {
+  "id": "tab_token",
+  "type": "tab",
+  "label": "API - Token da box",
+  "disabled": false,
+  "info": "GET /api/device-token?device=<id> -> token de midia da box, so para o dono.\n\nA 9997 e o MediaMTX passaram a exigir autenticacao. O app nao pode trazer o token embutido (APK se desmonta), entao pede aqui usando a sessao, e o banco so devolve se o owner_id bater.\n\nO no de configuracao do PostgreSQL NAO esta neste arquivo: aponta para o id existente (pg_secdb)."
+ },
+ {
+  "id": "tk_in",
+  "type": "http in",
+  "z": "tab_token",
+  "name": "GET /api/device-token",
+  "url": "/api/device-token",
+  "method": "get",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 190,
+  "y": 100,
+  "wires": [
+   [
+    "tk_prep"
+   ]
+  ]
+ },
+ {
+  "id": "tk_prep",
+  "type": "function",
+  "z": "tab_token",
+  "name": "sessao + device",
+  "func": "const h = String((msg.req.headers || {}).authorization || '');\nconst dev = String((msg.req.query || {}).device || '');\nmsg.params = [h.replace(/^Bearer\\s+/i, '').trim(), dev];\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 400,
+  "y": 100,
+  "wires": [
+   [
+    "tk_pg"
+   ]
+  ]
+ },
+ {
+  "id": "tk_pg",
+  "type": "postgresql",
+  "z": "tab_token",
+  "name": "device_token",
+  "query": "SELECT device_token($1, $2) AS token",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 600,
+  "y": 100,
+  "wires": [
+   [
+    "tk_out"
+   ]
+  ]
+ },
+ {
+  "id": "tk_out",
+  "type": "function",
+  "z": "tab_token",
+  "name": "resposta",
+  "func": "const t = ((msg.payload && msg.payload[0]) || {}).token;\n// Sem token = sessao invalida OU o usuario nao e dono do aparelho. Os dois\n// casos respondem igual: distinguir revelaria quais device_id existem.\nif (!t) { msg.statusCode = 404; msg.payload = { error: 'not_found' }; return msg; }\nmsg.statusCode = 200;\nmsg.payload = { token: t };\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 790,
+  "y": 100,
+  "wires": [
+   [
+    "tk_resp"
+   ]
+  ]
+ },
+ {
+  "id": "tk_resp",
+  "type": "http response",
+  "z": "tab_token",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 950,
+  "y": 100,
+  "wires": []
+ }
+]
