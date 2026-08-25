@@ -16,13 +16,14 @@
 # O app pede trechos alinhados numa grade de tempo, então o mesmo minuto é
 # sempre a mesma chave: o remux roda uma única vez e as próximas requisições
 # são servidas direto do cache em disco.
-import hashlib, hmac, json, os, subprocess, tempfile, threading
+import base64, hashlib, hmac, json, os, subprocess, tempfile, threading
 import urllib.parse, urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MEDIAMTX = "http://localhost:9996/get"
 MEDIAMTX_LIST = "http://localhost:9996/list"
+MTX_USER = "app"  # usuário do MediaMTX; a senha é o mesmo api_token
 CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
@@ -41,6 +42,28 @@ def _read_token():
 
 
 TOKEN = _read_token()
+
+
+# O MediaMTX passou a exigir autenticação. A exceção de localhost do usuário
+# "any" não pega nestas chamadas internas: ele responde "path 'cam' is not
+# configured" em vez de 401, escondendo o path de quem não tem permissão. Em
+# vez de brigar com a comparação de IP, o clip-server autentica como qualquer
+# outro cliente — o token dele é o mesmo.
+def _mtx_req(url):
+    req = urllib.request.Request(url)
+    if TOKEN:
+        cred = base64.b64encode(("%s:%s" % (MTX_USER, TOKEN)).encode()).decode()
+        req.add_header("Authorization", "Basic " + cred)
+    return req
+
+
+def _mtx_url(url):
+    # Para o ffmpeg, que recebe a URL pronta e não aceita cabeçalho.
+    if not TOKEN:
+        return url
+    esquema, resto = url.split("://", 1)
+    return "%s://%s:%s@%s" % (esquema, MTX_USER,
+                              urllib.parse.quote(TOKEN, safe=""), resto)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 _locks = {}
@@ -338,8 +361,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_error(400)
                 return
             try:
-                with urllib.request.urlopen(
-                        MEDIAMTX_LIST + "?path=" + urllib.parse.quote(path),
+                with urllib.request.urlopen(_mtx_req(
+                        MEDIAMTX_LIST + "?path=" + urllib.parse.quote(path)),
                         timeout=15) as r:
                     data = r.read()
             except Exception:
@@ -374,7 +397,7 @@ class Handler(BaseHTTPRequestHandler):
             if cacheable and _ok(dest):  # outra thread gerou enquanto esperava
                 serve = dest
             else:
-                src = MEDIAMTX + "?" + urllib.parse.urlencode(
+                src = _mtx_url(MEDIAMTX) + "?" + urllib.parse.urlencode(
                     {"path": path, "start": start, "duration": str(dur)})
                 tmp = _build(src)
                 if tmp is None:
