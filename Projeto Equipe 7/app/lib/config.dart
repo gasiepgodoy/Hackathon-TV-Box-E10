@@ -4,11 +4,9 @@
 
 const String apiBase = 'https://api.SEU_DOMINIO/api'; // Node-RED, pelo túnel
 
-// MQTT (tempo real: status, eventos, comandos)
-const String brokerHost = 'SEU_SERVIDOR';
-const int brokerPort = 1883;
-const String brokerUser = 'serverapp';
-const String brokerPass = 'SUA_SENHA_MQTT';
+// O app NÃO fala MQTT. Comandos vão por POST /api/command e a presença vem de
+// /api/devices — assim o broker não precisa ser publicado, e a credencial dele
+// não é compilada dentro do APK, de onde qualquer pessoa poderia extraí-la.
 
 // Serviços de mídia na TV box. Os dois exigem o token do aparelho, que o app
 // busca em /api/device-token — nunca vem embutido aqui, porque APK se desmonta.

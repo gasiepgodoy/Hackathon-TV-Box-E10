@@ -1,11 +1,18 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
-import 'config.dart';
 import 'api.dart';
 import 'camera_page.dart';
 
+// Detalhe do dispositivo: presença, comando de snapshot e histórico.
+//
+// Esta tela já falou MQTT direto com o broker. Deixou de falar por um motivo de
+// segurança: a credencial do broker vinha embutida no app, e qualquer pessoa
+// que extraísse o APK poderia assinar `devices/#` e publicar comandos. Agora
+// tudo passa pelo servidor, que confere a posse do aparelho — e o broker não
+// precisa ser publicado na internet.
+//
+// O custo é a presença deixar de ser instantânea: em vez do heartbeat via MQTT,
+// a tela consulta a API periodicamente. Para um pontinho de status, troca justa.
 class DeviceDetailPage extends StatefulWidget {
   final String token;
   final String deviceId;
@@ -21,84 +28,62 @@ class DeviceDetailPage extends StatefulWidget {
 }
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
-  MqttServerClient? client;
-  String connState = 'conectando...';
+  static const Duration _intervalo = Duration(seconds: 10);
+
   bool deviceOnline = false;
+  bool _semServidor = false;
   List<dynamic> events = [];
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _connect();
-    _loadEvents();
+    _atualizar();
+    _timer = Timer.periodic(_intervalo, (_) => _atualizar());
   }
 
-  Future<void> _loadEvents() async {
-    final e = await ApiService.events(widget.token, widget.deviceId);
-    if (mounted) setState(() => events = e);
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
-  Future<void> _connect() async {
-    final clientId = 'app-${DateTime.now().millisecondsSinceEpoch}';
-    final c = MqttServerClient(brokerHost, clientId);
-    c.port = brokerPort;
-    c.keepAlivePeriod = 30;
-    c.autoReconnect = true;
-    c.logging(on: false);
-    c.onConnected = () => setState(() => connState = 'conectado');
-    c.onDisconnected = () => setState(() => connState = 'desconectado');
-    c.connectionMessage = MqttConnectMessage()
-        .withClientIdentifier(clientId)
-        .authenticateAs(brokerUser, brokerPass)
-        .startClean();
-    client = c;
+  Future<void> _atualizar() async {
+    // A presença vem da mesma coluna que o Node-RED mantém a partir do status
+    // e do heartbeat publicados pela box — só que lida por HTTPS.
     try {
-      await c.connect();
-    } catch (e) {
-      setState(() => connState = 'erro de conexão');
-      c.disconnect();
-      return;
-    }
-    c.subscribe('devices/${widget.deviceId}/#', MqttQos.atLeastOnce);
-    c.updates?.listen(_onMessage);
-  }
-
-  void _onMessage(List<MqttReceivedMessage<MqttMessage>> msgs) {
-    for (final m in msgs) {
-      final topic = m.topic;
-      final rec = m.payload as MqttPublishMessage;
-      final payload =
-          MqttPublishPayload.bytesToStringAsString(rec.payload.message);
-      Map<String, dynamic> data = {};
-      try {
-        data = jsonDecode(payload) as Map<String, dynamic>;
-      } catch (_) {}
+      final lista = await ApiService.devices(widget.token);
+      final d = lista.cast<Map<String, dynamic>>().firstWhere(
+            (e) => e['device_id']?.toString() == widget.deviceId,
+            orElse: () => <String, dynamic>{},
+          );
+      final e = await ApiService.events(widget.token, widget.deviceId);
+      if (!mounted) return;
       setState(() {
-        if (topic.endsWith('/status')) {
-          deviceOnline = data['online'] == true;
-        } else if (topic.endsWith('/heartbeat')) {
-          deviceOnline = true;
-        } else if (topic.contains('/event')) {
-          _loadEvents();
-        }
+        deviceOnline = d['online'] == true;
+        events = e;
+        _semServidor = false;
       });
+    } catch (_) {
+      // Falha de rede não deve virar "aparelho offline": são coisas diferentes,
+      // e confundi-las faria o usuário procurar problema no lugar errado.
+      if (mounted) setState(() => _semServidor = true);
     }
   }
 
-  void _sendSnapshot() {
-    final c = client;
-    if (c == null) return;
-    final b = MqttClientPayloadBuilder();
-    b.addString(jsonEncode({'action': 'snapshot'}));
-    c.publishMessage('devices/${widget.deviceId}/camera/command',
-        MqttQos.atLeastOnce, b.payload!);
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comando snapshot enviado')));
+  Future<void> _sendSnapshot() async {
+    final ok = await ApiService.command(
+        widget.token, widget.deviceId, 'camera', 'snapshot');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? 'Comando snapshot enviado'
+            : 'Não foi possível enviar o comando')));
+    if (ok) _atualizar();
   }
 
   @override
   Widget build(BuildContext context) {
-    final connected = connState == 'conectado';
     return Scaffold(
       appBar: AppBar(title: Text(widget.name)),
       body: Column(
@@ -111,8 +96,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               const SizedBox(width: 8),
               Text(deviceOnline ? 'online' : 'offline'),
               const Spacer(),
-              Text('broker: $connState',
-                  style: Theme.of(context).textTheme.bodySmall),
+              if (_semServidor)
+                Text('sem contato com o servidor',
+                    style: Theme.of(context).textTheme.bodySmall),
             ]),
           ),
           Padding(
@@ -135,7 +121,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: connected ? _sendSnapshot : null,
+                  onPressed: deviceOnline ? _sendSnapshot : null,
                   icon: const Icon(Icons.camera_alt),
                   label: const Text('Snapshot'),
                 ),
@@ -152,7 +138,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _loadEvents,
+              onRefresh: _atualizar,
               child: events.isEmpty
                   ? ListView(children: const [
                       Padding(
@@ -177,11 +163,5 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    client?.disconnect();
-    super.dispose();
   }
 }

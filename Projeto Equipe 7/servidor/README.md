@@ -85,6 +85,9 @@ banco (`functions.sql`); os flows só fazem a cola.
 | POST | `/api/email/request-code` | `{email, purpose}` (`verify`\|`reset`) → envia código de 6 dígitos. **Responde sempre `200 {status:ok}`**, exista ou não a conta. Flow em [`nodered/api-email.json`](nodered/api-email.json). |
 | POST | `/api/email/confirm` | `{email, code}` → marca o e-mail como verificado. |
 | POST | `/api/password-reset` | `{email, code, password}` → troca a senha, encerra todas as sessões e remove os push tokens do usuário. |
+| GET | `/api/device-token?device=<id>` | Token de mídia da box, só para o dono. Flow em [`nodered/api-token.json`](nodered/api-token.json). |
+| GET | `/api/me` | Dados do dono da sessão (inclui `email_verified`). Flow em [`nodered/api-conta.json`](nodered/api-conta.json). |
+| POST | `/api/command` | `{device, module, action}` → publica em `devices/{device}/{module}/command`. Flow em [`nodered/api-command.json`](nodered/api-command.json). |
 | GET | `/api/me` | Header `Authorization: Bearer <token>` → `{user_id, email, name, email_verified}`; `401` se a sessão morreu. Flow em [`nodered/api-conta.json`](nodered/api-conta.json). |
 
 > Nota de implementação: no nó `mqtt in` do Node-RED, o payload chega como Buffer;
@@ -163,3 +166,30 @@ publicado na internet, não.
 > # no servidor, colando o valor:
 > psql -h localhost -U secadmin -d secdb -c >   "UPDATE devices SET secret_hash = crypt('COLE_AQUI', gen_salt('bf')) WHERE device_id='TVB-C90BB3'"
 > ```
+
+## Comandos sem MQTT no app
+
+O app **não fala MQTT**. Ele manda comandos por `POST /api/command` e o
+Node-RED publica no broker.
+
+A razão é a credencial: antes, `brokerUser`/`brokerPass` ficavam no
+`config.dart` e eram compilados no APK. Publicar o broker significaria que
+qualquer pessoa que extraísse o APK — coisa trivial — poderia assinar
+`devices/#` (status, eventos, alertas de movimento de todos) e **publicar
+comandos**: disparar a sirene, tirar snapshot, alterar configuração de câmera.
+
+Com a rota, o broker nunca precisa ser publicado, e o servidor confere a posse
+do aparelho antes de repassar (`device_owned`).
+
+Duas defesas no flow, e as duas importam:
+
+- **Lista fechada de módulos e ações.** Sem ela, o corpo da requisição
+  escolheria o tópico, e a rota viraria um publicador MQTT genérico exposto na
+  internet. Hoje: `camera` (`snapshot`, `clear_recordings`) e `alarme`
+  (`on`, `off`, `test`).
+- **Sessão inválida e "não é o dono" respondem igual (403).** Distinguir
+  revelaria quais `device_id` existem.
+
+> A presença do aparelho passou a vir de `/api/devices`, consultada a cada 10 s,
+> em vez do heartbeat MQTT. Menos imediato, e suficiente para um indicador de
+> status.

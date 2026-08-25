@@ -261,3 +261,17 @@ RETURNS TEXT AS $$
      WHERE d.device_id = p_device_id
        AND d.owner_id = user_from_token(p_session);
 $$ LANGUAGE sql;
+
+-- device_owned: a sessão é dona deste aparelho?
+--
+-- Guarda da rota /api/command. Sem ela, qualquer usuário autenticado mandaria
+-- comando para o aparelho de qualquer outro — disparar a sirene, tirar
+-- snapshot, alterar configuração de câmera.
+CREATE OR REPLACE FUNCTION device_owned(p_session TEXT, p_device TEXT)
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM devices d
+         WHERE d.device_id = p_device
+           AND d.owner_id = user_from_token(p_session)
+    );
+$$ LANGUAGE sql;

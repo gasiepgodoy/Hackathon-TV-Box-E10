@@ -241,4 +241,31 @@ class ApiService {
     } catch (_) {}
     return null;
   }
+
+  // Envia um comando ao aparelho pelo servidor, que repassa ao broker.
+  //
+  // O app não fala MQTT: assim o broker não precisa ser publicado na internet,
+  // e a credencial dele não viaja dentro do APK — qualquer pessoa que extraia
+  // um APK leria uma senha embutida ali.
+  static Future<bool> command(String session, String deviceId, String module,
+      String action, [Map<String, dynamic>? args]) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$apiBase/command'),
+              headers: {
+                'Authorization': 'Bearer $session',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'device': deviceId,
+                'module': module,
+                'action': action,
+                'args': ?args,
+              }))
+          .timeout(_timeout);
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

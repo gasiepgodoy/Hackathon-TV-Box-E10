@@ -1,0 +1,128 @@
+[
+ {
+  "id": "tab_command",
+  "type": "tab",
+  "label": "API - Comandos",
+  "disabled": false,
+  "info": "POST /api/command {device, module, action, ...} -> publica em\ndevices/{device}/{module}/command.\n\nExiste para o app NAO precisar de MQTT: com esta rota ele fala so\nHTTPS, e o broker nunca precisa ser publicado na internet. Antes, a\ncredencial do broker vinha embutida no APK -- qualquer pessoa que o\nextraisse podia assinar devices/# e publicar comandos.\n\nOs nos de configuracao (mqtt_broker_local, pg_secdb) NAO estao neste\narquivo: apontam para os ids que ja existem."
+ },
+ {
+  "id": "cmd_in",
+  "type": "http in",
+  "z": "tab_command",
+  "name": "POST /api/command",
+  "url": "/api/command",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 170,
+  "y": 100,
+  "wires": [
+   [
+    "cmd_prep"
+   ]
+  ]
+ },
+ {
+  "id": "cmd_prep",
+  "type": "function",
+  "z": "tab_command",
+  "name": "valida e prepara",
+  "func": "const b = msg.payload || {};\nconst h = String((msg.req.headers || {}).authorization || '');\nconst sessao = h.replace(/^Bearer\\s+/i, '').trim();\nconst device = String(b.device || '');\nconst modulo = String(b.module || '');\nconst acao   = String(b.action || '');\n\n// Lista fechada de propósito: sem ela, o corpo da requisição escolheria o\n// tópico, e a rota viraria um publicador MQTT genérico exposto na internet.\nconst MODULOS = ['camera', 'alarme'];\nconst ACOES = {\n    camera: ['snapshot', 'clear_recordings'],\n    alarme: ['on', 'off', 'test'],\n};\n\nif (!/^[A-Za-z0-9-]{3,32}$/.test(device) ||\n    MODULOS.indexOf(modulo) < 0 ||\n    (ACOES[modulo] || []).indexOf(acao) < 0) {\n    msg.statusCode = 400;\n    msg.payload = { error: 'invalid_command' };\n    return [null, msg];\n}\n\n// guarda o comando para depois da checagem de posse\nmsg.cmd = { device: device, module: modulo, body: JSON.stringify(b.args\n            ? Object.assign({ action: acao }, b.args)\n            : { action: acao }) };\nmsg.params = [sessao, device];\nreturn [msg, null];",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 390,
+  "y": 100,
+  "wires": [
+   [
+    "cmd_pg"
+   ],
+   [
+    "cmd_resp"
+   ]
+  ]
+ },
+ {
+  "id": "cmd_pg",
+  "type": "postgresql",
+  "z": "tab_command",
+  "name": "device_owned",
+  "query": "SELECT device_owned($1, $2) AS dono",
+  "postgreSQLConfig": "pg_secdb",
+  "split": false,
+  "rowsPerMsg": 1,
+  "outputs": 1,
+  "x": 580,
+  "y": 100,
+  "wires": [
+   [
+    "cmd_rota"
+   ]
+  ]
+ },
+ {
+  "id": "cmd_rota",
+  "type": "function",
+  "z": "tab_command",
+  "name": "e o dono?",
+  "func": "const dono = ((msg.payload && msg.payload[0]) || {}).dono === true;\nif (!dono) {\n    // Sessao invalida e 'nao e o dono' respondem igual: distinguir\n    // revelaria quais device_id existem.\n    msg.statusCode = 403;\n    msg.payload = { error: 'forbidden' };\n    return [null, msg];\n}\nconst c = msg.cmd;\nmsg.topic = 'devices/' + c.device + '/' + c.module + '/command';\nmsg.payload = c.body;\nmsg.qos = 1;\nmsg.retain = false;\nreturn [msg, null];",
+  "outputs": 2,
+  "noerr": 0,
+  "x": 760,
+  "y": 100,
+  "wires": [
+   [
+    "cmd_mqtt",
+    "cmd_ok"
+   ],
+   [
+    "cmd_resp"
+   ]
+  ]
+ },
+ {
+  "id": "cmd_mqtt",
+  "type": "mqtt out",
+  "z": "tab_command",
+  "name": "publica o comando",
+  "topic": "",
+  "qos": "1",
+  "retain": "false",
+  "respTopic": "",
+  "contentType": "",
+  "userProps": "",
+  "correl": "",
+  "expiry": "",
+  "broker": "mqtt_broker_local",
+  "x": 960,
+  "y": 60,
+  "wires": []
+ },
+ {
+  "id": "cmd_ok",
+  "type": "function",
+  "z": "tab_command",
+  "name": "resposta",
+  "func": "msg.statusCode = 200;\nmsg.payload = { status: 'sent' };\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "x": 950,
+  "y": 140,
+  "wires": [
+   [
+    "cmd_resp"
+   ]
+  ]
+ },
+ {
+  "id": "cmd_resp",
+  "type": "http response",
+  "z": "tab_command",
+  "name": "",
+  "statusCode": "",
+  "headers": {},
+  "x": 1130,
+  "y": 100,
+  "wires": []
+ }
+]
