@@ -6,7 +6,8 @@
 # Cada câmera tem seu liga/desliga e sua sensibilidade em camera-settings.json;
 # um supervisor acompanha cameras.json e sobe/derruba os detectores conforme as
 # câmeras aparecem, somem ou mudam de configuração.
-import json, time, subprocess, threading
+import json
+from urllib.parse import quote, time, subprocess, threading
 import paho.mqtt.client as mqtt
 
 BASE = "/opt/secbox"
@@ -16,7 +17,12 @@ DEVICE_ID = dev["device_id"]
 TOPIC = f"devices/{DEVICE_ID}/alarme/event"
 CAMERAS_JSON = f"{BASE}/cameras.json"
 SETTINGS_JSON = f"{BASE}/camera-settings.json"
-RTSP_BASE = cfg.get("rtsp_base", "rtsp://localhost:8554")
+_MTX_PASS = (cfg.get("mtx_internal_pass") or "").strip()
+_base = cfg.get("rtsp_base", "rtsp://localhost:8554")
+# O MediaMTX exige credencial até de dentro da box: não há exceção por IP,
+# porque o túnel faria todo tráfego externo parecer local.
+RTSP_BASE = (_base.replace("://", "://box:%s@" % quote(_MTX_PASS, safe=""), 1)
+             if _MTX_PASS else _base)
 COOLDOWN = cfg.get("motion_cooldown", 30)
 SENS = {"alta": 8, "media": 12, "baixa": 20}  # limiar: menor = mais sensível
 W, H = 160, 90

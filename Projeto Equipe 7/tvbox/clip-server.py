@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MEDIAMTX = "http://localhost:9996/get"
 MEDIAMTX_LIST = "http://localhost:9996/list"
-MTX_USER = "app"  # usuário do MediaMTX; a senha é o mesmo api_token
+MTX_USER = "box"  # usuário interno do MediaMTX (não é o do celular)
 CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
@@ -34,36 +34,37 @@ CACHE_MAX = 1024 * 1024 * 1024  # teto do cache em disco: 1 GB
 SETTLE = 15  # só entra no cache o trecho que já terminou há esse tempo
 DISK_LIMIT = 0.85  # acima disso o sd-guard começa a apagar gravação
 
-def _read_token():
+def _read_cfg(chave):
     try:
-        return (json.load(open(CONFIG_JSON)).get("api_token") or "").strip()
+        return (json.load(open(CONFIG_JSON)).get(chave) or "").strip()
     except Exception:
         return ""
 
 
-TOKEN = _read_token()
+TOKEN = _read_cfg("api_token")          # o que o app apresenta a ESTE serviço
+MTX_PASS = _read_cfg("mtx_internal_pass")  # o que ESTE serviço apresenta ao MediaMTX
 
 
-# O MediaMTX passou a exigir autenticação. A exceção de localhost do usuário
-# "any" não pega nestas chamadas internas: ele responde "path 'cam' is not
-# configured" em vez de 401, escondendo o path de quem não tem permissão. Em
-# vez de brigar com a comparação de IP, o clip-server autentica como qualquer
-# outro cliente — o token dele é o mesmo.
+# O MediaMTX exige autenticação e NÃO tem exceção para localhost: o cloudflared
+# entrega o tráfego do túnel em http://localhost, então qualquer regra por IP de
+# origem daria permissão total a quem viesse da internet. Logo, este serviço
+# autentica como qualquer outro cliente — com o usuário interno, que tem senha
+# diferente da que o celular recebe.
 def _mtx_req(url):
     req = urllib.request.Request(url)
-    if TOKEN:
-        cred = base64.b64encode(("%s:%s" % (MTX_USER, TOKEN)).encode()).decode()
+    if MTX_PASS:
+        cred = base64.b64encode(("%s:%s" % (MTX_USER, MTX_PASS)).encode()).decode()
         req.add_header("Authorization", "Basic " + cred)
     return req
 
 
 def _mtx_url(url):
     # Para o ffmpeg, que recebe a URL pronta e não aceita cabeçalho.
-    if not TOKEN:
+    if not MTX_PASS:
         return url
     esquema, resto = url.split("://", 1)
     return "%s://%s:%s@%s" % (esquema, MTX_USER,
-                              urllib.parse.quote(TOKEN, safe=""), resto)
+                              urllib.parse.quote(MTX_PASS, safe=""), resto)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 _locks = {}

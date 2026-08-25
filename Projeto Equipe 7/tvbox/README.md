@@ -19,7 +19,7 @@ movimento, remux de clipes e LEDs de status.
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
-| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, sirene, token da 9997). |
+| [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, sirene, token da 9997, senha interna do MediaMTX). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
 | [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
 | [`ALARME.md`](ALARME.md) | (documentação) | Sirene por MQTT — e por que o jack AV não toca com o DTB genérico. |
@@ -89,4 +89,51 @@ print("token gravado; leia com: jq -r .api_token", p)
 PY
 systemctl restart secbox-clip
 curl -s http://localhost:9997/health   # deve dizer "auth": true
+```
+
+## Autenticação do MediaMTX
+
+O `gen-cameras.py` escreve `authInternalUsers` no `mediamtx.yml` — no gerador, e
+não no arquivo, que é regravado a cada 30 s.
+
+**Não há exceção para `127.0.0.1`, e isso é deliberado.** O `cloudflared`
+entrega as requisições do túnel em `http://localhost:8889`, então uma regra
+baseada em IP de origem daria permissão total a quem viesse da internet. Foi
+exatamente esse o erro que deixou o vídeo ao vivo público por alguns minutos: a
+exceção criada para a box falar consigo mesma virou a porta de entrada.
+
+Dois usuários, com **senhas diferentes**:
+
+| Usuário | Permissões | Senha | Quem usa |
+|---|---|---|---|
+| `box` | publish, read, playback | `mtx_internal_pass` — nunca sai da box | ffmpeg do `runOnInit`, `motion.py`, `agent.py`, `clip-server` |
+| `app` | read, playback | `api_token` — entregue ao celular | o aplicativo |
+
+Senhas separadas importam: com uma só, qualquer celular que tivesse o token
+poderia **publicar** na câmera, isto é, trocar o vídeo por outro.
+
+Sem os **dois** segredos no `config.json`, o gerador não escreve bloco de
+autenticação nenhum — metade da configuração quebraria a publicação interna,
+que é pior que o estado anterior.
+
+```bash
+python3 - <<'PY'
+import json, secrets
+p = "/opt/secbox/config.json"
+c = json.load(open(p))
+c.setdefault("api_token", secrets.token_urlsafe(32))
+c["mtx_internal_pass"] = secrets.token_urlsafe(24)
+json.dump(c, open(p, "w"), indent=2)
+print("segredos gravados")
+PY
+python3 /opt/secbox/gen-cameras.py
+systemctl restart mediamtx secbox-clip secbox-motion secbox-agent
+```
+
+Depois de reiniciar, confirme que a publicação voltou (`pgrep -af libx264` tem
+de mostrar o ffmpeg da câmera) e que o acesso anônimo caiu:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}
+' http://localhost:8889/cam/   # 401
 ```

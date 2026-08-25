@@ -9,5 +9,6 @@
   "alsa_device": "default",
   "siren_file": "/opt/secbox/sounds/sirene.wav",
   "siren_max_seconds": 300,
-  "api_token": "GERE_UM_TOKEN_LONGO_E_UNICO"
+  "api_token": "GERE_UM_TOKEN_LONGO_E_UNICO",
+  "mtx_internal_pass": "GERE_OUTRO_SEGREDO_SO_DA_BOX"
 }

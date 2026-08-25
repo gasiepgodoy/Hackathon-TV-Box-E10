@@ -2,11 +2,17 @@
 # Agente da borda: cliente MQTT + modo pareamento (lê QR pela câmera,
 # conecta Wi-Fi e reivindica o aparelho). Lê /opt/secbox/{device,config}.json.
 import json, time, subprocess, threading, os
+from urllib.parse import quote
 import paho.mqtt.client as mqtt
 
 BASE = "/opt/secbox"
 dev = json.load(open(f"{BASE}/device.json"))
 cfg = json.load(open(f"{BASE}/config.json"))
+
+_MTX_PASS = (cfg.get("mtx_internal_pass") or "").strip()
+# Mesma razão do motion.py: sem exceção por IP, todo consumidor se autentica.
+RTSP_URL = (cfg["rtsp_url"].replace("://", "://box:%s@" % quote(_MTX_PASS, safe=""), 1)
+            if _MTX_PASS else cfg["rtsp_url"])
 
 DEVICE_ID    = dev["device_id"]
 SECRET       = dev.get("secret","")
@@ -23,12 +29,12 @@ def publish_event(client, module, etype, extra=None):
     client.publish(f"{BASE_TOPIC}/{module}/event", json.dumps(body), qos=1)
 
 def take_snapshot(path="/tmp/snap.jpg"):
-    subprocess.run(["ffmpeg","-y","-i",cfg["rtsp_url"],"-frames:v","1",path],
+    subprocess.run(["ffmpeg","-y","-i",RTSP_URL,"-frames:v","1",path],
                    timeout=15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return path
 
 def scan_qr():
-    subprocess.run(["ffmpeg","-y","-i",cfg["rtsp_url"],"-frames:v","1","/tmp/scan.jpg"],
+    subprocess.run(["ffmpeg","-y","-i",RTSP_URL,"-frames:v","1","/tmp/scan.jpg"],
                    timeout=15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         out = subprocess.run(["zbarimg","-q","--raw","/tmp/scan.jpg"],

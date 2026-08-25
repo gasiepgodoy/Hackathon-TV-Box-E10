@@ -73,38 +73,42 @@ def load_settings():
     return s
 
 
-def api_token():
+def segredos():
+    """(token do app, senha interna da box). O token do app vai para o celular;
+    a senha interna NUNCA sai da box."""
     try:
-        return (json.load(open(CONFIG_JSON)).get("api_token") or "").strip()
+        c = json.load(open(CONFIG_JSON))
+        return ((c.get("api_token") or "").strip(),
+                (c.get("mtx_internal_pass") or "").strip())
     except Exception:
-        return ""
+        return "", ""
 
 
-def auth_block(token):
-    """Autenticação do MediaMTX. Sem ela, quem alcançar a porta 8889 recebe o
-    vídeo ao vivo, e a 9996 entrega as gravações — inaceitável assim que a box
-    for publicada na internet.
+def auth_block(token, interna):
+    """Autenticação do MediaMTX.
 
-    O usuário 'any' restrito a localhost é o que mantém a casa funcionando: é
-    dali que o ffmpeg do runOnInit publica e que o clip-server lê o playback.
-    Sem essa exceção, a própria box perderia acesso a si mesma.
+    NÃO existe exceção para localhost, e isso é deliberado: o cloudflared
+    entrega as requisições do túnel em http://localhost:8889, então qualquer
+    regra baseada em IP de origem daria permissão total a quem viesse da
+    internet. Uma exceção assim já expôs o vídeo ao vivo publicamente.
 
-    Sem token configurado não escreve bloco nenhum — mesmo critério do
-    clip-server, para um upgrade não deixar o piloto cego."""
-    if not token:
+    Dois usuários com senhas diferentes. Com uma senha só, qualquer celular que
+    tivesse o token poderia PUBLICAR na câmera — trocar o vídeo por outro.
+
+    Sem os dois segredos configurados não escreve bloco nenhum: metade da
+    configuração quebraria a publicação interna, que é pior que o estado atual.
+    """
+    if not token or not interna:
         return []
     return [
         "authInternalUsers:",
-        "  - user: any",
-        "    pass:",
-        "    ips: ['127.0.0.1', '::1']",
+        "  - user: box",          # consumidores internos da própria box
+        "    pass: %s" % interna,
         "    permissions:",
         "      - action: publish",
         "      - action: read",
         "      - action: playback",
-        "      - action: api",
-        "      - action: metrics",
-        "  - user: app",
+        "  - user: app",          # o celular; leitura apenas
         "    pass: %s" % token,
         "    permissions:",
         "      - action: read",
@@ -113,7 +117,8 @@ def auth_block(token):
 
 
 def build(cams, settings):
-    lines = ["playback: yes"] + auth_block(api_token()) + ["paths:"]
+    token, interna = segredos()
+    lines = ["playback: yes"] + auth_block(token, interna) + ["paths:"]
     meta = []
     for i, (byid, sizes) in enumerate(cams[:MAX]):
         path = "cam" if i == 0 else "cam%d" % (i + 1)
@@ -128,8 +133,9 @@ def build(cams, settings):
         run = ("ffmpeg -f v4l2 -input_format mjpeg -video_size %s -framerate %d "
                "-i %s -c:v libx264 -preset ultrafast -tune zerolatency "
                "-pix_fmt yuv420p -b:v %dk -g %d -f rtsp "
-               "rtsp://localhost:$RTSP_PORT/$MTX_PATH"
-               % (size, fps, byid, p["kbps"], fps * 2))
+               "rtsp://%slocalhost:$RTSP_PORT/$MTX_PATH"
+               % (size, fps, byid, p["kbps"], fps * 2,
+                  ("box:%s@" % interna) if interna else ""))
         lines += ["  %s:" % path,
                   "    runOnInit: %s" % run,
                   "    runOnInitRestart: yes",
