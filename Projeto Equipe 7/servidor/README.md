@@ -193,3 +193,55 @@ Duas defesas no flow, e as duas importam:
 > A presença do aparelho passou a vir de `/api/devices`, consultada a cada 10 s,
 > em vez do heartbeat MQTT. Menos imediato, e suficiente para um indicador de
 > status.
+
+## Broker alcançável de fora da VPN
+
+O app **não** usa MQTT (ver seção anterior), então isto vale só para a ligação
+**servidor ↔ borda**.
+
+**WebSocket não é opção neste servidor.** O pacote `mosquitto` do Debian não é
+compilado com libwebsockets:
+
+```bash
+ldd /usr/sbin/mosquitto | grep -c websocket   # 0 = sem suporte
+```
+
+Um `listener 9001 / protocol websockets` é aceito em silêncio e não abre porta —
+o serviço sobe `active` e a porta simplesmente não existe. Foi assim que
+descobrimos.
+
+**O caminho é o túnel carregando TCP.** No `config.yml` do `cloudflared` do
+servidor, antes do `http_status:404`:
+
+```yaml
+  - hostname: mqtt.SEU_DOMINIO
+    service: tcp://localhost:1883
+```
+
+E na box, o [`secbox-mqtt-tunnel.service`](../tvbox/systemd/secbox-mqtt-tunnel.service)
+roda `cloudflared access tcp`, que expõe `127.0.0.1:1883` localmente. Os quatro
+serviços da borda continuam apontando para localhost e não sabem que há túnel
+no meio.
+
+> ⚠️ **Um hostname TCP no túnel é alcançável por quem souber o nome** — basta
+> rodar `cloudflared access tcp`. A partir daí, a única barreira é a credencial
+> MQTT, o que equivale a expor a 1883 na internet com senha. Para fechar
+> direito, use **Cloudflare Access com service token**, que exige um cabeçalho
+> antes de o túnel sequer abrir.
+
+### ACL
+
+Sem `acl_file`, qualquer credencial válida lê e escreve em **todos** os tópicos —
+uma box comprometida veria os eventos das outras e mandaria comando para elas.
+
+```
+user serverapp
+topic readwrite #
+
+user box-TVB-XXXXXX
+topic readwrite devices/TVB-XXXXXX/#
+topic write provisioning/claim
+```
+
+Um usuário por box. Escrito à mão não escala; para muitos aparelhos, o caminho
+é gerar este arquivo a partir do PostgreSQL, ou o plugin dynamic-security.

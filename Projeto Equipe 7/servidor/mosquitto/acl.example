@@ -1,0 +1,19 @@
+# /etc/mosquitto/acl — quem pode falar em quê.
+#
+# Sem este arquivo, qualquer credencial válida lê e escreve em TODOS os tópicos.
+# Com o broker publicado, isso significaria que uma box comprometida veria os
+# eventos de todas as outras e mandaria comando para elas.
+#
+# Um usuário por box. Não escala para centenas de aparelhos escrito à mão —
+# nesse ponto o caminho é o plugin dynamic-security do Mosquitto, ou gerar este
+# arquivo a partir do PostgreSQL e recarregar.
+
+# Node-RED: precisa de tudo (grava eventos, responde provisionamento, publica
+# comandos vindos de /api/command).
+user serverapp
+topic readwrite #
+
+# Cada TV box só enxerga os próprios tópicos.
+user box-TVB-XXXXXX
+topic readwrite devices/TVB-XXXXXX/#
+topic write provisioning/claim

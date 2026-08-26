@@ -1,0 +1,17 @@
+[Unit]
+# Encaminha 127.0.0.1:1883 da box para o broker, pelo Cloudflare Tunnel.
+# Com ele, os serviços da borda continuam falando com localhost e não precisam
+# saber que existe túnel no meio.
+#
+# Troque SEU_DOMINIO antes de instalar.
+Description=Encaminhador MQTT pelo Cloudflare Tunnel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/cloudflared access tcp --hostname mqtt.SEU_DOMINIO --url 127.0.0.1:1883
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
