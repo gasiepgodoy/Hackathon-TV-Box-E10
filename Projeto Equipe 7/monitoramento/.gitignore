@@ -1,0 +1,5 @@
+# Endereços internos e chave privada não são versionados.
+config.json
+id_monitor
+id_monitor.pub
+history.jsonl

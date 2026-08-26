@@ -10,7 +10,8 @@ Projeto do **Hackathon TV Box E10**. Uma **TV Box** (com Linux) faz o papel do e
 
 - [`app/`](app/) — aplicativo Android (Flutter)
 - [`tvbox/`](tvbox/) — scripts da borda: câmera (MediaMTX), agente, detecção de movimento, LEDs, remux e serviços systemd
-- [`servidor/`](servidor/) — banco de dados (`schema.sql`, `functions.sql`), broker, Node-RED e microserviço de push
+- [`servidor/`](servidor/) — banco de dados (`schema.sql`, `functions.sql`), broker, Node-RED e microserviço de saída (push e e-mail)
+- [`monitoramento/`](monitoramento/) — coletor que verifica borda e servidor e reporta o que mudou
 
 ---
 
