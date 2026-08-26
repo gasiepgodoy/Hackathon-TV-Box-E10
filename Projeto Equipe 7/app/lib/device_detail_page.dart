@@ -32,6 +32,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   bool deviceOnline = false;
   bool _semServidor = false;
+  // Token de mídia da box: o estado do alarme mora nela, não no servidor.
+  String? _mediaTok;
+  bool? _armado;
+  int _segundos = 60;
+  bool _mudandoAlarme = false;
   List<dynamic> events = [];
   Timer? _timer;
 
@@ -39,6 +44,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   void initState() {
     super.initState();
     _atualizar();
+    _carregarAlarme();
     _timer = Timer.periodic(_intervalo, (_) => _atualizar());
   }
 
@@ -46,6 +52,32 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _carregarAlarme() async {
+    _mediaTok ??= await ApiService.deviceToken(widget.token, widget.deviceId);
+    final e = await ApiService.alarmState(_mediaTok);
+    if (!mounted) return;
+    setState(() {
+      _armado = e == null ? null : e['armed'] == true;
+      if (e != null && e['seconds'] is int) _segundos = e['seconds'] as int;
+    });
+  }
+
+  Future<void> _alternarAlarme(bool armar) async {
+    setState(() => _mudandoAlarme = true);
+    final ok = await ApiService.setAlarm(armar, _segundos, _mediaTok);
+    if (!mounted) return;
+    setState(() {
+      _mudandoAlarme = false;
+      if (ok) _armado = armar;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok
+            ? (armar
+                ? 'Alarme armado: movimento dispara a sirene'
+                : 'Alarme desarmado')
+            : 'Não foi possível falar com a câmera')));
   }
 
   Future<void> _atualizar() async {
@@ -127,6 +159,26 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ),
             ]),
+          ),
+          Card(
+            margin: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+            child: SwitchListTile(
+              secondary: Icon(Icons.notifications_active,
+                  color: _armado == true ? Colors.red : Colors.grey),
+              title: const Text('Disparar sirene ao detectar movimento'),
+              subtitle: Text(_armado == null
+                  ? 'sem contato com a câmera'
+                  : _armado!
+                      ? 'armado — a sirene toca por $_segundos s'
+                      : 'desarmado'),
+              // O disparo é decidido DENTRO da box: com a rede caída, o
+              // movimento ainda toca a sirene. Só ligar e desligar precisa
+              // de rede.
+              value: _armado ?? false,
+              onChanged: (_armado == null || _mudandoAlarme)
+                  ? null
+                  : (v) => _alternarAlarme(v),
+            ),
           ),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 20, 16, 8),

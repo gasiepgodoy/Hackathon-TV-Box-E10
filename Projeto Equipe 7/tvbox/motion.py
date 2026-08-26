@@ -15,6 +15,10 @@ dev = json.load(open(f"{BASE}/device.json"))
 cfg = json.load(open(f"{BASE}/config.json"))
 DEVICE_ID = dev["device_id"]
 TOPIC = f"devices/{DEVICE_ID}/alarme/event"
+# Gatilho local da sirene. Escrito em disco, e nao publicado no broker, porque
+# o MQTT sai pela internet: com a rede fora, o movimento seria detectado e a
+# sirene nunca tocaria -- e cortar a internet viraria a forma de desarmar.
+TRIGGER_FILE = f"{BASE}/alarme-trigger"
 CAMERAS_JSON = f"{BASE}/cameras.json"
 SETTINGS_JSON = f"{BASE}/camera-settings.json"
 _MTX_PASS = (cfg.get("mtx_internal_pass") or "").strip()
@@ -72,6 +76,14 @@ def detect(path, name, thresh, stop):
                 now = time.time()
                 if score > thresh and now - last > COOLDOWN:
                     last = now
+                    # O gatilho vem PRIMEIRO: publicar pode bloquear ou
+                    # falhar com a rede caida, e a sirene nao pode depender
+                    # disso. Quem decide se toca e o alarm.py, conforme o
+                    # estado armado.
+                    try:
+                        open(TRIGGER_FILE, "w").write(str(int(time.time())))
+                    except OSError as e:
+                        print("gatilho falhou:", e, flush=True)
                     client.publish(TOPIC, json.dumps(
                         {"type": "movimento", "camera": path, "name": name,
                          "score": round(score, 1)}), qos=1)

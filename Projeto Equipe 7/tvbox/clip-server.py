@@ -5,6 +5,7 @@
 #   /list?path=                     -> trechos gravados (repassa do MediaMTX)
 #   /storage                        -> espaço, uso por câmera e autonomia estimada
 #   /settings  (GET | POST)         -> qualidade e retenção de cada câmera
+#   /alarm     (GET | POST)         -> armar/desarmar o disparo por movimento
 #   /health                         -> vivo? autenticação ligada? (sempre aberto)
 #
 # AUTENTICAÇÃO: se "api_token" existir no config.json, toda rota (menos /health)
@@ -27,6 +28,7 @@ MTX_USER = "box"  # usuário interno do MediaMTX (não é o do celular)
 CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
+ALARM_STATE = "/opt/secbox/alarm-state.json"
 GEN_CAMERAS = "/opt/secbox/gen-cameras.py"
 REC_DIR = "/opt/mediamtx/rec"
 CACHE_DIR = "/opt/secbox-clip/cache"
@@ -291,7 +293,25 @@ class Handler(BaseHTTPRequestHandler):
         if not self._autorizado():
             self._nega()
             return
-        if urllib.parse.urlparse(self.path).path != "/settings":
+        caminho = urllib.parse.urlparse(self.path).path
+        if caminho == "/alarm":
+            try:
+                n = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(n) or b"{}")
+                armado = bool(body.get("armed"))
+                segundos = max(1, min(int(body.get("seconds", 60)), 600))
+            except Exception:
+                self.send_error(400)
+                return
+            # Escrita atomica: o alarm.py le este arquivo a cada segundo, e um
+            # arquivo pela metade seria lido como "desarmado".
+            tmp = ALARM_STATE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump({"armed": armado, "seconds": segundos}, f, indent=2)
+            os.replace(tmp, ALARM_STATE)
+            self._send_json({"armed": armado, "seconds": segundos})
+            return
+        if caminho != "/settings":
             self.send_error(404)
             return
         try:
@@ -344,6 +364,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         if u.path == "/storage":
             self._send_json(_storage())
+            return
+        if u.path == "/alarm":
+            try:
+                data = open(ALARM_STATE, "rb").read()
+            except Exception:
+                data = b'{"armed": false, "seconds": 60}'
+            self._send_json(data)
             return
         if u.path == "/settings":
             try:

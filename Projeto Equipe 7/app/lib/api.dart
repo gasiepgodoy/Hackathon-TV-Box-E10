@@ -268,4 +268,32 @@ class ApiService {
       return false;
     }
   }
+
+  // Estado do disparo por movimento, lido da própria box.
+  // A box é a fonte da verdade: é ela que decide se toca, e é nela que o
+  // estado sobrevive a reboot e a queda de rede.
+  static Future<Map<String, dynamic>?> alarmState([String? token]) async {
+    try {
+      final r = await http
+          .get(Uri.parse('$clipBase/alarm'), headers: _midia(token))
+          .timeout(_timeout);
+      if (r.statusCode == 200) {
+        return jsonDecode(r.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<bool> setAlarm(bool armed, int seconds, [String? token]) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$clipBase/alarm'),
+              headers: {'Content-Type': 'application/json', ..._midia(token)},
+              body: jsonEncode({'armed': armed, 'seconds': seconds}))
+          .timeout(_timeout);
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }

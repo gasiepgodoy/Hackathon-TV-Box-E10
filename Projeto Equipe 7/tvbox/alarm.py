@@ -15,6 +15,13 @@ DEVICE_ID  = dev["device_id"]
 BASE_TOPIC = f"devices/{DEVICE_ID}"
 CMD_TOPIC  = f"{BASE_TOPIC}/alarme/command"
 
+# Estado armado/desarmado, em disco: sobrevive a reboot e nao depende de rede.
+STATE_FILE   = f"{BASE}/alarm-state.json"
+# Gatilho local do motion.py. NAO passa pelo broker de proposito: o MQTT sai
+# pela internet, a rede desta box cai varias vezes por hora, e um alarme que
+# nao toca com a rede fora bastaria ser desarmado cortando a internet.
+TRIGGER_FILE = f"{BASE}/alarme-trigger"
+
 WAV      = cfg.get("siren_file", f"{BASE}/sounds/sirene.wav")
 ALSA_DEV = cfg.get("alsa_device", "default")
 MAX_SEC  = int(cfg.get("siren_max_seconds", 300))
@@ -22,6 +29,21 @@ MAX_SEC  = int(cfg.get("siren_max_seconds", 300))
 _proc = None
 _deadline = 0.0
 _lock = threading.Lock()
+
+
+def ler_estado():
+    try:
+        e = json.load(open(STATE_FILE))
+        return bool(e.get("armed")), int(e.get("seconds", 60))
+    except Exception:
+        return False, 60      # desarmado por omissao: tocar sem pedir e pior
+
+
+def gravar_estado(armado, segundos):
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({"armed": bool(armado), "seconds": int(segundos)}, f, indent=2)
+    os.replace(tmp, STATE_FILE)   # troca atomica: nunca deixa arquivo parcial
 
 def publish(client, etype, extra=None):
     body = {"type": etype}
@@ -70,8 +92,34 @@ def siren_stop(client, motivo="comando"):
 def watchdog(client):
     # Trava de seguranca: sirene presa tocando e pior que sirene que nao toca.
     # Vale tambem se o comando de parar se perder com a rede fora do ar.
+    armado_antes = ler_estado()[0]
     while True:
         time.sleep(1)
+
+        # O estado tambem muda por fora (o app escreve pelo clip-server), entao
+        # e relido a cada volta. So a TRANSICAO para desarmado cala a sirene --
+        # comparar o valor absoluto cancelaria um disparo manual feito com o
+        # alarme desarmado, que e um uso legitimo.
+        armado_agora = ler_estado()[0]
+        if armado_antes and not armado_agora:
+            siren_stop(client, "desarmado")
+            publish(client, "desarmado")
+        armado_antes = armado_agora
+
+        # Gatilho do movimento. O arquivo e consumido (removido) mesmo com o
+        # alarme desarmado -- senao um movimento de ontem dispararia no
+        # instante em que alguem armasse.
+        if os.path.exists(TRIGGER_FILE):
+            try:
+                os.unlink(TRIGGER_FILE)
+            except OSError:
+                pass
+            armado, segundos = ler_estado()
+            if armado:
+                print("sirene: disparada por movimento", flush=True)
+                publish(client, "disparo_movimento", {"seconds": segundos})
+                siren_start(client, segundos)
+
         with _lock:
             expirou = _deadline and time.time() >= _deadline
             morreu  = _proc is not None and _proc.poll() is not None
@@ -93,12 +141,28 @@ def handle(client, cmd):
         siren_stop(client)
     elif action == "test":
         siren_start(client, 3)
+    elif action in ("arm", "armar"):
+        segundos = int(cmd.get("seconds", ler_estado()[1]))
+        gravar_estado(True, segundos)
+        print("alarme: ARMADO (%ds por disparo)" % segundos, flush=True)
+        publish(client, "armado", {"seconds": segundos})
+    elif action in ("disarm", "desarmar"):
+        gravar_estado(False, ler_estado()[1])
+        # Desarmar tambem cala a sirene em curso: quem desarma quer silencio
+        # agora, nao daqui a alguns minutos.
+        siren_stop(client, "desarmado")
+        print("alarme: DESARMADO", flush=True)
+        publish(client, "desarmado")
     else:
         print("sirene: acao desconhecida:", action, flush=True)
 
 def on_connect(client, userdata, flags, rc):
     print("sirene: conectado ao broker rc=", rc, flush=True)
     client.subscribe(CMD_TOPIC, qos=1)
+    # Anuncia o estado ao (re)conectar: quem estava sem contato com a box
+    # descobre se ela esta armada sem precisar perguntar.
+    armado, segundos = ler_estado()
+    publish(client, "armado" if armado else "desarmado", {"seconds": segundos})
 
 def on_message(client, userdata, msg):
     try:

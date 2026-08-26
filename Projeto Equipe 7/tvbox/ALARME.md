@@ -127,6 +127,43 @@ onde alto-falante pequeno reproduz bem. Os "sons de alarme" de banco de áudio
 costumam ser tom puro agudo (9 kHz): soam altíssimos no celular e somem na
 caixinha ligada na saída de linha.
 
+## Disparo por movimento
+
+O `motion.py` já detectava movimento e publicava no broker. O que faltava era
+alguém tocar a sirene — e **onde** essa decisão mora não é detalhe.
+
+**O gatilho é local, em disco, não pelo MQTT.** O `motion.py` escreve
+`/opt/secbox/alarme-trigger`; o `alarm.py` observa esse arquivo a cada segundo e
+decide conforme o estado armado. Nada disso passa pela rede.
+
+Se o caminho fosse `motion.py → broker → alarm.py`, ele sairia pela internet
+(o broker é alcançado por túnel) e a rede desta box cai várias vezes por hora.
+Um alarme que não toca com a rede fora **não é alarme**: bastaria cortar a
+internet para desarmá-lo. O `motion.py` escreve o gatilho **antes** de publicar,
+justamente porque publicar pode bloquear ou falhar.
+
+O estado fica em `/opt/secbox/alarm-state.json`:
+
+```json
+{ "armed": true, "seconds": 60 }
+```
+
+Em disco porque precisa sobreviver a reboot e funcionar sem rede. Arquivo
+ausente ou corrompido é lido como **desarmado** — e como o app lê o mesmo
+arquivo pelo `/alarm`, ele mostra "desarmado" também. A interface reflete o
+comportamento real, em vez de dizer que protege quando não protege.
+
+O gatilho é consumido mesmo com o alarme desarmado; senão um movimento de
+ontem dispararia no instante em que alguém armasse.
+
+### Pelo app
+
+`GET /alarm` e `POST /alarm {armed, seconds}` no clip-server (porta 9997, com
+token). O `alarm.py` relê o estado a cada segundo, então uma mudança feita pelo
+app é percebida sem reiniciar nada — e **a transição** para desarmado cala a
+sirene em curso. Só a transição: comparar o valor absoluto cancelaria um
+disparo manual feito com o alarme desarmado, que é uso legítimo.
+
 ## Comandos MQTT
 
 Tópico `devices/{deviceId}/alarme/command`:
@@ -136,13 +173,17 @@ Tópico `devices/{deviceId}/alarme/command`:
 | `{"action":"on","seconds":60}` | liga a sirene por 60 s (limitada por `siren_max_seconds`) |
 | `{"action":"off"}` | desliga |
 | `{"action":"test"}` | toca 3 s |
+| `{"action":"arm","seconds":60}` | arma o disparo por movimento |
+| `{"action":"disarm"}` | desarma e cala a sirene em curso |
 
 Um `on` durante uma sirene já tocando **estende** o prazo em vez de ser
 ignorado — segundo disparo durante o primeiro alarme é motivo para continuar,
 não para encerrar.
 
 Eventos publicados em `devices/{deviceId}/alarme/event`: `sirene_ligada`,
-`sirene_desligada` (com `motivo`) e `sirene_falhou`.
+`sirene_desligada` (com `motivo`), `sirene_falhou`, `disparo_movimento`,
+`armado` e `desarmado`. O estado também é anunciado a cada reconexão ao broker,
+para quem estava sem contato descobrir se a box está armada sem perguntar.
 
 > O flow de push do servidor assina `devices/+/alarme/event`. Sem um caso para
 > estes tipos ele monta a mensagem genérica — vale acrescentar os textos em
