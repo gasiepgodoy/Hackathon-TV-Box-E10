@@ -6,8 +6,8 @@
 # Cada câmera tem seu liga/desliga e sua sensibilidade em camera-settings.json;
 # um supervisor acompanha cameras.json e sobe/derruba os detectores conforme as
 # câmeras aparecem, somem ou mudam de configuração.
-import json
-from urllib.parse import quote, time, subprocess, threading
+import json, time, subprocess, threading
+from urllib.parse import quote
 import paho.mqtt.client as mqtt
 
 BASE = "/opt/secbox"
