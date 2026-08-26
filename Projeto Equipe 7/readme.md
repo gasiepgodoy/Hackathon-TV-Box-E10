@@ -38,21 +38,25 @@ flowchart LR
         UI[Login • lista • player<br/>Mibo-style • claiming]
     end
 
+    CFT{{Cloudflare Tunnel<br/>guardiantvbox.com}}
+
     AGT <-->|MQTT| BRK
     MOT -->|alarme| BRK
-    BRK <--> NR
+    BRK <-->|eventos / comandos| NR
     NR <--> DB
     NR --> PUSH
-    UI <-->|MQTT / HTTP| BRK
-    UI <-->|HTTP API| NR
-    UI <-->|WebRTC / HTTP| MTX
+    UI <-->|HTTPS| CFT
+    CFT <-->|API| NR
+    CFT <-->|clipes / sinalização| MTX
+    UI <-.->|WebRTC: mídia direta| MTX
     PUSH -->|push| UI
 ```
 
 **Princípios de projeto**
-- **MQTT é o único canal de controle**; vídeo nunca passa pelo MQTT — vai por WebRTC (ao vivo) e HTTP (gravações), direto da câmera pro app.
-- **`deviceId` + segredo de fábrica** desde o início (multi-tenant): cada aparelho tem identidade própria e pertence a um usuário.
-- Começar **simples e escalável**: o piloto roda tudo enxuto, e cada peça pode ser trocada sem reescrever o resto.
+- **Vídeo nunca passa pelo servidor nem pelo túnel** — vai por WebRTC (ao vivo) e HTTP (gravações), direto da câmera pro app. Pelo túnel passa só a sinalização.
+- **`deviceId` + segredo de fábrica** (multi-tenant): cada aparelho tem identidade própria, pertence a um usuário, e o segredo é validado no pareamento.
+- **Nenhum segredo compilado no app.** Tudo que ele precisa para falar com a câmera, pede ao servidor provando ser o dono. APK se desmonta.
+- **MQTT é o canal de controle entre servidor e borda** — o app não fala MQTT, e por isso o broker nunca precisa ser publicado.
 
 ---
 
@@ -112,8 +116,8 @@ flowchart LR
 
 - **Borda:** Linux (ARM), MediaMTX, Python (paho-mqtt, libgpiod), ffmpeg, zbar (QR), NetworkManager.
 - **Servidor:** Mosquitto, PostgreSQL (+ pgcrypto), Node-RED, Node.js (firebase-admin).
-- **App:** Flutter/Dart — `mqtt_client`, `flutter_webrtc`, `video_player`+`chewie`, `firebase_messaging`, `qr_flutter`, `wifi_scan`.
-- **Conectividade (piloto):** Tailscale (VPN) entre app, servidor e borda.
+- **App:** Flutter/Dart — `flutter_webrtc`, `video_player`+`chewie`, `firebase_messaging`, `qr_flutter`, `wifi_scan`, `http`.
+- **Conectividade:** **Cloudflare Tunnel** publica a API e os serviços de mídia por HTTPS, sem porta aberta nem IP público. Tailscale segue para administração e para a ligação servidor↔borda.
 
 ---
 
@@ -128,27 +132,37 @@ flutter run
 ```
 
 Antes de rodar, configure o ambiente:
-1. **`lib/config.dart`** — substitua os placeholders (`SEU_SERVIDOR`, `SUA_TVBOX`, `SUA_SENHA_MQTT`) pelos endereços/credenciais do seu servidor e da sua TV box.
+1. **`lib/config.dart`** — substitua os placeholders (`SEU_DOMINIO`, `SEU_SERVIDOR`) pelos seus endereços. Não há credencial aqui: o app busca no servidor o token de acesso à box.
 2. **Firebase (push)** — adicione o seu próprio `android/app/google-services.json` (do seu projeto Firebase). Ele **não está versionado** por conter identificadores do projeto.
 
 ---
 
 ## Estado atual
 
-**Funcional e testado em campo:** vídeo ao vivo + gravação, player unificado, detecção de movimento com push, app completo (login, multi-dispositivo, claiming por QR **com Wi-Fi**), LEDs de status, e o ciclo de onboarding do zero.
+**Funcional e testado em campo:** vídeo ao vivo + gravação, player unificado, detecção de movimento com push, sirene por MQTT, LEDs de status, ciclo de onboarding por QR, e o app completo — login, cadastro, verificação de e-mail, recuperação de senha, multi-dispositivo.
 
-**Próximos passos (produção/infra):**
-- Sair do Tailscale para um **servidor público** (VPS) com **TLS** e **credencial/ACL por dispositivo** no broker.
-- **Autenticação nos endpoints de mídia** ao expor à internet.
-- **TURN** (coturn) para o WebRTC funcionar de qualquer rede.
-- Hardware: **hub USB com fonte** para a câmera (estabilidade 24/7).
+**O app roda de qualquer rede**, sem VPN: fala HTTPS com quatro nomes servidos por Cloudflare Tunnel, e todos exigem autenticação.
+
+**Próximos passos:**
+- **TURN** para o WebRTC fechar quando os dois lados estiverem atrás de NAT.
+- **Disparo do alarme por movimento**, com estado armado/desarmado.
+- **TLS e ACL por dispositivo** no broker, para a ligação servidor↔borda sair da VPN.
+- Hardware: **hub USB com fonte** para as câmeras (estabilidade 24/7).
 
 ---
 
 ## Segurança
 
-- Senhas de usuário com **hash bcrypt**; tokens de sessão e de pareamento com expiração.
-- Segredo de fábrica do dispositivo **nunca** exibido (só o hash é guardado).
-- No piloto, o perímetro é a VPN (Tailscale); a migração para internet pública inclui TLS ponta a ponta e ACL por dispositivo.
+- Senhas de usuário com **hash bcrypt**; tokens de sessão e de pareamento com expiração. E-mail confirmado por código, para a conta ser recuperável.
+- **Segredo de fábrica validado** no pareamento (só o hash é guardado) — sem isso, conhecer um `deviceId` bastaria para reivindicar o aparelho alheio.
+- **Serviços de mídia autenticados:** o clip-server exige token e o MediaMTX exige credencial, com usuários separados para os consumidores internos da box e para o app — senha única deixaria qualquer celular *publicar* na câmera.
+- **O app não carrega segredo nenhum:** pede o token ao servidor, que só entrega ao dono do aparelho.
+- **Comandos passam pelo servidor**, com lista fechada de ações e checagem de posse.
+
+> **Lição que custou caro:** regra de autenticação **por IP de origem não vale
+> atrás de proxy reverso**. O `cloudflared` entrega o tráfego em `localhost`, e
+> uma exceção criada para a box falar consigo mesma expôs o vídeo ao vivo
+> publicamente por alguns minutos. Códigos HTTP não denunciaram — foi preciso
+> abrir a página num navegador para ver.
 
 > Nenhuma credencial (senhas, chaves, tokens) está versionada neste repositório.
