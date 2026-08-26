@@ -122,6 +122,24 @@ flowchart LR
 
 ---
 
+## Baixar o aplicativo
+
+<img src="app/baixar-apk.png" alt="QR code para baixar o SecBox" width="200" align="right">
+
+Aponte a câmera para o QR, ou abra no celular:
+
+**[github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/latest/download/secbox.apk](https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/latest/download/secbox.apk)**
+
+Esse endereço é permanente e sempre entrega a **versão mais recente** — para
+atualizar, basta abri-lo de novo. O Android vai pedir permissão para instalar de
+fonte desconhecida, o que é normal fora da Play Store.
+
+Requer uma conta no servidor do projeto e um dispositivo pareado. As
+[versões publicadas](https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases)
+trazem o que mudou em cada uma.
+
+<br clear="right">
+
 ## Como rodar o app
 
 Pré-requisito: [Flutter](https://docs.flutter.dev/get-started/install) instalado.
