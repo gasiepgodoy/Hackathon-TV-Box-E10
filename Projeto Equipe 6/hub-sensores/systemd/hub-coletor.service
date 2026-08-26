@@ -1,0 +1,17 @@
+[Unit]
+Description=Hub de sensores - coletor MQTT
+After=network.target mosquitto.service zigbee2mqtt.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=/opt/hub-sensores/src
+Environment=HUB_CONFIG=/etc/hub/hub.ini
+ExecStart=/usr/bin/python3 -m hub.coletor
+WorkingDirectory=/opt/hub-sensores
+Restart=always
+RestartSec=10s
+User=root
+
+[Install]
+WantedBy=multi-user.target

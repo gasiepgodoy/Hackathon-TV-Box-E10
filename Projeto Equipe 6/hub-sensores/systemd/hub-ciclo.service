@@ -1,0 +1,10 @@
+[Unit]
+Description=Hub de sensores - agrega, detecta eventos e envia pelo LoRa
+
+[Service]
+Type=oneshot
+Environment=PYTHONPATH=/opt/hub-sensores/src
+Environment=HUB_CONFIG=/etc/hub/hub.ini
+ExecStart=/usr/bin/python3 -m hub.ciclo --transporte log
+WorkingDirectory=/opt/hub-sensores
+User=root

@@ -1,0 +1,17 @@
+# Segredos e dados locais — nunca commitar
+config/hub.ini
+*.db
+*.db-wal
+*.db-shm
+
+# Backups de imagem: grandes demais para git e cheios de segredos
+backup*/
+*.tar.gz
+*.img
+*.img.xz
+
+# Runtime
+*.log
+__pycache__/
+*.pyc
+.venv/
