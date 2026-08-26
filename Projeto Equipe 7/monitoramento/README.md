@@ -15,13 +15,19 @@ execução anterior. Roda numa máquina Windows que alcance as duas por VPN.
 responder `401` (rota viva recusando um token inválido).
 
 **Com SSH** — uptime, estado de cada serviço systemd, **contador de reinícios
-por serviço**, uso de disco e a contagem de quedas do Wi-Fi no `wifi-guard`.
+por serviço**, uso de disco, a contagem de quedas do Wi-Fi no `wifi-guard` e o
+**estado do cabo de rede**.
 
 O contador de reinícios existe porque `is-active` não basta: um serviço em laço
 de falha alterna entre `activating` e `failed`, e uma coleta pontual pega
 qualquer um dos dois. Foi assim que a detecção de movimento ficou cinco dias
 parada sem ninguém notar — o `activating` aparecia e passava por transição
 normal. `NRestarts` subindo é inequívoco.
+
+O cabo é vigiado em dois níveis: `carrier` diz se há link físico, e o IP só
+aparece quando o DHCP responde. Na instalação atual há link mas não há IP —
+a tomada exige cadastro de MAC, e o dia em que o IP aparecer é o dia em que o
+pedido à TI foi atendido.
 
 Cada execução acrescenta uma linha JSON em `history.jsonl` e imprime um resumo
 com uma seção **"mudou desde a coleta anterior"** — que é o que torna o relatório
