@@ -14,8 +14,14 @@ execução anterior. Roda numa máquina Windows que alcance as duas por VPN.
 `/cameras` e `/storage` do clip-server, e `/api/me` do servidor, que deve
 responder `401` (rota viva recusando um token inválido).
 
-**Com SSH** — uptime, estado de cada serviço systemd, uso de disco e a contagem
-de quedas do Wi-Fi no log do `wifi-guard`.
+**Com SSH** — uptime, estado de cada serviço systemd, **contador de reinícios
+por serviço**, uso de disco e a contagem de quedas do Wi-Fi no `wifi-guard`.
+
+O contador de reinícios existe porque `is-active` não basta: um serviço em laço
+de falha alterna entre `activating` e `failed`, e uma coleta pontual pega
+qualquer um dos dois. Foi assim que a detecção de movimento ficou cinco dias
+parada sem ninguém notar — o `activating` aparecia e passava por transição
+normal. `NRestarts` subindo é inequívoco.
 
 Cada execução acrescenta uma linha JSON em `history.jsonl` e imprime um resumo
 com uma seção **"mudou desde a coleta anterior"** — que é o que torna o relatório
@@ -48,6 +54,14 @@ credencial no mundo, e ela nunca fica desatualizada quando o token é girado.
 clip-server, e existe justamente para denunciar o estado perigoso: se ele
 responder `auth: false`, a porta 9997 subiu sem proteção e o relatório destaca
 isso.
+
+**Duas tentativas nas chamadas HTTP.** A rede da box cai várias vezes por hora,
+e medindo dava cerca de uma coleta em três perdendo esses dados. A repetição
+recupera a maioria, e só custa uma pausa quando já falhou.
+
+**Leitura ausente não é mudança de estado.** O comparador exige os dois lados
+presentes: sem isso, um soluço de rede apareceria como
+`cams_conectadas : 1 -> ` e treinaria quem lê a ignorar o relatório.
 
 **Falha de rede e "aparelho offline" são coisas diferentes.** O coletor não
 converte uma na outra: quando não consegue falar com o servidor, diz isso, em

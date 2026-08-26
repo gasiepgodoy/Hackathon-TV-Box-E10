@@ -33,8 +33,18 @@ function Test-Porta($alvo, $porta) {
 function Get-Json($url, $token) {
     $h = @{}
     if ($token) { $h['Authorization'] = "Bearer $token" }
-    try { (Invoke-WebRequest -Uri $url -TimeoutSec 8 -UseBasicParsing -Headers $h).Content | ConvertFrom-Json }
-    catch { $null }
+    # Duas tentativas: o Wi-Fi da box cai varias vezes por hora, e medindo dava
+    # cerca de 1 coleta em 3 perdendo estes dados. Uma repeticao recupera a
+    # maioria, e o custo e uma pausa de 3s so quando ja falhou.
+    foreach ($tentativa in 1..2) {
+        try {
+            return (Invoke-WebRequest -Uri $url -TimeoutSec 8 -UseBasicParsing `
+                        -Headers $h).Content | ConvertFrom-Json
+        } catch {
+            if ($tentativa -lt 2) { Start-Sleep -Seconds 3 }
+        }
+    }
+    return $null
 }
 
 function Invoke-Remoto($destino, $comando) {
@@ -103,25 +113,27 @@ try {
 }
 
 # ---------- via SSH (opcional) ----------
-$svcBox = 'mediamtx secbox-agent secbox-motion secbox-clip secbox-leds wifi-guard'
+$svcBox = 'mediamtx secbox-agent secbox-motion secbox-clip secbox-leds wifi-guard secbox-mqtt-tunnel'
 $outBox = Invoke-Remoto "root@$BOX" `
-    "cut -d. -f1 /proc/uptime; systemctl is-active $svcBox | tr '\n' ' '; echo; grep -c 'queda detectada' /var/log/wifi-guard.log 2>/dev/null || echo 0"
+    "cut -d. -f1 /proc/uptime; systemctl is-active $svcBox | tr '\n' ' '; echo; grep -c 'queda detectada' /var/log/wifi-guard.log 2>/dev/null || echo 0; for u in $svcBox; do printf '%s=%s ' `$u `$(systemctl show `$u -p NRestarts --value); done; echo"
 if ($outBox) {
     $l = $outBox -split "`n"
     $e.box_uptime_s   = [int]($l[0].Trim())
     $e.box_servicos   = $l[1].Trim()
     $e.box_quedas_wifi = [int]($l[2].Trim())
+    if ($l.Count -gt 3) { $e.box_reinicios = $l[3].Trim() }
     $e.ssh_box = $true
 } else { $e.ssh_box = $false }
 
 $svcSrv = 'mosquitto postgresql nodered secbox-push'
 $outSrv = Invoke-Remoto "$USR@$SRV" `
-    "cut -d. -f1 /proc/uptime; systemctl is-active $svcSrv | tr '\n' ' '; echo; df --output=pcent / | tail -1 | tr -dc '0-9'"
+    "cut -d. -f1 /proc/uptime; systemctl is-active $svcSrv | tr '\n' ' '; echo; df --output=pcent / | tail -1 | tr -dc '0-9'; echo; for u in $svcSrv; do printf '%s=%s ' `$u `$(systemctl show `$u -p NRestarts --value); done; echo"
 if ($outSrv) {
     $l = $outSrv -split "`n"
     $e.srv_uptime_s = [int]($l[0].Trim())
     $e.srv_servicos = $l[1].Trim()
     $e.srv_disco_pct = [int]($l[2].Trim())
+    if ($l.Count -gt 3) { $e.srv_reinicios = $l[3].Trim() }
     $e.ssh_srv = $true
 } else { $e.ssh_srv = $false }
 
@@ -146,11 +158,13 @@ if ($null -ne $e.disco_livre_gb) {
 if ($e.ssh_box) {
     "  uptime    $([math]::Round($e.box_uptime_s/3600,1)) h   servicos: $($e.box_servicos)"
     "  wifi      $($e.box_quedas_wifi) quedas no log"
+    "  reinicios $($e.box_reinicios)"
 }
 "Servidor  ping=$(if($e.srv_ping){'ok'}else{'FORA'})  1880=$(if($e.srv_1880){'ok'}else{'FECHADA'})  1883=$(if($e.srv_1883){'ok'}else{'FECHADA'})  /api/me=$($e.api_me)"
 if ($e.ssh_srv) {
     "  uptime    $([math]::Round($e.srv_uptime_s/3600,1)) h   servicos: $($e.srv_servicos)"
     "  disco     $($e.srv_disco_pct)% usado"
+    "  reinicios $($e.srv_reinicios)"
 }
 if (-not $e.ssh_box -or -not $e.ssh_srv) {
     "  (sem SSH em: $(@(if(-not $e.ssh_box){'box'}; if(-not $e.ssh_srv){'servidor'}) -join ', ') -- chave nao instalada ou recusada)"
@@ -164,7 +178,12 @@ if ($linhas.Count -ge 2) {
         if ($k -eq 'ts') { continue }
         $a = $ant.$k
         $b = $e[$k]
-        if ($null -ne $a -and "$a" -ne "$b") { $mud += "$k : $a -> $b" }
+        # Exige os dois lados presentes: a rede da box cai, e uma leitura que
+        # faltou nao e mudanca de estado. Sem isto, um soluco de rede apareceria
+        # como "cams_conectadas: 1 -> " e treinaria quem le a ignorar o relatorio.
+        if ($null -ne $a -and $null -ne $b -and "$a" -ne "$b") {
+            $mud += "$k : $a -> $b"
+        }
     }
     if ($mud.Count) { ""; "=== mudou desde a coleta anterior ==="; $mud | ForEach-Object { "  $_" } }
 }
