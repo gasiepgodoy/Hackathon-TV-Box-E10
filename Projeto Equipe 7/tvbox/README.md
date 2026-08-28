@@ -18,11 +18,13 @@ movimento, remux de clipes e LEDs de status.
 | [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
+| [`rec-prune.py`](rec-prune.py) | `/opt/secbox/` | Descarta os trechos sem movimento das câmeras em modo "só com movimento". |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
 | [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, sirene, token da 9997, senha interna do MediaMTX). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
 | [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
 | [`ALARME.md`](ALARME.md) | (documentação) | Sirene por MQTT — e por que o jack AV não toca com o DTB genérico. |
+| [`GRAVACAO.md`](GRAVACAO.md) | (documentação) | Gravar só com movimento: por que é descarte e não liga/desliga da captura. |
 
 ## Identidade do dispositivo
 
@@ -46,6 +48,8 @@ apt install -y ffmpeg v4l-utils zbar-tools python3 python3-paho-mqtt python3-lib
 cp systemd/*.service systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now mediamtx secbox-agent secbox-motion secbox-clip secbox-leds sd-guard.timer
+# descarte da gravacao sem movimento (ver GRAVACAO.md):
+systemctl enable --now secbox-recprune.timer
 # alarme sonoro (precisa de uma saida de audio funcional, ver ALARME.md):
 systemctl enable --now secbox-alarm
 # se estiver usando o Wi-Fi interno, some o vigia da rede:

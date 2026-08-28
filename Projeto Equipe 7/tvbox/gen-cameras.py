@@ -25,7 +25,16 @@ FPS_OPTIONS = [3, 5, 10, 15]
 # estimar o consumo antes de aplicar uma mudança.
 CPU_PER_MPPS = 8.3
 DEFAULT = {"quality": "media", "retention_h": 24,
-           "motion": True, "sensitivity": "media", "fps": None}
+           "motion": True, "sensitivity": "media", "fps": None,
+           "record_mode": "continuo"}
+# "continuo" guarda tudo; "movimento" grava igual e deixa o rec-prune.py
+# descartar depois o que nao teve movimento -- ver o cabecalho de rec-prune.py
+# para o porque de nao ser um liga/desliga da captura.
+REC_MODES = ("continuo", "movimento")
+# Segmento curto no modo movimento: o descarte so consegue ser fino ate o
+# tamanho do arquivo, e 10 min significaria guardar 10 min inteiros por causa
+# de um segundo de movimento. Custa mais arquivos, e a maioria deles some.
+SEGMENTO = {"continuo": 600, "movimento": 60}
 # Sensibilidade do detector: limiar menor = dispara com menos movimento.
 SENSITIVITIES = {"alta": 8, "media": 12, "baixa": 20}
 
@@ -127,6 +136,13 @@ def build(cams, settings):
         # cai para a maior resolução suportada se o preset não existir na câmera
         size = p["size"] if (not sizes or p["size"] in sizes) else sizes[0]
         ret = max(1, int(cfg["retention_h"]))
+        # O detector precisa estar ligado (na camera E no geral) para haver
+        # como saber o que descartar. Sem ele o modo cai para continuo, em vez
+        # de a box achar que esta economizando enquanto apaga as cegas.
+        det = bool(cfg["motion"]) and settings["notify"].get("motion", True)
+        modo = cfg.get("record_mode")
+        if modo not in REC_MODES or not det:
+            modo = "continuo"
         # fps é escolha independente da qualidade (é o que mais pesa na CPU);
         # sem escolha, vale o do preset
         fps = cfg["fps"] if cfg["fps"] in FPS_OPTIONS else p["fps"]
@@ -142,14 +158,17 @@ def build(cams, settings):
                   "    record: yes",
                   "    recordPath: /opt/mediamtx/rec/%path/%Y-%m-%d_%H-%M-%S-%f",
                   "    recordFormat: fmp4",
-                  "    recordSegmentDuration: 600s",
+                  "    recordSegmentDuration: %ds" % SEGMENTO[modo],
                   "    recordDeleteAfter: %dh" % ret]
         meta.append({"name": "Câmera %d" % (i + 1), "path": path,
                      "id": cam_id(byid), "label": label(byid),
                      "quality": cfg["quality"], "retention_h": ret,
                      "kbps": p["kbps"], "size": size, "sizes": sizes,
                      "fps": fps, "motion": bool(cfg["motion"]),
-                     "sensitivity": cfg["sensitivity"]})
+                     "sensitivity": cfg["sensitivity"],
+                     # o modo EM VIGOR, ja com o rebaixamento acima aplicado
+                     "record_mode": modo,
+                     "record_mode_pedido": cfg.get("record_mode", "continuo")})
     return "\n".join(lines) + "\n", meta
 
 
@@ -160,6 +179,7 @@ json.dump({"cameras": meta, "connected": len(cams), "limit": MAX,
            "exceeded": len(cams) > MAX, "presets": PRESETS,
            "fps_options": FPS_OPTIONS, "cpu_per_mpps": CPU_PER_MPPS,
            "sensitivities": sorted(SENSITIVITIES),
+           "record_modes": list(REC_MODES),
            "notify": dict({"motion": True, "camera_offline": True},
                           **settings["notify"])},
           open(CAMERAS_JSON, "w"))

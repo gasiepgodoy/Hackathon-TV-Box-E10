@@ -4,7 +4,7 @@
 #   /clip?path=&start=&duration=    -> trecho em MP4 navegável (+faststart)
 #   /list?path=                     -> trechos gravados (repassa do MediaMTX)
 #   /storage                        -> espaço, uso por câmera e autonomia estimada
-#   /settings  (GET | POST)         -> qualidade e retenção de cada câmera
+#   /settings  (GET | POST)         -> qualidade, retenção e modo de gravação
 #   /alarm     (GET | POST)         -> armar/desarmar o disparo por movimento
 #   /health                         -> vivo? autenticação ligada? (sempre aberto)
 #
@@ -29,6 +29,7 @@ CONFIG_JSON = "/opt/secbox/config.json"
 CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
 ALARM_STATE = "/opt/secbox/alarm-state.json"
+PRUNE_STATS = "/opt/secbox/rec-prune.json"
 GEN_CAMERAS = "/opt/secbox/gen-cameras.py"
 REC_DIR = "/opt/mediamtx/rec"
 CACHE_DIR = "/opt/secbox-clip/cache"
@@ -136,6 +137,20 @@ def _dir_size(p):
     return total
 
 
+def _prune_stats():
+    """O que o faxineiro de gravação mediu por câmera.
+
+    Interessa ao app sobretudo a "razao": a fração do tempo vigiado que
+    sobrevive ao descarte. Sem ela o app só saberia estimar espaço supondo
+    gravação contínua, e mostraria números muito maiores que a realidade para
+    quem escolheu gravar só com movimento.
+    """
+    try:
+        return json.load(open(PRUNE_STATS)).get("paths", {})
+    except Exception:
+        return {}
+
+
 def _storage():
     # Autonomia = quanto ainda cabe de gravação dividido pelo consumo somado.
     # O orçamento não é só o espaço livre: a gravação antiga é descartável, o
@@ -170,7 +185,7 @@ def _storage():
     return {"total": total, "free": free, "used": used, "rec_used": rec,
             "budget": budget, "per_camera": per, "kbps_total": kbps,
             "hours": round(hours, 1), "load": round(load, 2),
-            "cpus": os.cpu_count() or 1}
+            "cpus": os.cpu_count() or 1, "prune": _prune_stats()}
 
 
 def _load_settings():
@@ -190,6 +205,7 @@ def _load_settings():
 def _apply_settings(new):
     # Grava as preferências e manda o gerador reescrever o mediamtx.yml.
     cur = _load_settings()
+    meta = {}   # sem isto, um cameras.json ilegivel deixaria "meta" sem valor
     try:
         meta = json.load(open(CAMERAS_JSON))
         valid = set(meta.get("presets", {}))
@@ -200,6 +216,8 @@ def _apply_settings(new):
     valid = valid or {"alta", "media", "baixa"}
     sens = sens or {"alta", "media", "baixa"}
     fpss = fpss or {3, 5, 10, 15}
+    modos = set(meta.get("record_modes", [])) if isinstance(meta, dict) else set()
+    modos = modos or {"continuo", "movimento"}
     for k, v in (new.get("notify") or {}).items():
         if k in ("motion", "camera_offline"):
             cur["notify"][k] = bool(v)
@@ -215,6 +233,8 @@ def _apply_settings(new):
             entry["sensitivity"] = cfg["sensitivity"]
         if isinstance(cfg.get("motion"), bool):
             entry["motion"] = cfg["motion"]
+        if cfg.get("record_mode") in modos:
+            entry["record_mode"] = cfg["record_mode"]
         try:
             if int(cfg["fps"]) in fpss:
                 entry["fps"] = int(cfg["fps"])

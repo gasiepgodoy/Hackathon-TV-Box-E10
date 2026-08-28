@@ -1,0 +1,9 @@
+[Unit]
+Description=Roda o faxineiro da gravacao a cada 5 min
+
+[Timer]
+OnBootSec=4min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

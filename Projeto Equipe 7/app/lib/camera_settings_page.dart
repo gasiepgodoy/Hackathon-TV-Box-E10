@@ -33,6 +33,10 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   Map<String, bool> _origNotify = {};
   List<String> _sensitivities = ['baixa', 'media', 'alta'];
   List<int> _fpsOptions = [3, 5, 10, 15];
+  List<String> _recordModes = ['continuo', 'movimento'];
+  // O que a box mediu sobre o descarte, indexado pelo path do MediaMTX.
+  Map<String, dynamic> _prune = {};
+  final Map<String, String> _camPath = {}; // id da camera -> path
   double _cpuPerMpps = 8.3;
 
   @override
@@ -69,7 +73,13 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
         'motion': cam['motion'] as bool? ?? true,
         'sensitivity': cam['sensitivity']?.toString() ?? 'media',
         'fps': (cam['fps'] as num? ?? 10).toInt(),
+        // O PEDIDO, nao o que esta em vigor: uma camera com detecção desligada
+        // tem o modo rebaixado para contínuo pela box, e a escolha do usuário
+        // não pode se perder por causa disso.
+        'record_mode':
+            cam['record_mode_pedido']?.toString() ?? cam['record_mode']?.toString() ?? 'continuo',
       };
+      _camPath[id] = cam['path']?.toString() ?? id;
       _edit[id] = Map.of(v);
       _orig[id] = Map.of(v);
     }
@@ -84,6 +94,10 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
           .map((e) => (e as num).toInt())
           .toList();
       _cpuPerMpps = (c['cpu_per_mpps'] as num? ?? _cpuPerMpps).toDouble();
+      _recordModes = ((c['record_modes'] as List?) ?? _recordModes)
+          .map((e) => e.toString())
+          .toList();
+      _prune = (s['prune'] as Map?)?.cast<String, dynamic>() ?? {};
       _notify = {
         'motion': n['motion'] as bool? ?? true,
         'camera_offline': n['camera_offline'] as bool? ?? true,
@@ -119,14 +133,40 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
 
   double get _cpuTotal => _edit.keys.fold(0.0, (a, id) => a + _cpuOf(id));
 
-  // Espaço que a retenção pedida exige: bitrate × tempo.
+  // Fração do tempo vigiado que sobrevive ao descarte, medida pela própria
+  // box. Só vale com pelo menos uma hora observada: com dez minutos, um único
+  // movimento distorceria a conta para qualquer lado.
+  double? _ratio(String id) {
+    final p = _prune[_camPath[id]] as Map?;
+    if (p == null) return null;
+    final vigiado = (p['vigiado_h'] as num? ?? 0).toDouble();
+    final r = p['razao'];
+    if (vigiado < 1 || r is! num) return null;
+    return r.toDouble();
+  }
+
+  double _liberado(String id) =>
+      ((_prune[_camPath[id]] as Map?)?['liberado_bytes'] as num? ?? 0).toDouble();
+
+  bool _porMovimento(String id) => _edit[id]!['record_mode'] == 'movimento';
+
+  // A detecção precisa estar ligada nos dois níveis: sem detector não há como
+  // saber o que descartar, e a box rebaixa o modo para contínuo.
+  bool _detectando(String id) =>
+      (_edit[id]!['motion'] as bool? ?? true) && (_notify['motion'] ?? true);
+
+  // Espaço que a retenção pedida exige: bitrate × tempo. Gravando só com
+  // movimento, o que fica é uma fração disso — e usar a fração MEDIDA é o que
+  // impede a tela de assustar com um número que não vai acontecer.
   double _needBytes(String id) {
     final e = _edit[id]!;
-    return _kbps(e['quality'] as String) *
+    final bruto = _kbps(e['quality'] as String) *
         1000 /
         8 *
         3600 *
         (e['retention_h'] as int);
+    if (!_porMovimento(id) || !_detectando(id)) return bruto;
+    return bruto * (_ratio(id) ?? 1.0); // sem medida ainda: assume o pior caso
   }
 
   double get _needTotal =>
@@ -139,6 +179,30 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   bool get _dirty =>
       _edit.keys.any((id) => _edit[id].toString() != _orig[id].toString()) ||
       _notify.toString() != _origNotify.toString();
+
+  String _recordHint(String id) {
+    if (!_porMovimento(id)) {
+      return 'Guarda tudo o que a câmera vê. O espaço é previsível e constante.';
+    }
+    if (!_detectando(id)) {
+      return 'Precisa da detecção de movimento ligada, aqui e em Notificações. '
+          'Sem detector não há como saber o que descartar, e a TV box continua '
+          'guardando tudo.';
+    }
+    final r = _ratio(id);
+    if (r == null) {
+      return 'A câmera grava sempre, e a TV box descarta depois os trechos em '
+          'que nada aconteceu — guardando 30 s antes e 60 s depois de cada '
+          'movimento. Ainda medindo quanto isso economiza aqui.';
+    }
+    final lib = _liberado(id);
+    final extra = lib > 0 ? ' — já liberou ${_gb(lib)}' : '';
+    return 'Guardando ${(r * 100).round()}% do tempo vigiado$extra. Cada trecho '
+        'mantém 30 s antes e 60 s depois do movimento.';
+  }
+
+  double get _liberadoTotal =>
+      _edit.keys.fold(0.0, (a, id) => a + _liberado(id));
 
   String _gb(num b) => '${(b / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   String _hours(double h) =>
@@ -228,6 +292,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
               _gb((_storage['rec_used'] as num? ?? 0).toDouble())),
           for (final e in per.entries)
             _row('   ${e.key}', _gb((e.value as num).toDouble()), dim: true),
+          if (_liberadoTotal > 0)
+            _row('Já liberado pelo descarte', _gb(_liberadoTotal)),
           const Divider(height: 20),
           _row('Consumo somado', '${(_kbpsTotal / 1000).toStringAsFixed(1)} Mbps'),
           _row('Retenção pedida', _gb(_needTotal)),
@@ -360,7 +426,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
             ],
           ),
           const SizedBox(height: 4),
-          Text('${_sizeOf(q)} · ${_gb(_needBytes(id))} para ${_retLabel(ret)}',
+          Text('${_sizeOf(q)} · ${_gb(_needBytes(id))} para ${_retLabel(ret)}'
+              '${_porMovimento(id) && _detectando(id) ? " (só o movimento)" : ""}',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 12),
           Row(children: [
@@ -400,6 +467,35 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                 ),
             ],
           ),
+          const SizedBox(height: 12),
+          const Text('Gravar', style: TextStyle(fontSize: 13)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: [
+              if (_recordModes.contains('continuo'))
+                ChoiceChip(
+                  label: const Text('Sempre'),
+                  selected: !_porMovimento(id),
+                  onSelected: (_) =>
+                      setState(() => e['record_mode'] = 'continuo'),
+                ),
+              if (_recordModes.contains('movimento'))
+                ChoiceChip(
+                  label: const Text('Só com movimento'),
+                  selected: _porMovimento(id),
+                  // Desligado quando não há detector: o modo seria rebaixado
+                  // pela box de qualquer forma, e um botão que não faz o que
+                  // diz é pior que um botão ausente.
+                  onSelected: _detectando(id)
+                      ? (_) => setState(() => e['record_mode'] = 'movimento')
+                      : null,
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(_recordHint(id),
+              style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const Divider(height: 24),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,

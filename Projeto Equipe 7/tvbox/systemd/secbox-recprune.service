@@ -1,0 +1,6 @@
+[Unit]
+Description=Descarta a gravacao sem movimento das cameras em modo "movimento"
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/secbox/rec-prune.py
