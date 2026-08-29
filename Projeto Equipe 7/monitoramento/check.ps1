@@ -113,9 +113,9 @@ try {
 }
 
 # ---------- via SSH (opcional) ----------
-$svcBox = 'mediamtx secbox-agent secbox-motion secbox-clip secbox-leds wifi-guard secbox-mqtt-tunnel secbox-alarm'
+$svcBox = 'mediamtx secbox-agent secbox-motion secbox-clip secbox-leds wifi-guard secbox-mqtt-tunnel secbox-alarm usb-guard'
 $outBox = Invoke-Remoto "root@$BOX" `
-    "cut -d. -f1 /proc/uptime; systemctl is-active $svcBox | tr '\n' ' '; echo; grep -c 'queda detectada' /var/log/wifi-guard.log 2>/dev/null || echo 0; for u in $svcBox; do printf '%s=%s ' `$u `$(systemctl show `$u -p NRestarts --value); done; echo; cat /sys/class/net/eth0/carrier 2>/dev/null || echo 0; ip -4 -br addr show eth0 2>/dev/null | awk '{print `$3}'"
+    "cut -d. -f1 /proc/uptime; systemctl is-active $svcBox | tr '\n' ' '; echo; grep -c 'queda detectada' /var/log/wifi-guard.log 2>/dev/null || echo 0; for u in $svcBox; do printf '%s=%s ' `$u `$(systemctl show `$u -p NRestarts --value); done; echo; cat /sys/class/net/eth0/carrier 2>/dev/null || echo 0; cat /opt/secbox/usb-guard.json 2>/dev/null | grep -c faltam_s; ip -4 -br addr show eth0 2>/dev/null | awk '{print `$3}'"
 if ($outBox) {
     $l = $outBox -split "`n"
     $e.box_uptime_s   = [int]($l[0].Trim())
@@ -126,7 +126,10 @@ if ($outBox) {
     # DHCP responde -- que hoje nao acontece porque o MAC nao esta cadastrado
     # na tomada. E o sinal de que o pedido a TI foi atendido.
     if ($l.Count -gt 4) { $e.eth_carrier = $l[4].Trim() }
-    if ($l.Count -gt 5) { $e.eth_ip = $l[5].Trim() }
+    # Porta USB em quarentena = camera sumida DE PROPOSITO. Sem esta linha, o
+    # relatorio diria so "cams_conectadas 2 -> 1" e ninguem saberia por que.
+    if ($l.Count -gt 5) { $e.usb_quarentena = [int]($l[5].Trim()) }
+    if ($l.Count -gt 6) { $e.eth_ip = $l[6].Trim() }
     $e.ssh_box = $true
 } else { $e.ssh_box = $false }
 
@@ -164,6 +167,9 @@ if ($e.ssh_box) {
     "  uptime    $([math]::Round($e.box_uptime_s/3600,1)) h   servicos: $($e.box_servicos)"
     "  wifi      $($e.box_quedas_wifi) quedas no log"
     "  reinicios $($e.box_reinicios)"
+    if ($e.usb_quarentena -gt 0) {
+        "  ATENCAO   $($e.usb_quarentena) porta(s) USB em quarentena pelo usb-guard -- ver journalctl -u usb-guard"
+    }
     if ($e.eth_ip) {
         "  CABO      link=$($e.eth_carrier)  IP=$($e.eth_ip)  <- o cadastro do MAC saiu!"
     } elseif ($e.eth_carrier -eq '1') {

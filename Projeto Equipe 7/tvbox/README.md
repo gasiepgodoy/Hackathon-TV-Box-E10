@@ -19,6 +19,7 @@ movimento, remux de clipes e LEDs de status.
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
 | [`rec-prune.py`](rec-prune.py) | `/opt/secbox/` | Descarta os trechos sem movimento das câmeras em modo "só com movimento". |
+| [`usb-guard.py`](usb-guard.py) | `/opt/secbox/` | Impede que uma porta USB instável derrube as outras (ver abaixo). |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
 | [`config.example.json`](config.example.json) | `/opt/secbox/config.json` | Modelo de configuração (broker, RTSP, movimento, sirene, token da 9997, senha interna do MediaMTX). |
 | [`systemd/`](systemd/) | `/etc/systemd/system/` | Serviços (habilitar com `systemctl enable --now`). |
@@ -54,12 +55,42 @@ systemctl enable --now secbox-recprune.timer
 systemctl enable --now secbox-alarm
 # se estiver usando o Wi-Fi interno, some o vigia da rede:
 systemctl enable --now wifi-guard
+# vigia do USB (recomendado sempre que houver mais de uma camera):
+systemctl enable --now usb-guard
 ```
 
 > **Nota de hardware:** webcams USB "gulosas" (ex.: Logitech C920) podem cair do
 > barramento na porta da TV box — use um **hub USB com fonte própria**. Se a câmera
 > voltar com outro `/dev/videoN`, aponte o `mediamtx.yml` para um caminho estável
 > em `/dev/v4l/by-id/`.
+
+## Uma câmera ruim derrubando a outra
+
+As duas portas da box penduram no **mesmo controlador** (`xhci-hcd.2.auto`): a
+USB 3.0 não é um controlador separado, é outro root hub do mesmo bloco. Por
+isso um dispositivo que falha a enumeração em laço não fica contido na porta
+dele — cada tentativa mexe no controlador, e já bastou uma câmera ruim para
+levar junto uma câmera boa que estava num hub com fonte própria.
+
+Isolamento de verdade seria hardware. Em software dá para fazer duas coisas, e
+o [`usb-guard.py`](usb-guard.py) faz as duas:
+
+1. **`early_stop=1` em toda porta.** O kernel (≥ 6.0) desiste de um dispositivo
+   que falha a enumeração repetidas vezes, em vez de tentar para sempre. Vale
+   mesmo com o serviço fora do ar.
+2. **Quarentena.** Porta que reenumera 8 vezes em 5 min é desligada por 15 min,
+   dobrando a cada reincidência até 4 h, e depois ganha nova chance.
+
+A quarentena **nunca** cai sobre uma porta que tem um hub: desligá-la levaria
+junto todos os filhos, que é exatamente o dano que o serviço existe para
+evitar. Nesse caso ele denuncia no log e não age.
+
+Para soltar uma porta na mão:
+
+```bash
+cat /opt/secbox/usb-guard.json          # o que está em quarentena e por quê
+systemctl restart usb-guard             # zera as quarentenas
+```
 
 ## Wi-Fi interno (opcional)
 

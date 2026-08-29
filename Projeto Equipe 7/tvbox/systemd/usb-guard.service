@@ -1,0 +1,11 @@
+[Unit]
+Description=Impede que uma porta USB instavel derrube as outras
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/secbox/usb-guard.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
