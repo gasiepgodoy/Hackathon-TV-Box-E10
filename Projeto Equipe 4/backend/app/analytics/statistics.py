@@ -121,6 +121,13 @@ def testar_normalidade(valores: list[float]) -> Optional[dict]:
     if n < 8:
         return None  # testes de normalidade não são confiáveis com amostra minúscula
 
+    # Série sem variação quebra os testes (retornam NaN): não há dispersão
+    # para comparar com a de uma normal. A resposta útil aqui não é um
+    # p-valor, é dizer que não há o que testar.
+    if float(np.std(arr)) < 1e-12:
+        return {"n": int(n), "aplicavel": False,
+                "motivo": "Série constante — não há variação para testar normalidade."}
+
     resultado: dict = {"n": int(n)}
 
     # Shapiro-Wilk é o mais potente para n moderado, mas satura acima de ~5000
@@ -161,6 +168,11 @@ def ajustar_distribuicoes(valores: list[float]) -> Optional[dict]:
     if n < 10:
         return None
 
+    if float(np.std(arr)) < 1e-12:
+        return {"aplicavel": False,
+                "motivo": "Série constante — não há distribuição a ajustar.",
+                "interpretacao": "O sensor reportou sempre o mesmo valor no período; veja o diagnóstico de saúde."}
+
     candidatas = {
         "normal": stats.norm,
         "laplace": stats.laplace,
@@ -180,6 +192,12 @@ def ajustar_distribuicoes(valores: list[float]) -> Optional[dict]:
             log_verossimilhanca = float(np.sum(dist.logpdf(arr, *parametros)))
             k = len(parametros)
             aic = 2 * k - 2 * log_verossimilhanca
+            # Um ajuste degenerado produz NaN/inf. Descartamos aqui: um
+            # número não-finito não é comparável por AIC e ainda quebraria
+            # a serialização JSON da resposta.
+            if not all(np.isfinite(v) for v in (ks_stat, ks_p, log_verossimilhanca, aic)):
+                falhas[nome] = "ajuste degenerado (valores não finitos)"
+                continue
             ajustes[nome] = {
                 "parametros": [float(p) for p in parametros],
                 "ks_estatistica": float(ks_stat),
@@ -191,7 +209,9 @@ def ajustar_distribuicoes(valores: list[float]) -> Optional[dict]:
             falhas[nome] = str(exc)
 
     if not ajustes:
-        return None
+        return {"aplicavel": False,
+                "motivo": "Não foi possível ajustar nenhuma das distribuições candidatas.",
+                "falhas": falhas}
 
     melhor = min(ajustes, key=lambda nome: ajustes[nome]["aic"])
 

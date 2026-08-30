@@ -8,6 +8,7 @@ dados não mudam tanto assim entre dois cliques.
 """
 from __future__ import annotations
 
+import math
 import time
 from datetime import datetime
 from typing import Optional
@@ -19,6 +20,26 @@ from ..analytics import anomalies, forecast as forecast_mod, health, statistics 
 from .data import _executar_consulta_influx, _validar_intervalo
 
 router = APIRouter(prefix="/api/analise", tags=["analise"])
+
+
+def _sanitizar(valor):
+    """Substitui NaN/Infinito por None em toda a estrutura da resposta.
+
+    JSON não tem representação para esses valores, então um único NaN
+    vindo de qualquer cálculo derruba a resposta inteira com erro 500 —
+    e o usuário vê só "Internal Server Error", sem pista do motivo.
+    Corrigimos as origens conhecidas (séries constantes quebravam o teste
+    de normalidade e o ajuste de distribuições), mas mantemos esta rede de
+    segurança: é preferível um campo nulo no painel a uma análise inteira
+    indisponível por causa de um número.
+    """
+    if isinstance(valor, dict):
+        return {k: _sanitizar(v) for k, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [_sanitizar(v) for v in valor]
+    if isinstance(valor, float) and not math.isfinite(valor):
+        return None
+    return valor
 
 # Cache simples: chave -> (timestamp, resultado). Evita recomputar a
 # análise inteira em cliques repetidos na mesma janela.
@@ -132,7 +153,7 @@ def saude_de_todos(inicio: str = Query("-24h")):
             })
         except Exception as exc:
             resultados.append({"sensor_id": sensor.id, "nome": sensor.nome, "erro": str(exc)})
-    return resultados
+    return _sanitizar(resultados)
 
 
 @router.get("/{sensor_id}")
@@ -210,6 +231,7 @@ def analise_completa(
         "saude": health.avaliar(valores, timestamps, esperado),
     }
 
+    resultado = _sanitizar(resultado)
     _cache_set(chave, resultado)
     return resultado
 
@@ -259,6 +281,7 @@ def previsao(
         "backtest": retro,
         "alerta": alerta,
     }
+    resultado = _sanitizar(resultado)
     _cache_set(chave, resultado)
     return resultado
 
@@ -271,7 +294,7 @@ def apenas_saude(sensor_id: str, inicio: str = Query("-24h"), fim: Optional[str]
         raise HTTPException(404, "Sensor não encontrado")
     _validar_intervalo(inicio, fim)
     valores, timestamps = _carregar_serie(sensor_id, inicio, fim)
-    return {
+    return _sanitizar({
         "sensor_id": sensor_id, "nome": sensor.nome,
         **health.avaliar(valores, timestamps, _intervalo_esperado(sensor)),
-    }
+    })

@@ -183,9 +183,11 @@ def avaliar(
     # sentido: os valores não vêm de uma distribuição estável, então o
     # "melhor ajuste" descreve o passeio, não o comportamento do sensor.
     ajuste = stats_mod.ajustar_distribuicoes(valores)
-    if ajuste and not serie_estavel:
+    if ajuste and ajuste.get("aplicavel") is False:
+        pass  # série constante: o problema já é reportado como "congelado"
+    elif ajuste and not serie_estavel:
         ajuste = {**ajuste, "observacao": "A série não tem média estável; o ajuste descreve o passeio da série, não o ruído do sensor."}
-    if (ajuste and serie_estavel and ajuste.get("alguma_distribuicao_adere")
+    if (ajuste and ajuste.get("aplicavel") is not False and serie_estavel and ajuste.get("alguma_distribuicao_adere")
             and ajuste["melhor_ajuste"] == "cauchy"):
         desconto += PESOS["cauda_pesada"]
         problemas.append({
