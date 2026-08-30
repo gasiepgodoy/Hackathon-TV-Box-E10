@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gateway IoT — Sensores</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">Gateway IoT</div>
+        <div class="brand-sub">TV box · local</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="index.html"><i class="ti ti-chart-bar"></i> Dashboard</a>
+      <a href="sensores.html" class="active"><i class="ti ti-plug"></i> Sensores</a>
+      <a href="analise.html"><i class="ti ti-activity"></i> Análise</a>
+    </nav>
+    <div class="sidebar-footer">v1.0 · influxdb + websocket</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>Sensores</h1>
+      <button class="primary" id="btn-abrir-modal"><i class="ti ti-plus"></i> Adicionar sensor</button>
+    </div>
+
+    <div class="content">
+      <section class="panel">
+        <div class="panel-title">Sensores cadastrados</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Tipo</th>
+              <th>Protocolo</th>
+              <th>Local</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tabela-corpo">
+            <tr><td colspan="6" class="empty-state">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de adicionar/editar sensor -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <h2 id="modal-titulo">Adicionar sensor</h2>
+    <form id="form-sensor" class="form-grid">
+      <input type="hidden" id="campo-id">
+
+      <div class="field">
+        <label for="campo-nome">Nome</label>
+        <input type="text" id="campo-nome" required placeholder="Ex: Temperatura galpão A">
+      </div>
+
+      <div class="form-row-2">
+        <div class="field">
+          <label for="campo-tipo">Tipo (measurement)</label>
+          <input type="text" id="campo-tipo" required placeholder="Ex: temperatura">
+        </div>
+        <div class="field">
+          <label for="campo-unidade">Unidade</label>
+          <input type="text" id="campo-unidade" placeholder="Ex: °C">
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="field">
+          <label for="campo-limite-min">Limite mínimo (opcional)</label>
+          <input type="number" step="any" id="campo-limite-min" placeholder="Ex: 18">
+        </div>
+        <div class="field">
+          <label for="campo-limite-max">Limite máximo (opcional)</label>
+          <input type="number" step="any" id="campo-limite-max" placeholder="Ex: 28">
+        </div>
+      </div>
+      <div class="campo-ajuda">Se preenchidos, a aba Análise avisa quando a previsão indicar que o valor vai cruzar esses limites.</div>
+
+      <div class="form-row-2">
+        <div class="field">
+          <label for="campo-protocolo">Protocolo</label>
+          <select id="campo-protocolo" required>
+            <option value="mqtt">MQTT</option>
+            <option value="opcua">OPC UA</option>
+            <option value="http">HTTP (polling)</option>
+            <option value="simulado">Simulado (teste)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="campo-local">Local</label>
+          <input type="text" id="campo-local" placeholder="Ex: Galpão A">
+        </div>
+      </div>
+
+      <!-- Config MQTT -->
+      <div class="protocol-config" data-protocolo="mqtt">
+        <div class="form-row-2">
+          <div class="field">
+            <label for="mqtt-host">Endereço do broker</label>
+            <input type="text" id="mqtt-host" placeholder="192.168.1.10">
+          </div>
+          <div class="field">
+            <label for="mqtt-port">Porta</label>
+            <input type="number" id="mqtt-port" value="1883">
+          </div>
+        </div>
+        <div class="field">
+          <label for="mqtt-topico">Tópico</label>
+          <input type="text" id="mqtt-topico" placeholder="casa/sala/temperatura">
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="mqtt-qos">QoS</label>
+            <select id="mqtt-qos">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="mqtt-campo-valor">Campo do valor (se JSON)</label>
+            <input type="text" id="mqtt-campo-valor" value="valor">
+          </div>
+        </div>
+        <div class="field">
+          <label for="mqtt-intervalo-esperado">Intervalo esperado entre publicações (s)</label>
+          <input type="number" step="any" id="mqtt-intervalo-esperado" placeholder="Ex: 1">
+        </div>
+        <div class="campo-ajuda">Opcional. O dispositivo é quem decide quando publicar, então o gateway não consegue inferir isso sozinho. Preenchendo, a análise passa a detectar perda de leituras e quedas de conexão.</div>
+      </div>
+
+      <!-- Config OPC UA -->
+      <div class="protocol-config" data-protocolo="opcua" style="display:none">
+        <div class="field">
+          <label for="opcua-endpoint">Endpoint URL</label>
+          <input type="text" id="opcua-endpoint" placeholder="opc.tcp://192.168.1.20:4840/servidor/">
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="opcua-node">Node ID</label>
+            <input type="text" id="opcua-node" placeholder="ns=2;i=2">
+          </div>
+          <div class="field">
+            <label for="opcua-intervalo">Intervalo (ms)</label>
+            <input type="number" id="opcua-intervalo" value="1000">
+          </div>
+        </div>
+      </div>
+
+      <!-- Config Simulado -->
+      <div class="protocol-config" data-protocolo="simulado" style="display:none">
+        <div class="form-row-2">
+          <div class="field">
+            <label for="sim-min">Valor mínimo</label>
+            <input type="number" id="sim-min" value="18">
+          </div>
+          <div class="field">
+            <label for="sim-max">Valor máximo</label>
+            <input type="number" id="sim-max" value="28">
+          </div>
+        </div>
+        <div class="field">
+          <label for="sim-intervalo">Intervalo entre leituras (segundos)</label>
+          <input type="number" id="sim-intervalo" value="5">
+        </div>
+      </div>
+
+      <!-- Config HTTP -->
+      <div class="protocol-config" data-protocolo="http" style="display:none">
+        <div class="field">
+          <label for="http-url">URL</label>
+          <input type="text" id="http-url" placeholder="http://192.168.1.50/api/status">
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="http-metodo">Método</label>
+            <select id="http-metodo">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="http-intervalo">Intervalo (segundos)</label>
+            <input type="number" id="http-intervalo" value="10">
+          </div>
+        </div>
+        <div class="field">
+          <label for="http-campo-valor">Caminho do valor no JSON</label>
+          <input type="text" id="http-campo-valor" value="valor" placeholder="ex: leitura.valor">
+        </div>
+      </div>
+
+      <div class="form-error" id="form-error"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="btn-cancelar">Cancelar</button>
+        <button type="submit" class="primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script src="js/common.js"></script>
+<script src="js/sensores.js"></script>
+</body>
+</html>
