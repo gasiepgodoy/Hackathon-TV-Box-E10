@@ -1,0 +1,34 @@
+# Credenciais e configuração local — NUNCA commitar.
+# O .env guarda o token do InfluxDB; use o .env.example como modelo.
+.env
+*.env
+!.env.example
+
+# Ambiente virtual Python
+.venv/
+venv/
+env/
+
+# Banco local de cadastro de sensores (gerado em tempo de execução)
+*.db
+*.db-shm
+*.db-wal
+
+# Bytecode e caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp

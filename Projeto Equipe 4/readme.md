@@ -59,6 +59,12 @@ iot-gateway/
 └── esp32/       -> Firmware de teste para validar o gateway com hardware real
 ```
 
+Protocolos suportados hoje: **MQTT**, **OPC UA**, **Modbus TCP**, **HTTP
+(polling)** e um gerador **simulado** para testes sem hardware.
+
+```
+```
+
 ---
 
 ## 1. Instalar o InfluxDB (na própria TV box ou em outra máquina da rede)
@@ -148,6 +154,20 @@ Na tela **Sensores**, clique em "Adicionar sensor" e escolha o protocolo:
 - **OPC UA**: informe o `endpoint_url` do servidor e o `node_id` da
   variável que você quer monitorar (o gateway assina o node e recebe as
   mudanças automaticamente, sem polling).
+- **Modbus TCP**: informe o endereço do equipamento, o ID do escravo e o
+  registrador. Como Modbus não tem notificação por evento, o gateway faz
+  polling no intervalo configurado.
+
+  Atenção a dois campos que costumam ser fonte de erro:
+
+  - **Escala/offset** — equipamentos Modbus quase sempre transmitem
+    inteiros. Um transmissor que mede 23,5 °C normalmente envia `235`, e o
+    manual informa "escala 0,1". Sem preencher isso, o gateway gravaria
+    235 °C e toda a análise ficaria sobre uma grandeza errada.
+  - **Ordem das palavras** — valores de 32 bits ocupam dois registradores
+    e não há consenso entre fabricantes sobre qual vem primeiro. Se o valor
+    lido vier absurdo (como 1e9 numa temperatura), inverter essa opção
+    costuma resolver.
 
 O campo **Tipo** vira o *measurement* no InfluxDB — sensores do mesmo
 tipo (ex: vários sensores `temperatura`) podem ser comparados/filtrados

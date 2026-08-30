@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gateway IoT — Análise</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/analise.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">Gateway IoT</div>
+        <div class="brand-sub">TV box · local</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="index.html"><i class="ti ti-chart-bar"></i> Dashboard</a>
+      <a href="sensores.html"><i class="ti ti-plug"></i> Sensores</a>
+      <a href="analise.html" class="active"><i class="ti ti-activity"></i> Análise</a>
+    </nav>
+    <div class="sidebar-footer">v1.0 · influxdb + websocket</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>Análise por sensor</h1>
+    </div>
+
+    <div class="content">
+
+      <section class="panel">
+        <div class="controls-row">
+          <div class="field">
+            <label for="select-sensor">Sensor</label>
+            <select id="select-sensor">
+              <option value="">Selecione um sensor…</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Período analisado</label>
+            <div class="chip-row" id="chip-row">
+              <div class="chip" data-range="-1h">1 hora</div>
+              <div class="chip active" data-range="-24h">24 horas</div>
+              <div class="chip" data-range="-7d">7 dias</div>
+              <div class="chip" data-range="-30d">30 dias</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="conteudo-analise" style="display:none">
+
+        <section class="panel">
+          <div class="panel-title">Saúde do sensor</div>
+          <div id="bloco-saude"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">Série e anomalias detectadas</div>
+          <div class="chart-wrap"><canvas id="grafico-analise"></canvas></div>
+        </section>
+
+        <section class="panel">
+          <div class="painel-cabecalho">
+            <div class="panel-title" style="margin:0">Previsão e banda de confiança</div>
+            <button id="btn-prever" class="primary"><i class="ti ti-chart-dots"></i> Gerar previsão</button>
+          </div>
+          <div id="bloco-previsao">
+            <div class="empty-state">A previsão ajusta um modelo ARIMA e leva alguns segundos. Clique para gerar.</div>
+          </div>
+          <div class="chart-wrap" id="wrap-previsao" style="display:none"><canvas id="grafico-previsao"></canvas></div>
+        </section>
+
+        <div class="grid-duplo">
+          <section class="panel">
+            <div class="panel-title">Estatística descritiva</div>
+            <div id="bloco-descritivas"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">Forma da distribuição</div>
+            <div id="bloco-distribuicao"></div>
+          </section>
+        </div>
+
+        <div class="grid-duplo">
+          <section class="panel">
+            <div class="panel-title">Regularidade de entrega (Poisson)</div>
+            <div id="bloco-entrega"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">Detectores de anomalia</div>
+            <div id="bloco-anomalias"></div>
+          </section>
+        </div>
+
+      </div>
+
+      <div class="empty-state" id="estado-vazio">Selecione um sensor acima para ver a análise estatística completa.</div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-area"></div>
+
+<script src="js/common.js"></script>
+<script src="js/analise.js"></script>
+</body>
+</html>
