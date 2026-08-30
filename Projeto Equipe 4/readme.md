@@ -1,15 +1,65 @@
 # Gateway IoT universal — TV box
 
+## Introdução
+
+A maioria dos ambientes com sensores acumula, com o tempo, uma mistura de
+protocolos: um sensor industrial fala Modbus, outro fala OPC UA, um novo
+módulo Wi-Fi fala MQTT, e cada um chega com seu próprio software de
+monitoramento, sua própria tela, seu próprio banco de dados. Esse projeto
+nasceu para resolver esse problema na raiz: um único gateway, rodando numa
+TV box comum, que fala com qualquer protocolo de sensor e entrega tudo
+num único dashboard, com um único histórico organizado.
+
+## Objetivo
+
+Construir um gateway IoT **verdadeiramente universal** — não apenas
+suportando dois ou três protocolos fixos, mas com uma arquitetura de
+adapters plugáveis onde adicionar um protocolo novo (Modbus, BLE, CoAP,
+o que for) não exige tocar em nenhuma outra parte do sistema. A partir
+disso, o gateway se propõe a:
+
+- Traduzir qualquer protocolo de sensor para um formato normalizado único;
+- Armazenar o histórico de forma organizada e consultável no InfluxDB,
+  diferenciando cada sensor sem precisar de arquivos separados;
+- Exibir tudo em tempo real num dashboard web, com gráficos, exportação
+  em CSV e cadastro de sensores independente do protocolo;
+- Ir além da simples visualização: analisar estatisticamente a saúde de
+  cada sensor, detectar anomalias por múltiplos métodos complementares, e
+  prever a tendência de curto prazo com banda de confiança — tudo rodando
+  na própria borda, em hardware de baixo custo (TV box, ARM, poucos GB de
+  RAM), sem depender de nuvem.
+
+## O que diferencia este projeto
+
+A maior parte dos gateways multiprotocolo se limita a dois ou três
+protocolos embutidos diretamente no núcleo do sistema — adicionar um
+protocolo novo significa reescrever o core. Aqui, o "core" (InfluxDB,
+WebSocket, dashboard) nunca sabe de qual protocolo um dado veio: cada
+adapter (`backend/app/adapters/`) apenas traduz seu protocolo específico
+para um formato comum (`Leitura`) antes de entregá-lo ao resto do
+sistema. Ver a seção *"Adicionando um novo protocolo"* mais abaixo.
+
+Além disso, a camada de **análise** (estatística descritiva, detecção de
+anomalias por múltiplos métodos, e previsão com banda de confiança) roda
+inteiramente na borda, calibrada e validada empiricamente contra falsos
+positivos — inclusive com hardware real (ESP32 via MQTT), não só dados
+sintéticos. Essas seções estão detalhadas mais abaixo neste documento.
+
+## Arquitetura
+
 Gateway que recebe dados de sensores em qualquer protocolo (MQTT, OPC UA,
-e o que você adicionar depois), grava no InfluxDB e mostra tudo em um
-dashboard em tempo real via WebSocket.
+HTTP, e o que você adicionar depois), grava no InfluxDB e mostra tudo em
+um dashboard em tempo real via WebSocket.
 
 ```
 iot-gateway/
-├── backend/     -> API Python (FastAPI) + adapters de protocolo + escrita no InfluxDB
+├── backend/     -> API Python (FastAPI) + adapters de protocolo + escrita no InfluxDB + análise
 ├── frontend/    -> Dashboard estático (HTML/CSS/JS puro, sem build step)
-└── nginx/       -> Configs de exemplo para servir tudo na TV box
+├── nginx/       -> Configs de exemplo para servir tudo na TV box
+└── esp32/       -> Firmware de teste para validar o gateway com hardware real
 ```
+
+---
 
 ## 1. Instalar o InfluxDB (na própria TV box ou em outra máquina da rede)
 
