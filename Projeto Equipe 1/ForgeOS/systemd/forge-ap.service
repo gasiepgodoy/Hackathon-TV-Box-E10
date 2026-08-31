@@ -1,0 +1,15 @@
+[Unit]
+Description=ForgeOS AP Stack (RTL8189FTV captive AP)
+Wants=network-pre.target
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /opt/forgeos/bin/start-ap.sh
+ExecStop=/bin/bash -c 'pkill -f "wpa_supplicant.*wpa_ap.conf"; pkill -f "dnsmasq.*dnsmasq_portal.conf"'
+StandardOutput=append:/var/log/forge-ap.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

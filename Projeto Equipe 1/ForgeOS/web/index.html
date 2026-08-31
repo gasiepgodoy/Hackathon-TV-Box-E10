@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ForgeOS // Cockpit Appliance Portal</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+
+  <!-- Inter & Red Hat Display & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Red+Hat+Display:wght@400;500;600;700;800&family=Red+Hat+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       ENTERPRISE DESIGN SYSTEM & COLOR TOKENS (WCAG 2.2 AA)
+       ========================================================================== */
+    :root {
+      --pf-font-sans: 'Red Hat Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --pf-font-heading: 'Red Hat Display', var(--pf-font-sans);
+      --pf-font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+      --pf-bg-base: #0B0E14;
+      --pf-bg-sidebar: #0F131C;
+      --pf-bg-card: #151A24;
+      --pf-bg-card-hover: #1A202D;
+      --pf-bg-inset: #090C12;
+      --pf-bg-header: #0F131C;
+
+      --pf-text-primary: #F0F4FC;
+      --pf-text-secondary: #9DA8BE;
+      --pf-text-muted: #626D82;
+
+      --pf-border-subtle: #1F2737;
+      --pf-border-strong: #2D374D;
+
+      --pf-blue-light: #2B9AF3;
+      --pf-blue-surface: rgba(43, 154, 243, 0.12);
+      --pf-blue-hover: #1E80D4;
+
+      --pf-green-light: #3E8635;
+      --pf-green-surface: rgba(62, 134, 53, 0.14);
+
+      --pf-orange-warning: #F0AB00;
+      --pf-orange-surface: rgba(240, 171, 0, 0.14);
+
+      --pf-red-light: #C9190B;
+      --pf-red-surface: rgba(201, 25, 11, 0.14);
+
+      --pf-radius: 6px;
+      --pf-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+      --pf-shadow-modal: 0 16px 40px rgba(0, 0, 0, 0.65);
+    }
+
+    [data-theme="light"] {
+      --pf-bg-base: #F0F2F5;
+      --pf-bg-sidebar: #FFFFFF;
+      --pf-bg-card: #FFFFFF;
+      --pf-bg-card-hover: #F8F9FA;
+      --pf-bg-inset: #F4F6F8;
+      --pf-bg-header: #FFFFFF;
+
+      --pf-text-primary: #151515;
+      --pf-text-secondary: #4F5255;
+      --pf-text-muted: #707478;
+
+      --pf-border-subtle: #D2D2D2;
+      --pf-border-strong: #B8BBBE;
+
+      --pf-blue-light: #0066CC;
+      --pf-blue-surface: rgba(0, 102, 204, 0.10);
+      --pf-blue-hover: #004B99;
+
+      --pf-green-light: #1E7E34;
+      --pf-green-surface: rgba(30, 126, 52, 0.10);
+
+      --pf-orange-warning: #D97706;
+      --pf-orange-surface: rgba(217, 119, 6, 0.10);
+
+      --pf-red-light: #A30000;
+      --pf-red-surface: rgba(163, 0, 0, 0.10);
+
+      --pf-shadow-card: 0 2px 6px rgba(0, 0, 0, 0.08);
+      --pf-shadow-modal: 0 12px 32px rgba(0, 0, 0, 0.20);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *:focus-visible { outline: 2px solid var(--pf-blue-light); outline-offset: 2px; }
+
+    body {
+      font-family: var(--pf-font-sans);
+      background: var(--pf-bg-base);
+      color: var(--pf-text-primary);
+      min-height: 100vh;
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+
+    .cockpit-app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* --- MASTHEAD BAR --- */
+    .cockpit-masthead {
+      height: 48px;
+      background: var(--pf-bg-header);
+      border-bottom: 1px solid var(--pf-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .masthead-brand { display: flex; align-items: center; gap: 0.65rem; }
+    .masthead-toggle-btn {
+      display: none;
+      background: transparent;
+      border: 1px solid var(--pf-border-subtle);
+      color: var(--pf-text-primary);
+      border-radius: var(--pf-radius);
+      padding: 0.3rem;
+      cursor: pointer;
+    }
+    .masthead-logo { display: flex; align-items: center; gap: 0.45rem; cursor: pointer; }
+    .masthead-logo-img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+    }
+    .masthead-title {
+      font-family: var(--pf-font-heading);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--pf-text-primary);
+      letter-spacing: -0.01em;
+    }
+    .masthead-tools { display: flex; align-items: center; gap: 0.4rem; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 12px;
+      background: var(--pf-green-surface);
+      color: var(--pf-green-light);
+      border: 1px solid rgba(62, 134, 53, 0.3);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .status-badge.info {
+      background: var(--pf-blue-surface);
+      color: var(--pf-blue-light);
+      border-color: rgba(43, 154, 243, 0.3);
+    }
+    .status-badge.warn {
+      background: var(--pf-orange-surface);
+      color: var(--pf-orange-warning);
+      border-color: rgba(240, 171, 0, 0.3);
+    }
+
+    .status-dot-sm {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .live-pulse { animation: pfPulse 1.5s infinite; }
+    @keyframes pfPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.85); }
+    }
+
+    .masthead-btn {
+      height: 28px;
+      padding: 0 0.55rem;
+      background: var(--pf-bg-card);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: var(--pf-radius);
+      color: var(--pf-text-secondary);
+      font-size: 0.72rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s ease;
+    }
+    .masthead-btn:hover {
+      background: var(--pf-bg-card-hover);
+      color: var(--pf-text-primary);
+      border-color: var(--pf-border-strong);
+    }
+
+    .cmd-shortcut-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: 4px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.65rem;
+      font-family: var(--pf-font-mono);
+      color: var(--pf-text-muted);
+    }
+
+    /* --- MAIN LAYOUT & SIDEBAR --- */
+    .cockpit-main-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
+
+    .cockpit-sidebar {
+      width: 230px;
+      background: var(--pf-bg-sidebar);
+      border-right: 1px solid var(--pf-border-subtle);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .sidebar-nav-scroll { padding: 0.75rem 0.5rem; overflow-y: auto; flex: 1; }
+
+    .nav-group-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--pf-text-muted);
+      padding: 0.6rem 0.6rem 0.25rem 0.6rem;
+      letter-spacing: 0.03em;
+    }
+
+    .pf-nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.45rem 0.6rem;
+      color: var(--pf-text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      border-radius: var(--pf-radius);
+      margin-bottom: 2px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .pf-nav-link svg { width: 15px; height: 15px; stroke-width: 2; flex-shrink: 0; }
+    .pf-nav-link:hover { background: var(--pf-bg-card); color: var(--pf-text-primary); }
+    .pf-nav-link.active {
+      background: var(--pf-blue-surface);
+      color: var(--pf-blue-light);
+      font-weight: 600;
+      border-left: 3px solid var(--pf-blue-light);
+    }
+    .pf-nav-badge {
+      margin-left: auto;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 10px;
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      color: var(--pf-text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-footer-card {
+      padding: 0.65rem 0.75rem;
+      border-top: 1px solid var(--pf-border-subtle);
+      background: var(--pf-bg-inset);
+      font-size: 0.72rem;
+      color: var(--pf-text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* --- CONTENT VIEWPORT --- */
+    .cockpit-content-viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--pf-bg-base);
+      min-width: 0;
+    }
+
+    .page-header-banner {
+      background: var(--pf-bg-card);
+      border-bottom: 1px solid var(--pf-border-subtle);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .page-header-title-group h2 {
+      font-family: var(--pf-font-heading);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--pf-text-primary);
+    }
+    .page-header-title-group p {
+      font-size: 0.74rem;
+      color: var(--pf-text-secondary);
+      margin-top: 1px;
+    }
+
+    .page-body-content { padding: 1rem 1.25rem; flex: 1; }
+
+    /* --- GRIDS & CARDS --- */
+    .pf-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .pf-grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .pf-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .pf-card {
+      background: var(--pf-bg-card);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: var(--pf-radius);
+      padding: 0.85rem;
+      box-shadow: var(--pf-shadow-card);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      transition: border-color 0.15s ease;
+    }
+    .pf-kpi-card {
+      justify-content: space-between;
+      min-height: 120px;
+    }
+    .pf-card:hover { border-color: var(--pf-border-strong); }
+
+    .pf-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.65rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid var(--pf-border-subtle);
+    }
+    .pf-card-title {
+      font-family: var(--pf-font-heading);
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--pf-text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--pf-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .metric-value {
+      font-family: var(--pf-font-heading);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--pf-text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .metric-subtext {
+      font-size: 0.7rem;
+      color: var(--pf-text-secondary);
+      margin-top: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sparkline-box {
+      width: 100%;
+      height: 24px;
+      margin-top: 0.35rem;
+      background: var(--pf-bg-inset);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .sparkline-svg { width: 100%; height: 100%; display: block; }
+
+    .pf-progress-bar {
+      width: 100%;
+      height: 5px;
+      background: var(--pf-bg-inset);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0.35rem 0;
+    }
+    .pf-progress-fill {
+      height: 100%;
+      background: var(--pf-blue-light);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .pf-progress-fill.green { background: var(--pf-green-light); }
+    .pf-progress-fill.orange { background: var(--pf-orange-warning); }
+    .pf-progress-fill.red { background: var(--pf-red-light); }
+
+    /* --- BUTTONS & CONTROLS --- */
+    .pf-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      font-family: var(--pf-font-sans);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--pf-radius);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .pf-btn-sm { padding: 0.25rem 0.5rem; font-size: 0.7rem; }
+    .pf-btn-primary { background: var(--pf-blue-light); color: #FFFFFF; }
+    .pf-btn-primary:hover { background: var(--pf-blue-hover); }
+    .pf-btn-secondary {
+      background: var(--pf-bg-inset);
+      border-color: var(--pf-border-subtle);
+      color: var(--pf-text-primary);
+    }
+    .pf-btn-secondary:hover {
+      background: var(--pf-bg-card-hover);
+      border-color: var(--pf-border-strong);
+    }
+    .pf-btn-secondary.active {
+      background: var(--pf-blue-surface);
+      border-color: var(--pf-blue-light);
+      color: var(--pf-blue-light);
+    }
+    .pf-btn-danger {
+      background: var(--pf-red-surface);
+      border-color: rgba(201, 25, 11, 0.3);
+      color: var(--pf-red-light);
+    }
+    .pf-btn-danger:hover { background: var(--pf-red-light); color: #FFFFFF; }
+
+    .pf-input, .pf-select {
+      width: 100%;
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: var(--pf-radius);
+      color: var(--pf-text-primary);
+      padding: 0.4rem 0.6rem;
+      font-size: 0.78rem;
+      font-family: var(--pf-font-sans);
+      transition: border-color 0.15s ease;
+    }
+    .pf-input:focus, .pf-select:focus {
+      border-color: var(--pf-blue-light);
+      outline: none;
+    }
+    .pf-label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--pf-text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    .pf-form-group { margin-bottom: 0.65rem; }
+
+    /* --- PILLS & BADGES --- */
+    .pf-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 12px;
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      color: var(--pf-text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .pf-pill.success {
+      background: var(--pf-green-surface);
+      color: var(--pf-green-light);
+      border-color: rgba(62, 134, 53, 0.3);
+    }
+    .pf-pill.warning {
+      background: var(--pf-orange-surface);
+      color: var(--pf-orange-warning);
+      border-color: rgba(240, 171, 0, 0.3);
+    }
+    .pf-pill.danger {
+      background: var(--pf-red-surface);
+      color: var(--pf-red-light);
+      border-color: rgba(201, 25, 11, 0.3);
+    }
+    .pf-pill.info {
+      background: var(--pf-blue-surface);
+      color: var(--pf-blue-light);
+      border-color: rgba(43, 154, 243, 0.3);
+    }
+
+    /* --- TABLES --- */
+    .table-responsive { width: 100%; overflow-x: auto; }
+    .pf-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+    }
+    .pf-table th {
+      text-align: left;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--pf-text-muted);
+      border-bottom: 1px solid var(--pf-border-subtle);
+      padding: 0.5rem 0.6rem;
+      letter-spacing: 0.02em;
+    }
+    .pf-table td {
+      padding: 0.55rem 0.6rem;
+      border-bottom: 1px solid var(--pf-border-subtle);
+      color: var(--pf-text-secondary);
+      vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+    }
+    .pf-table tr:hover td { background: var(--pf-bg-card-hover); color: var(--pf-text-primary); }
+    .pf-table-mono { font-family: var(--pf-font-mono); font-size: 0.72rem; }
+
+    /* --- TAB SECTIONS --- */
+    .tab-section { display: none; }
+    .tab-section.active { display: block; animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* --- ADVANCED LOG VIEWER --- */
+    .log-viewer-wrapper {
+      display: flex;
+      flex-direction: column;
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: var(--pf-radius);
+      min-height: 480px;
+      position: relative;
+    }
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--pf-bg-card);
+      border-bottom: 1px solid var(--pf-border-subtle);
+      flex-wrap: wrap;
+    }
+    .log-chips-group { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+    .log-chip {
+      font-size: 0.68rem;
+      padding: 0.2rem 0.45rem;
+      border-radius: var(--pf-radius);
+      background: var(--pf-bg-inset);
+      border: 1px solid var(--pf-border-subtle);
+      color: var(--pf-text-secondary);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .log-chip.active { background: var(--pf-blue-surface); border-color: var(--pf-blue-light); color: var(--pf-blue-light); }
+    .log-chip.err.active { background: var(--pf-red-surface); border-color: var(--pf-red-light); color: var(--pf-red-light); }
+    .log-chip.warn.active { background: var(--pf-orange-surface); border-color: var(--pf-orange-warning); color: var(--pf-orange-warning); }
+
+    .log-container {
+      flex: 1;
+      height: 440px;
+      overflow-y: auto;
+      padding: 0.5rem 0.75rem;
+      font-family: var(--pf-font-mono);
+      font-size: 0.72rem;
+      line-height: 1.5;
+    }
+    .log-row {
+      display: flex;
+      gap: 0.5rem;
+      padding: 2px 4px;
+      border-left: 2px solid transparent;
+      margin-bottom: 1px;
+      word-break: break-all;
+    }
+    .log-row:hover { background: rgba(255, 255, 255, 0.03); }
+    .log-row.log-err { border-left-color: var(--pf-red-light); color: #FF7B72; }
+    .log-row.log-warning { border-left-color: var(--pf-orange-warning); color: #FFA657; }
+    .log-row.log-info { border-left-color: var(--pf-blue-light); }
+    .log-row.log-debug { border-left-color: var(--pf-text-muted); color: var(--pf-text-muted); }
+    .log-time { color: var(--pf-text-muted); flex-shrink: 0; font-size: 0.68rem; }
+    .log-unit { color: var(--pf-blue-light); flex-shrink: 0; font-weight: 600; }
+    .log-msg { flex: 1; color: var(--pf-text-primary); }
+
+    .floating-scroll-pill {
+      position: absolute;
+      bottom: 1rem;
+      right: 1.5rem;
+      background: var(--pf-blue-light);
+      color: #FFFFFF;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 0.35rem;
+      z-index: 10;
+      border: none;
+    }
+
+    /* --- TOAST NOTIFICATIONS --- */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-width: 360px;
+      pointer-events: none;
+    }
+    .toast-item {
+      background: var(--pf-bg-card);
+      border: 1px solid var(--pf-border-strong);
+      border-radius: var(--pf-radius);
+      padding: 0.65rem 0.85rem;
+      box-shadow: var(--pf-shadow-modal);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      font-size: 0.76rem;
+      color: var(--pf-text-primary);
+      pointer-events: auto;
+      animation: slideInRight 0.2s ease;
+    }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .toast-item.success { border-left: 3px solid var(--pf-green-light); }
+    .toast-item.error { border-left: 3px solid var(--pf-red-light); }
+    .toast-item.info { border-left: 3px solid var(--pf-blue-light); }
+
+    /* --- MODALS & DIALOGS --- */
+    .pf-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(2px);
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .pf-modal-backdrop.open { display: flex; animation: fadeIn 0.15s ease; }
+    .pf-modal-dialog {
+      background: var(--pf-bg-card);
+      border: 1px solid var(--pf-border-strong);
+      border-radius: var(--pf-radius);
+      width: 100%;
+      max-width: 480px;
+      box-shadow: var(--pf-shadow-modal);
+      overflow: hidden;
+    }
+    .pf-modal-header {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--pf-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pf-modal-header h3 { font-family: var(--pf-font-heading); font-size: 0.95rem; font-weight: 700; }
+    .pf-modal-body { padding: 1rem; }
+    .pf-modal-footer {
+      padding: 0.75rem 1rem;
+      background: var(--pf-bg-inset);
+      border-top: 1px solid var(--pf-border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.4rem;
+    }
+
+    /* --- COMMAND PALETTE --- */
+    .cmd-palette-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--pf-border-subtle);
+      padding: 0.85rem 1rem;
+      font-size: 0.9rem;
+      color: var(--pf-text-primary);
+      font-family: var(--pf-font-sans);
+    }
+    .cmd-palette-input:focus { outline: none; }
+    .cmd-palette-list { max-height: 280px; overflow-y: auto; padding: 0.4rem; }
+    .cmd-palette-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.55rem 0.75rem;
+      border-radius: var(--pf-radius);
+      cursor: pointer;
+      color: var(--pf-text-secondary);
+      font-size: 0.78rem;
+    }
+    .cmd-palette-item:hover, .cmd-palette-item.active {
+      background: var(--pf-blue-surface);
+      color: var(--pf-blue-light);
+    }
+
+    /* --- MOBILE RESPONSIVENESS --- */
+    @media (max-width: 900px) {
+      .pf-grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .pf-grid-2 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .cockpit-sidebar {
+        position: fixed;
+        left: -240px;
+        top: 48px;
+        bottom: 0;
+        z-index: 60;
+        transition: left 0.2s ease;
+      }
+      .cockpit-sidebar.open { left: 0; }
+      .cockpit-sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 48px 0 0 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 55;
+      }
+      .cockpit-sidebar-backdrop.open { display: block; }
+      .masthead-toggle-btn { display: block; }
+      .pf-grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cockpit-app">
+  <!-- TOP MASTHEAD -->
+  <header class="cockpit-masthead">
+    <div class="masthead-brand">
+      <button class="masthead-toggle-btn" id="sidebar-toggle" aria-label="Abrir menu de navegação">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="masthead-logo" onclick="showTab('overview')">
+        <img src="/logo.png" alt="ForgeOS" class="masthead-logo-img">
+        <span class="masthead-title">ForgeOS</span>
+      </div>
+    </div>
+
+    <div class="masthead-tools">
+      <button class="masthead-btn" id="btn-open-cmd" title="Paleta de Comandos (Ctrl+K)" aria-label="Buscar ou executar comando">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span class="cmd-shortcut-badge">⌘K</span>
+      </button>
+
+      <div class="status-badge info" id="top-status-badge">
+        <span class="status-dot-sm live-pulse"></span>
+        <span id="top-status-text">AP: 192.168.4.1</span>
+      </div>
+
+      <button class="masthead-btn" id="btn-quick-reset" title="Restaurar modo Ponto de Acesso" aria-label="Reiniciar Ponto de Acesso">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        <span>Reiniciar AP</span>
+      </button>
+
+      <button class="masthead-btn" id="theme-toggle" title="Alternar Modo Escuro / Claro" aria-label="Alternar Modo Escuro e Claro">
+        <svg id="theme-icon-sun" style="display:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg id="theme-icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT LAYOUT -->
+  <div class="cockpit-main-layout">
+    <div class="cockpit-sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="cockpit-sidebar" id="sidebar">
+      <nav class="sidebar-nav-scroll" aria-label="Navegação Principal">
+        <div class="nav-group-title">Sistema</div>
+        <a href="#overview" class="pf-nav-link active" data-tab="overview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>Visão geral</span>
+        </a>
+        <a href="#logs" class="pf-nav-link" data-tab="logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Logs do sistema</span>
+        </a>
+        <a href="#services" class="pf-nav-link" data-tab="services">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          <span>Serviços &amp; recursos</span>
+          <span class="pf-nav-badge" id="badge-services-count">8</span>
+        </a>
+
+        <div class="nav-group-title">Rede &amp; conectividade</div>
+        <a href="#networking" class="pf-nav-link" data-tab="networking">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          <span>Wi-Fi &amp; ponto de acesso</span>
+          <span class="pf-nav-badge" id="badge-wifi-count">0</span>
+        </a>
+        <a href="#interfaces" class="pf-nav-link" data-tab="interfaces">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49"/></svg>
+          <span>Interfaces físicas</span>
+        </a>
+
+        <div class="nav-group-title">Aplicações</div>
+        <a href="#modules" class="pf-nav-link" data-tab="modules">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <span>ForgeHub</span>
+          <span class="pf-nav-badge" id="badge-modules-count">3 Apps</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer-card">
+        <div>
+          <strong style="color:var(--pf-text-primary);">root@armbian</strong>
+          <div style="font-size:0.68rem;" id="sidebar-footer-ip">192.168.1.153</div>
+        </div>
+        <span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>1s LIVE</span>
+      </div>
+    </aside>
+
+    <!-- CONTENT VIEWPORT -->
+    <main class="cockpit-content-viewport">
+      <!-- HEADER BANNER -->
+      <div class="page-header-banner">
+        <div class="page-header-title-group">
+          <h2 id="page-banner-title">Visão geral do sistema</h2>
+          <p id="page-banner-subtitle">Telemetria contínua em tempo real e saúde do hardware.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.35rem;">
+          <span class="pf-pill success" id="live-indicator"><span class="status-dot-sm live-pulse"></span>1s LIVE</span>
+          <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="tickRealtime(true)" aria-label="Atualizar telemetria">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span>Atualizar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BODY CONTENT -->
+      <div class="page-body-content">
+        <!-- 1. OVERVIEW TAB -->
+        <section class="tab-section active" id="view-overview">
+          <!-- 4 KPI CARDS -->
+          <div class="pf-grid-4">
+            <!-- CPU & Thermal Card -->
+            <div class="pf-card pf-kpi-card">
+              <div>
+                <div class="metric-label">
+                  <span>Processador &amp; Térmico</span>
+                  <span class="pf-pill success" id="dash-temp-pill">40.4°C</span>
+                </div>
+                <div class="metric-value" id="dash-cpu-val" style="color:var(--pf-blue-light);">4.2%</div>
+                <div class="sparkline-box">
+                  <svg class="sparkline-svg" id="sparkline-cpu" viewBox="0 0 100 30" preserveAspectRatio="none">
+                    <path d="M 0 30 L 100 30" fill="none" stroke="#2B9AF3" stroke-width="2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-subtext">
+                <span id="dash-cpu-sub">4x A53 @ 1.8 GHz · Carga: 0.08, 0.02, 0.04</span>
+              </div>
+            </div>
+
+            <!-- RAM Usage Card -->
+            <div class="pf-card pf-kpi-card">
+              <div>
+                <div class="metric-label">Memória RAM</div>
+                <div class="metric-value" id="dash-mem-val" style="color:var(--pf-green-light);">485 MB / 1.98 GB</div>
+                <div class="sparkline-box">
+                  <svg class="sparkline-svg" id="sparkline-ram" viewBox="0 0 100 30" preserveAspectRatio="none">
+                    <path d="M 0 30 L 100 30" fill="none" stroke="#3E8635" stroke-width="2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-subtext">
+                <span id="dash-mem-sub">24.5% em uso (1.50 GB livre)</span>
+              </div>
+            </div>
+
+            <!-- Storage eMMC Card -->
+            <div class="pf-card pf-kpi-card">
+              <div>
+                <div class="metric-label">Armazenamento eMMC</div>
+                <div class="metric-value" id="dash-disk-val" style="color:var(--pf-orange-warning);">3.5 GB / 28.7 GB</div>
+                <div class="pf-progress-bar" style="margin-top:0.45rem;">
+                  <div class="pf-progress-fill orange" id="dash-disk-bar" style="width:12.2%;"></div>
+                </div>
+              </div>
+              <div class="metric-subtext">
+                <span id="dash-disk-sub">12.2% em uso · Ext4 Rootfs</span>
+              </div>
+            </div>
+
+            <!-- Operating Mode & Traffic Card -->
+            <div class="pf-card pf-kpi-card">
+              <div>
+                <div class="metric-label">Tráfego de Rede (I/O)</div>
+                <div class="metric-value" id="dash-net-val" style="color:var(--pf-blue-light);">↓ 0.4 KB/s · ↑ 0.6 KB/s</div>
+                <div class="sparkline-box">
+                  <svg class="sparkline-svg" id="sparkline-net" viewBox="0 0 100 30" preserveAspectRatio="none">
+                    <path d="M 0 30 L 100 30" fill="none" stroke="#2B9AF3" stroke-width="2"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="metric-subtext">
+                <span id="dash-mode-sub">RTL8189FTV_AP (192.168.4.1)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2 COLUMNS: Wi-Fi Scanner & Top 5 Processes -->
+          <div class="pf-grid-2">
+            <!-- Wi-Fi Quick Access -->
+            <div class="pf-card">
+              <div class="pf-card-header">
+                <span class="pf-card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/></svg>
+                  Redes Wi-Fi Próximas
+                </span>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="showTab('networking')" aria-label="Ver todas as redes">Ver Todas</button>
+              </div>
+              <div id="dash-wifi-list">
+                <p style="color:var(--pf-text-muted); font-size:0.78rem; padding:0.35rem 0;">Procurando sinais de rádio...</p>
+              </div>
+            </div>
+
+            <!-- Top 5 Processes -->
+            <div class="pf-card">
+              <div class="pf-card-header">
+                <span class="pf-card-title">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                  Processos Ativos (Top 5 por Memória/CPU)
+                </span>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="showTab('services')" aria-label="Ver todos os serviços">Ver Serviços</button>
+              </div>
+              <div class="table-responsive">
+                <table class="pf-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">PID</th>
+                      <th scope="col">Processo</th>
+                      <th scope="col">% CPU</th>
+                      <th scope="col">% RAM</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dash-top-processes">
+                    <tr><td colspan="4" style="color:var(--pf-text-muted);">Coletando dados de telemetria...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. NETWORKING & WI-FI -->
+        <section class="tab-section" id="view-networking">
+          <div class="pf-card" id="wifi-active-conn-banner" style="margin-bottom:0.75rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div style="display:flex; align-items:center; gap:0.6rem;">
+                <div>
+                  <div style="font-weight:700; font-size:0.9rem;" id="wifi-status-title">
+                    <span class="status-dot-sm live-pulse" style="background:var(--pf-blue-light); display:inline-block; margin-right:6px;"></span>Modo Ponto de Acesso: <strong style="color:var(--pf-blue-light);">RTL8189FTV_AP</strong>
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--pf-text-muted);" id="wifi-status-subtitle">Endereço IP: 192.168.4.1 · Servidor DHCP dnsmasq Ativo · Portal Cativo</div>
+                </div>
+              </div>
+              <div style="display:flex; gap:0.35rem;" id="wifi-banner-actions">
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="showTab('networking')" aria-label="Configurar Ponto de Acesso">Configurar AP</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-grid-2">
+            <!-- Wi-Fi Scanner Card -->
+            <div class="pf-card" style="min-height:360px;">
+              <div class="pf-card-header">
+                <span class="pf-card-title">Redes Wi-Fi Disponíveis</span>
+                <div class="wifi-header-actions">
+                  <button class="pf-btn pf-btn-secondary pf-btn-sm" id="btn-manual-network">+ Oculta</button>
+                  <button class="pf-btn pf-btn-primary pf-btn-sm" id="btn-refresh-scan">[ Escanear ]</button>
+                </div>
+              </div>
+
+              <div style="margin-bottom:0.65rem;">
+                <input type="text" class="pf-input" id="wifi-filter-input" placeholder="Filtrar por nome de rede (SSID)..." aria-label="Filtrar redes Wi-Fi">
+              </div>
+
+              <div id="wifi-networks-container" style="max-height:440px; overflow-y:auto; padding-right:2px;">
+                <p style="color:var(--pf-text-muted); padding:0.65rem 0;">Procurando redes...</p>
+              </div>
+            </div>
+
+            <!-- Access Point Configuration Card -->
+            <div class="pf-card" style="min-height:360px;">
+              <div class="pf-card-header">
+                <span class="pf-card-title">Configurar Ponto de Acesso (AP)</span>
+              </div>
+              <form id="form-ap-config">
+                <div class="pf-form-group">
+                  <label class="pf-label" for="ap-cfg-ssid">Nome da Rede (SSID)</label>
+                  <input type="text" class="pf-input" id="ap-cfg-ssid" value="RTL8189FTV_AP" required maxlength="32">
+                </div>
+
+                <div class="pf-form-group">
+                  <div style="display:flex; justify-content:space-between;">
+                    <label class="pf-label" for="ap-cfg-pass">Chave de Segurança (WPA2-PSK)</label>
+                    <span style="font-size:0.68rem; color:var(--pf-text-muted);" id="ap-pass-counter">0/63</span>
+                  </div>
+                  <div style="position:relative;">
+                    <input type="password" class="pf-input" id="ap-cfg-pass" placeholder="Deixe em branco para rede aberta" minlength="8" maxlength="63">
+                    <button type="button" id="btn-toggle-ap-pass" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--pf-text-muted); cursor:pointer;" aria-label="Mostrar senha">👁</button>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.55rem;">
+                  <div class="pf-form-group">
+                    <label class="pf-label" for="ap-cfg-channel">Canal Wi-Fi (2.4 GHz)</label>
+                    <select class="pf-select" id="ap-cfg-channel">
+                      <option value="1">Canal 1 (2412 MHz)</option>
+                      <option value="6" selected>Canal 6 (2437 MHz)</option>
+                      <option value="11">Canal 11 (2462 MHz)</option>
+                    </select>
+                  </div>
+                  <div class="pf-form-group">
+                    <label class="pf-label">Endereço IP do Gateway</label>
+                    <input type="text" class="pf-input" value="192.168.4.1" disabled>
+                  </div>
+                </div>
+
+                <div style="margin-top:0.35rem;">
+                  <button type="submit" class="pf-btn pf-btn-primary" style="width:100%;">
+                    Salvar e Reiniciar Ponto de Acesso
+                  </button>
+                </div>
+              </form>
+
+              <div style="margin-top:0.85rem; padding-top:0.55rem; border-top:1px solid var(--pf-border-subtle);">
+                <div class="metric-label">Parâmetros do Servidor DHCP</div>
+                <div style="font-size:0.72rem; color:var(--pf-text-muted); line-height:1.4;">
+                  Faixa de IP: <code>192.168.4.10 – 192.168.4.250</code><br>
+                  Portal Cativo: <code>dnsmasq (Porta 53 Hijack)</code><br>
+                  Watchdog: <code>Auto-Rollback 75s ativo</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. PHYSICAL INTERFACES -->
+        <section class="tab-section" id="view-interfaces">
+          <div class="pf-card">
+            <div class="pf-card-header">
+              <span class="pf-card-title">Interfaces de Rede Físicas</span>
+            </div>
+            <div class="table-responsive">
+              <table class="pf-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Interface</th>
+                    <th scope="col">Controlador</th>
+                    <th scope="col">Endereço IPv4</th>
+                    <th scope="col">Endereço MAC</th>
+                    <th scope="col">Velocidade</th>
+                    <th scope="col">Tráfego em Tempo Real</th>
+                    <th scope="col" style="text-align:right;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="color:var(--pf-blue-light); font-weight:700;">eth0</td>
+                    <td>Realtek RTL8211F Gigabit</td>
+                    <td class="pf-table-mono" id="eth-table-ip">192.168.1.153</td>
+                    <td class="pf-table-mono" id="eth-table-mac">EC:2E:AB:41:1E:75</td>
+                    <td style="color:var(--pf-green-light);">1000 Mbps Full-Duplex</td>
+                    <td class="pf-table-mono" id="eth-traffic-rate">RX: 0.4 KB/s · TX: 0.6 KB/s</td>
+                    <td style="text-align:right;"><span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Conectado</span></td>
+                  </tr>
+                  <tr>
+                    <td style="color:var(--pf-blue-light); font-weight:700;">wlan0</td>
+                    <td>Realtek RTL8189FTV 802.11n</td>
+                    <td class="pf-table-mono" id="wlan-table-ip">192.168.4.1</td>
+                    <td class="pf-table-mono" id="wlan-table-mac">3C:7A:AA:39:F6:C2</td>
+                    <td style="color:var(--pf-green-light);">72.2 Mbps (MCS7)</td>
+                    <td class="pf-table-mono" id="wlan-traffic-rate">RX: 0.1 KB/s · TX: 0.2 KB/s</td>
+                    <td style="text-align:right;" id="wlan-table-status"><span class="pf-pill info"><span class="status-dot-sm live-pulse" style="background:var(--pf-blue-light);"></span>AP Ativo</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. SERVICES & HARDWARE RESOURCES -->
+        <section class="tab-section" id="view-services">
+          <div class="pf-card">
+            <div class="pf-card-header">
+              <span class="pf-card-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                Gerenciador de Serviços do Sistema (systemd Units)
+              </span>
+              <div style="display:flex; gap:0.35rem; align-items:center;">
+                <input type="text" class="pf-input" id="services-search-input" placeholder="Filtrar serviços..." style="width:160px; height:28px; font-size:0.72rem;" aria-label="Filtrar serviços systemd">
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="loadServices()" aria-label="Atualizar lista de serviços">↻ Atualizar</button>
+              </div>
+            </div>
+
+            <!-- Segmented Category Filters -->
+            <div style="display:flex; gap:0.3rem; margin-bottom:0.65rem; flex-wrap:wrap;">
+              <button class="pf-btn pf-btn-secondary pf-btn-sm active" id="svc-filter-all" onclick="filterServices('all')">Todos (8)</button>
+              <button class="pf-btn pf-btn-secondary pf-btn-sm" id="svc-filter-forgeos" onclick="filterServices('forgeos')">Daemons ForgeOS (5)</button>
+              <button class="pf-btn pf-btn-secondary pf-btn-sm" id="svc-filter-system" onclick="filterServices('system')">Serviços Base (3)</button>
+            </div>
+
+            <!-- Services Table -->
+            <div class="table-responsive">
+              <table class="pf-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Unidade</th>
+                    <th scope="col" class="col-category">Categoria</th>
+                    <th scope="col">Descrição / Escopo</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">No Boot</th>
+                    <th scope="col" style="text-align:right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="services-table-body">
+                  <!-- Rendered dynamically by loadServices() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. FORGEHUB APPLICATION ARSENAL -->
+        <section class="tab-section" id="view-modules">
+          <div class="pf-grid-3" id="modules-container">
+            <!-- Dynamic Module Cards -->
+          </div>
+        </section>
+
+        <!-- 6. SYSTEM LOGS VIEWER (RFC 5424) -->
+        <section class="tab-section" id="view-logs">
+          <div class="log-viewer-wrapper">
+            <div class="log-toolbar">
+              <div class="log-chips-group">
+                <button class="log-chip active" data-lvl="all" onclick="filterLogLevel('all')">Todos</button>
+                <button class="log-chip err" data-lvl="err" onclick="filterLogLevel('err')">Erros</button>
+                <button class="log-chip warn" data-lvl="warning" onclick="filterLogLevel('warning')">Avisos</button>
+                <button class="log-chip" data-lvl="info" onclick="filterLogLevel('info')">Info</button>
+                <button class="log-chip" data-lvl="debug" onclick="filterLogLevel('debug')">Debug</button>
+              </div>
+
+              <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
+                <select class="pf-select" id="log-unit-select" style="width:160px; height:28px; font-size:0.72rem;" onchange="loadSystemLogs()">
+                  <option value="all">Todas as Unidades</option>
+                  <option value="forge-portal.service">forge-portal.service</option>
+                  <option value="forge-ap.service">forge-ap.service</option>
+                  <option value="forge-display.service">forge-display.service</option>
+                  <option value="forge-watchdog.service">forge-watchdog.service</option>
+                  <option value="ssh.service">ssh.service</option>
+                  <option value="kernel">kernel</option>
+                </select>
+
+                <input type="text" class="pf-input" id="log-search-input" placeholder="Buscar nos logs..." style="width:140px; height:28px; font-size:0.72rem;" oninput="filterLogsRealtime()">
+
+                <button class="pf-btn pf-btn-secondary pf-btn-sm active" id="btn-toggle-follow" onclick="toggleLogFollow()">● Seguir (Tail)</button>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="copyLogsToClipboard()">Copiar Logs</button>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="exportLogsToFile()">Exportar</button>
+                <button class="pf-btn pf-btn-danger pf-btn-sm" onclick="confirmClearLogs()">Limpar Logs</button>
+              </div>
+            </div>
+
+            <div class="log-container" id="log-container">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <button class="floating-scroll-pill" id="floating-scroll-btn" onclick="scrollToLogBottom()">
+              ↓ Novas linhas nos logs
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- PATTERNFLY CONNECT MODAL -->
+<div class="pf-modal-backdrop" id="connect-modal">
+  <div class="pf-modal-dialog">
+    <div class="pf-modal-header">
+      <h3 id="modal-network-title">Conectar à Rede Wi-Fi</h3>
+      <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="closeModal()" aria-label="Fechar modal">✕</button>
+    </div>
+    <form id="form-connect-wifi">
+      <div class="pf-modal-body">
+        <div class="pf-form-group">
+          <label class="pf-label" for="prov-ssid">Nome da Rede (SSID)</label>
+          <input type="text" class="pf-input" id="prov-ssid" required>
+        </div>
+
+        <div class="pf-form-group" id="group-prov-psk">
+          <div style="display:flex; justify-content:space-between;">
+            <label class="pf-label" for="prov-password">Chave de Segurança (WPA2-PSK)</label>
+            <span style="font-size:0.68rem; color:var(--pf-text-muted);" id="prov-pass-counter">0/63</span>
+          </div>
+          <div style="position:relative;">
+            <input type="password" class="pf-input" id="prov-password" placeholder="Digite a senha da rede" minlength="8" maxlength="63">
+            <button type="button" id="btn-toggle-prov-pass" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--pf-text-muted); cursor:pointer;" aria-label="Mostrar senha">👁</button>
+          </div>
+        </div>
+
+        <div id="group-prov-eap" style="display:none;">
+          <div class="pf-form-group">
+            <label class="pf-label" for="prov-eap-identity">Identidade Institucional (RA / Usuário)</label>
+            <input type="text" class="pf-input" id="prov-eap-identity" placeholder="ex: usuario@unesp.br">
+          </div>
+          <div class="pf-form-group">
+            <label class="pf-label" for="prov-eap-password">Senha Institucional</label>
+            <input type="password" class="pf-input" id="prov-eap-password" placeholder="Senha do portal institucional">
+          </div>
+        </div>
+
+        <div style="background:var(--pf-bg-inset); border:1px solid var(--pf-border-subtle); border-radius:var(--pf-radius); padding:0.55rem 0.65rem; font-size:0.72rem; color:var(--pf-orange-warning); margin-top:0.35rem; display:flex; align-items:flex-start; gap:0.45rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span><strong>Aviso:</strong> O ponto de acesso será reiniciado para conectar à rede selecionada com watchdog de 75s.</span>
+        </div>
+      </div>
+      <div class="pf-modal-footer">
+        <button type="button" class="pf-btn pf-btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="pf-btn pf-btn-primary" id="btn-submit-provision">Conectar à Rede</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ACTION CONFIRMATION MODAL -->
+<div class="pf-modal-backdrop" id="confirm-modal">
+  <div class="pf-modal-dialog">
+    <div class="pf-modal-header">
+      <h3 id="confirm-modal-title">Confirmar Ação</h3>
+      <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="closeConfirmModal()" aria-label="Fechar modal">✕</button>
+    </div>
+    <div class="pf-modal-body">
+      <p id="confirm-modal-body" style="font-size:0.8rem; color:var(--pf-text-primary); line-height:1.4;">
+        Tem certeza que deseja executar esta ação?
+      </p>
+    </div>
+    <div class="pf-modal-footer">
+      <button type="button" class="pf-btn pf-btn-secondary" onclick="closeConfirmModal()">Cancelar</button>
+      <button type="button" class="pf-btn pf-btn-danger" id="confirm-modal-btn" onclick="executeConfirmedAction()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- COMMAND PALETTE MODAL -->
+<div class="pf-modal-backdrop" id="cmd-modal">
+  <div class="pf-modal-dialog" style="max-width:440px;">
+    <input type="text" class="cmd-palette-input" id="cmd-input" placeholder="Buscar página, serviço ou comando..." autofocus>
+    <div class="cmd-palette-list" id="cmd-list">
+      <!-- Populated dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATIONS CONTAINER -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script>
+/* ==========================================================================
+   HIGH-PERFORMANCE CLIENT TELEMETRY & EVENT LOOP ENGINE
+   ========================================================================== */
+let currentNetworks = [];
+let currentServices = [];
+let currentSvcFilter = 'all';
+let currentProvMode = 'psk';
+let isTickerBusy = false;
+let currentClientSsid = null;
+
+// Ring Buffers for Sparklines (60 points)
+const HISTORY_LENGTH = 60;
+const cpuHistory = new Float32Array(HISTORY_LENGTH);
+const ramHistory = new Float32Array(HISTORY_LENGTH);
+const netHistory = new Float32Array(HISTORY_LENGTH);
+let historyIndex = 0;
+
+// Logs Engine
+let currentLogs = [];
+let currentLogLevel = 'all';
+let isLogFollowActive = true;
+let pendingActionCallback = null;
+
+// Command Palette Actions
+const COMMANDS = [
+  { name: 'Ir para Visão Geral', tab: 'overview', icon: '📊' },
+  { name: 'Ir para Logs do Sistema', tab: 'logs', icon: '📜' },
+  { name: 'Ir para Serviços & Recursos', tab: 'services', icon: '⚙️' },
+  { name: 'Ir para Wi-Fi & Ponto de Acesso', tab: 'networking', icon: '📶' },
+  { name: 'Ir para Interfaces Físicas', tab: 'interfaces', icon: '🔌' },
+  { name: 'Ir para ForgeHub (Arsenal)', tab: 'modules', icon: '📦' },
+  { name: 'Restaurar Ponto de Acesso (AP)', action: () => disconnectWifi(), icon: '🔄' },
+  { name: 'Alternar Modo Escuro / Claro', action: () => toggleTheme(), icon: '🌓' },
+  { name: 'Limpar Logs do Journal', action: () => confirmClearLogs(), icon: '🧹' }
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  setupNavigation();
+  setupPasswordToggles();
+  setupCommandPalette();
+  loadServices();
+  loadModulesHub();
+  loadSystemLogs();
+  tickRealtime();
+  setInterval(tickRealtime, 1000);
+});
+
+// Toast System
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast-item ${type}`;
+  toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    setTimeout(() => toast.remove(), 200);
+  }, 4000);
+}
+
+// Confirmation Modal
+function showConfirmDialog(title, message, btnText, isDestructive, onConfirm) {
+  document.getElementById('confirm-modal-title').textContent = title;
+  document.getElementById('confirm-modal-body').textContent = message;
+  const btn = document.getElementById('confirm-modal-btn');
+  btn.textContent = btnText;
+  btn.className = isDestructive ? 'pf-btn pf-btn-danger' : 'pf-btn pf-btn-primary';
+  pendingActionCallback = onConfirm;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.remove('open');
+  pendingActionCallback = null;
+}
+function executeConfirmedAction() {
+  if (pendingActionCallback) {
+    pendingActionCallback();
+  }
+  closeConfirmModal();
+}
+
+// Theme
+function initTheme() {
+  const saved = localStorage.getItem('forge_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcons(saved);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('forge_theme', next);
+  updateThemeIcons(next);
+}
+function updateThemeIcons(theme) {
+  const sun = document.getElementById('theme-icon-sun');
+  const moon = document.getElementById('theme-icon-moon');
+  if (sun && moon) {
+    sun.style.display = theme === 'dark' ? 'none' : 'block';
+    moon.style.display = theme === 'dark' ? 'block' : 'none';
+  }
+}
+
+// Navigation
+function setupNavigation() {
+  window.addEventListener('hashchange', handleHash);
+  handleHash();
+
+  document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-backdrop').classList.toggle('open');
+  });
+  document.getElementById('sidebar-backdrop').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-backdrop').classList.remove('open');
+  });
+  document.getElementById('btn-quick-reset').addEventListener('click', () => disconnectWifi());
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+}
+
+function handleHash() {
+  const hash = window.location.hash.replace('#', '') || 'overview';
+  showTab(hash);
+}
+
+function showTab(tabId) {
+  document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.pf-nav-link').forEach(l => l.classList.remove('active'));
+
+  const targetSec = document.getElementById(`view-${tabId}`);
+  if (targetSec) targetSec.classList.add('active');
+
+  const activeLink = document.querySelector(`.pf-nav-link[data-tab="${tabId}"]`);
+  if (activeLink) activeLink.classList.add('active');
+
+  const titles = {
+    overview: ['Visão geral do sistema', 'Telemetria contínua em tempo real e saúde do hardware.'],
+    logs: ['Logs do sistema', 'Registro de eventos do kernel e serviços (journalctl RFC 5424).'],
+    services: ['Serviços & recursos', 'Gerenciador de daemons do sistema e especificações do hardware.'],
+    networking: ['Wi-Fi & ponto de acesso', 'Configuração de redes sem fio e portal cativo.'],
+    interfaces: ['Interfaces físicas', 'Diagnóstico de conexões cabeada Gigabit e rádio SDIO.'],
+    modules: ['ForgeHub (Arsenal)', 'Catálogo e instalador de módulos e quiosques acadêmicos.']
+  };
+
+  const [t, sub] = titles[tabId] || ['ForgeOS Cockpit', 'Painel de gerenciamento do appliance.'];
+  document.getElementById('page-banner-title').textContent = t;
+  document.getElementById('page-banner-subtitle').textContent = sub;
+
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+
+  if (tabId === 'logs') loadSystemLogs();
+  if (tabId === 'services') loadServices();
+  if (tabId === 'modules') loadModulesHub();
+  if (tabId === 'networking') scanWifi();
+}
+
+// Password Eye Toggles
+function setupPasswordToggles() {
+  const toggleAP = document.getElementById('btn-toggle-ap-pass');
+  const inputAP = document.getElementById('ap-cfg-pass');
+  if (toggleAP && inputAP) {
+    toggleAP.addEventListener('click', () => {
+      inputAP.type = inputAP.type === 'password' ? 'text' : 'password';
+    });
+    inputAP.addEventListener('input', () => {
+      document.getElementById('ap-pass-counter').textContent = `${inputAP.value.length}/63`;
+    });
+  }
+
+  const toggleProv = document.getElementById('btn-toggle-prov-pass');
+  const inputProv = document.getElementById('prov-password');
+  if (toggleProv && inputProv) {
+    toggleProv.addEventListener('click', () => {
+      inputProv.type = inputProv.type === 'password' ? 'text' : 'password';
+    });
+    inputProv.addEventListener('input', () => {
+      document.getElementById('prov-pass-counter').textContent = `${inputProv.value.length}/63`;
+    });
+  }
+}
+
+// Command Palette
+function setupCommandPalette() {
+  document.getElementById('btn-open-cmd').addEventListener('click', openCommandPalette);
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openCommandPalette();
+    }
+    if (e.key === 'Escape') {
+      closeCommandPalette();
+      closeModal();
+      closeConfirmModal();
+    }
+  });
+
+  const cmdInput = document.getElementById('cmd-input');
+  cmdInput.addEventListener('input', () => {
+    const q = cmdInput.value.toLowerCase();
+    renderCommandList(COMMANDS.filter(c => c.name.toLowerCase().includes(q)));
+  });
+}
+function openCommandPalette() {
+  document.getElementById('cmd-modal').classList.add('open');
+  const input = document.getElementById('cmd-input');
+  input.value = '';
+  input.focus();
+  renderCommandList(COMMANDS);
+}
+function closeCommandPalette() {
+  document.getElementById('cmd-modal').classList.remove('open');
+}
+function renderCommandList(list) {
+  const container = document.getElementById('cmd-list');
+  container.innerHTML = list.map(c => `
+    <div class="cmd-palette-item" onclick="executeCommand('${c.name}')">
+      <span>${c.icon} ${escapeHtml(c.name)}</span>
+      <span style="font-size:0.68rem; color:var(--pf-text-muted);">↵ Executar</span>
+    </div>
+  `).join('');
+}
+function executeCommand(name) {
+  const item = COMMANDS.find(c => c.name === name);
+  closeCommandPalette();
+  if (item) {
+    if (item.tab) {
+      window.location.hash = item.tab;
+    } else if (item.action) {
+      item.action();
+    }
+  }
+}
+
+// Sparklines Rendering (Normalized 0-100 SVG path)
+function renderSparkline(svgId, dataArray, maxVal = 100) {
+  const svg = document.getElementById(svgId);
+  if (!svg) return;
+  const path = svg.querySelector('path');
+  if (!path) return;
+
+  const len = dataArray.length;
+  let d = '';
+  for (let i = 0; i < len; i++) {
+    const idx = (historyIndex + i) % len;
+    const val = dataArray[idx];
+    const x = (i / (len - 1)) * 100;
+    const y = 30 - Math.min(30, Math.max(0, (val / maxVal) * 30));
+    d += (i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  path.setAttribute('d', d);
+}
+
+// Real-time Telemetry
+async function tickRealtime(force = false) {
+  if (isTickerBusy && !force) return;
+  isTickerBusy = true;
+
+  try {
+    const res = await fetch('/rest/metrics');
+    const m = await res.json();
+
+    // 1. CPU & Thermal
+    const cpuVal = m.cpu_pct !== undefined ? m.cpu_pct : 0;
+    document.getElementById('dash-cpu-val').textContent = `${cpuVal.toFixed(1)}%`;
+    
+    // Thermal Zone
+    const tempVal = m.cpu_temp || 40.0;
+    const tempPill = document.getElementById('dash-temp-pill');
+    if (tempPill) {
+      tempPill.textContent = `${tempVal.toFixed(1)}°C`;
+      tempPill.className = tempVal > 85 ? 'pf-pill danger' : (tempVal > 70 ? 'pf-pill warning' : 'pf-pill success');
+    }
+
+    const loadStr = m.load_avg ? m.load_avg.map(x => x.toFixed(2)).join(', ') : '0.08, 0.02, 0.04';
+    document.getElementById('dash-cpu-sub').textContent = `4x A53 @ 1.8 GHz · Carga: ${loadStr}`;
+
+    // 2. RAM
+    const ramUsed = m.ram_used_mb || 485;
+    const ramTotal = m.ram_total_mb || 1980;
+    const ramPct = m.ram_pct || ((ramUsed / ramTotal) * 100);
+    const ramFreeGb = ((ramTotal - ramUsed) / 1024).toFixed(2);
+    document.getElementById('dash-mem-val').textContent = `${ramUsed} MB / ${(ramTotal/1024).toFixed(2)} GB`;
+    document.getElementById('dash-mem-sub').textContent = `${ramPct.toFixed(1)}% em uso (${ramFreeGb} GB livre)`;
+
+    // 3. Storage
+    const diskUsed = m.disk_used_gb || 3.5;
+    const diskTotal = m.disk_total_gb || 28.7;
+    const diskPct = ((diskUsed / diskTotal) * 100).toFixed(1);
+    document.getElementById('dash-disk-val').textContent = `${diskUsed} GB / ${diskTotal} GB`;
+    document.getElementById('dash-disk-sub').textContent = `${diskPct}% em uso · Ext4 Rootfs`;
+    const diskBar = document.getElementById('dash-disk-bar');
+    if (diskBar) diskBar.style.width = `${diskPct}%`;
+
+    // 4. Network I/O
+    const rx = m.rx_kbs || 0.0;
+    const tx = m.tx_kbs || 0.0;
+    document.getElementById('dash-net-val').textContent = `↓ ${rx.toFixed(1)} KB/s · ↑ ${tx.toFixed(1)} KB/s`;
+    document.getElementById('eth-traffic-rate').textContent = `RX: ${rx.toFixed(1)} KB/s · TX: ${tx.toFixed(1)} KB/s`;
+
+    // Update Sparkline Buffers
+    cpuHistory[historyIndex] = cpuVal;
+    ramHistory[historyIndex] = ramPct;
+    netHistory[historyIndex] = rx + tx;
+    historyIndex = (historyIndex + 1) % HISTORY_LENGTH;
+
+    renderSparkline('sparkline-cpu', cpuHistory, 100);
+    renderSparkline('sparkline-ram', ramHistory, 100);
+    renderSparkline('sparkline-net', netHistory, 50);
+
+    // Render Top 5 Processes
+    const procs = m.top_processes || [];
+    const procTable = document.getElementById('dash-top-processes');
+    if (procTable && procs.length > 0) {
+      procTable.innerHTML = procs.map(p => `
+        <tr>
+          <td class="pf-table-mono" style="color:var(--pf-text-muted);">${p.pid}</td>
+          <td style="font-weight:600; color:var(--pf-text-primary);">${escapeHtml(p.name)}</td>
+          <td style="color:var(--pf-blue-light); font-weight:600;">${p.cpu}%</td>
+          <td>${p.mem}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Refresh Dynamic Status
+    await updateStatus();
+  } catch (err) {
+    // Network jitter fallback
+  } finally {
+    isTickerBusy = false;
+  }
+}
+
+// Status & Network State Engine
+async function updateStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const s = await res.json();
+
+    const badgeText = document.getElementById('top-status-text');
+    const badgeEl = document.getElementById('top-status-badge');
+    const wifiBanner = document.getElementById('wifi-active-conn-banner');
+    const wifiTitle = document.getElementById('wifi-status-title');
+    const wifiSubtitle = document.getElementById('wifi-status-subtitle');
+    const wlanIpEl = document.getElementById('wlan-table-ip');
+    const wlanStatusEl = document.getElementById('wlan-table-status');
+    const wifiBannerActions = document.getElementById('wifi-banner-actions');
+
+    if (s.provisioning) {
+      badgeText.textContent = 'Conectando ao Wi-Fi...';
+      badgeEl.className = 'status-badge warn';
+    } else if (s.client_connected) {
+      currentClientSsid = s.client_ssid;
+      badgeText.textContent = `Wi-Fi: ${s.client_ssid} (${s.client_ip})`;
+      badgeEl.className = 'status-badge';
+
+      if (wifiBanner) {
+        wifiBanner.style.display = 'block';
+        if (wifiTitle) wifiTitle.innerHTML = `<span class="status-dot-sm live-pulse" style="background:var(--pf-green-light); display:inline-block; margin-right:6px;"></span>Conectado à Rede: <strong style="color:var(--pf-green-light);">${escapeHtml(s.client_ssid)}</strong>`;
+        if (wifiSubtitle) wifiSubtitle.textContent = `Endereço IP: ${s.client_ip} · Gateway: 10.129.75.2 · Rede Institucional (Internet Ativa)`;
+        if (wifiBannerActions) wifiBannerActions.innerHTML = `<button class="pf-btn pf-btn-danger pf-btn-sm" onclick="disconnectWifi()">Restaurar Modo Ponto de Acesso</button>`;
+      }
+
+      if (wlanIpEl) wlanIpEl.textContent = s.client_ip;
+      if (wlanStatusEl) wlanStatusEl.innerHTML = `<span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Conectado: ${escapeHtml(s.client_ssid)}</span>`;
+      document.getElementById('dash-mode-sub').textContent = `${s.client_ssid} (${s.client_ip})`;
+    } else {
+      currentClientSsid = null;
+      badgeText.textContent = 'AP: 192.168.4.1';
+      badgeEl.className = 'status-badge info';
+
+      if (wifiBanner) {
+        wifiBanner.style.display = 'block';
+        if (wifiTitle) wifiTitle.innerHTML = `<span class="status-dot-sm live-pulse" style="background:var(--pf-blue-light); display:inline-block; margin-right:6px;"></span>Modo Ponto de Acesso: <strong style="color:var(--pf-blue-light);">${escapeHtml(s.ssid || 'RTL8189FTV_AP')}</strong>`;
+        if (wifiSubtitle) wifiSubtitle.textContent = `Endereço IP: 192.168.4.1 · Servidor DHCP dnsmasq Ativo · Portal Cativo`;
+        if (wifiBannerActions) wifiBannerActions.innerHTML = `<button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="showTab('networking')">Configurar AP</button>`;
+      }
+
+      if (wlanIpEl) wlanIpEl.textContent = '192.168.4.1';
+      if (wlanStatusEl) wlanStatusEl.innerHTML = `<span class="pf-pill info"><span class="status-dot-sm live-pulse" style="background:var(--pf-blue-light);"></span>AP Ativo</span>`;
+      document.getElementById('dash-mode-sub').textContent = s.ap_active ? (s.ssid + ' (192.168.4.1)') : 'Sem IP';
+    }
+
+    // Ethernet IP Check
+    const ethRes = await fetch('/rest/ethernetStatus');
+    const eth = await ethRes.json();
+    if (eth.local_ip) {
+      document.getElementById('eth-table-ip').textContent = eth.local_ip;
+      document.getElementById('eth-table-mac').textContent = eth.mac_address;
+      document.getElementById('sidebar-footer-ip').textContent = eth.local_ip;
+    }
+  } catch (err) {}
+}
+
+// Disconnect / Restore AP
+function disconnectWifi() {
+  showConfirmDialog(
+    'Restaurar Modo Ponto de Acesso',
+    'Deseja desconectar da rede Wi-Fi e reativar o Ponto de Acesso (RTL8189FTV_AP em 192.168.4.1)?',
+    'Restaurar AP',
+    true,
+    async () => {
+      try {
+        await fetch('/api/reset', { method: 'POST' });
+        showToast('Ponto de acesso restaurado com sucesso! (192.168.4.1)', 'success');
+        setTimeout(updateStatus, 2000);
+      } catch (err) {
+        showToast('Erro ao restaurar modo AP', 'error');
+      }
+    }
+  );
+}
+
+// Wi-Fi Scan & Provisioning
+async function scanWifi() {
+  const container = document.getElementById('wifi-networks-container');
+  const dashContainer = document.getElementById('dash-wifi-list');
+  if (container) container.innerHTML = '<p style="color:var(--pf-text-muted); font-size:0.75rem; padding:0.5rem 0;">Escaneando espectro Wi-Fi...</p>';
+
+  try {
+    const res = await fetch('/api/scan');
+    const data = await res.json();
+    currentNetworks = data.networks || [];
+    renderWifiNetworks();
+  } catch (err) {
+    if (container) container.innerHTML = '<p style="color:var(--pf-red-light); font-size:0.75rem;">Erro ao escanear redes Wi-Fi.</p>';
+  }
+}
+
+function renderWifiNetworks() {
+  const container = document.getElementById('wifi-networks-container');
+  const dashContainer = document.getElementById('dash-wifi-list');
+  const filter = (document.getElementById('wifi-filter-input')?.value || '').toLowerCase();
+
+  const filtered = currentNetworks.filter(n => n.ssid.toLowerCase().includes(filter));
+  document.getElementById('badge-wifi-count').textContent = `${filtered.length} Redes`;
+
+  const html = filtered.map(n => {
+    const isConn = currentClientSsid && n.ssid === currentClientSsid;
+    const isEap = n.encryption === 'eap' || n.flags.includes('EAP');
+    const encPill = isEap 
+      ? '<span class="pf-pill warning">802.1X EAP</span>' 
+      : (n.encryption === 'open' ? '<span class="pf-pill">Aberta</span>' : '<span class="pf-pill">WPA2-PSK</span>');
+
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.6rem; border-bottom:1px solid var(--pf-border-subtle); background:${isConn ? 'var(--pf-green-surface)' : 'transparent'}; border-radius:var(--pf-radius);">
+        <div>
+          <div style="font-weight:700; color:var(--pf-text-primary); font-size:0.8rem; display:flex; align-items:center; gap:0.4rem;">
+            ${escapeHtml(n.ssid)}
+            ${isConn ? '<span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Conectada</span>' : ''}
+          </div>
+          <div style="font-size:0.68rem; color:var(--pf-text-muted); margin-top:2px;">
+            Sinal: <strong>${n.rssi} dBm</strong> · Canal ${n.channel} · ${encPill}
+          </div>
+        </div>
+        <div>
+          ${isConn 
+            ? '<button class="pf-btn pf-btn-danger pf-btn-sm" onclick="disconnectWifi()">Desconectar</button>'
+            : `<button class="pf-btn pf-btn-primary pf-btn-sm" onclick="openConnectModal('${escapeHtml(n.ssid)}', '${n.encryption}')">Conectar</button>`
+          }
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (container) container.innerHTML = html || '<p style="color:var(--pf-text-muted); padding:0.5rem 0;">Nenhuma rede encontrada.</p>';
+  if (dashContainer) dashContainer.innerHTML = html || '<p style="color:var(--pf-text-muted); padding:0.5rem 0;">Nenhuma rede encontrada.</p>';
+}
+
+document.getElementById('wifi-filter-input')?.addEventListener('input', renderWifiNetworks);
+document.getElementById('btn-refresh-scan')?.addEventListener('click', scanWifi);
+document.getElementById('btn-manual-network')?.addEventListener('click', () => openConnectModal('', 'psk'));
+
+// Connect Modal
+function openConnectModal(ssid, encryption) {
+  document.getElementById('prov-ssid').value = ssid;
+  document.getElementById('prov-password').value = '';
+  document.getElementById('modal-network-title').textContent = ssid ? `Conectar à rede: ${ssid}` : 'Conectar à Rede Oculta';
+
+  const isEap = encryption === 'eap';
+  document.getElementById('group-prov-psk').style.display = isEap ? 'none' : 'block';
+  document.getElementById('group-prov-eap').style.display = isEap ? 'block' : 'none';
+  currentProvMode = isEap ? 'eap' : 'psk';
+
+  document.getElementById('connect-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('connect-modal').classList.remove('open');
+}
+
+// Provisioning Form Submit
+document.getElementById('form-connect-wifi')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ssid = document.getElementById('prov-ssid').value.trim();
+  const btn = document.getElementById('btn-submit-provision');
+  btn.textContent = 'Conectando...';
+  btn.disabled = true;
+
+  const payload = {
+    ssid: ssid,
+    mode: currentProvMode,
+    password: currentProvMode === 'psk' ? document.getElementById('prov-password').value : document.getElementById('prov-eap-password').value,
+    identity: currentProvMode === 'eap' ? document.getElementById('prov-eap-identity').value : undefined
+  };
+
+  try {
+    const res = await fetch('/api/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      showToast(`Tentativa de conexão a '${ssid}' enviada com watchdog de 75s!`, 'success');
+      closeModal();
+      setTimeout(updateStatus, 3000);
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Falha ao iniciar provisionamento.', 'error');
+    }
+  } catch (err) {
+    showToast('Erro de comunicação com o servidor.', 'error');
+  } finally {
+    btn.textContent = 'Conectar à Rede';
+    btn.disabled = false;
+  }
+});
+
+// AP Config Submit
+document.getElementById('form-ap-config')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ssid = document.getElementById('ap-cfg-ssid').value.trim();
+  const pass = document.getElementById('ap-cfg-pass').value.trim();
+  const ch = document.getElementById('ap-cfg-channel').value;
+
+  showConfirmDialog(
+    'Salvar Configuração do AP',
+    `Deseja aplicar o SSID '${ssid}' no canal ${ch}? A interface sem fio será reiniciada.`,
+    'Salvar e Reiniciar',
+    true,
+    async () => {
+      try {
+        const res = await fetch('/api/ap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ssid, password: pass, channel: parseInt(ch) })
+        });
+        if (res.ok) {
+          showToast('Configurações do Ponto de Acesso salvas e reiniciadas!', 'success');
+          setTimeout(updateStatus, 2500);
+        } else {
+          showToast('Erro ao salvar AP.', 'error');
+        }
+      } catch (err) {
+        showToast('Erro de comunicação.', 'error');
+      }
+    }
+  );
+});
+
+// Services Management Engine
+async function loadServices() {
+  try {
+    const res = await fetch('/api/services');
+    const data = await res.json();
+    currentServices = data.services || [];
+    renderServicesTable();
+  } catch (err) {
+    showToast('Erro ao carregar serviços systemd.', 'error');
+  }
+}
+
+function filterServices(category) {
+  currentSvcFilter = category;
+  document.querySelectorAll('[id^="svc-filter-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById(`svc-filter-${category}`)?.classList.add('active');
+  renderServicesTable();
+}
+
+function renderServicesTable() {
+  const container = document.getElementById('services-table-body');
+  if (!container) return;
+
+  const search = (document.getElementById('services-search-input')?.value || '').toLowerCase();
+  const filtered = currentServices.filter(s => {
+    const matchCat = (currentSvcFilter === 'all') || (s.category === currentSvcFilter);
+    const matchSearch = s.unit.toLowerCase().includes(search) || s.desc.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+
+  document.getElementById('badge-services-count').textContent = `${currentServices.length}`;
+
+  container.innerHTML = filtered.map(s => {
+    let statePill = '<span class="pf-pill">Inativo</span>';
+    if (s.state === 'active') {
+      statePill = '<span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Ativo (running)</span>';
+    } else if (s.state === 'failed') {
+      statePill = '<span class="pf-pill danger" style="font-weight:700;"><span class="status-dot-sm live-pulse" style="background:var(--pf-red-light);"></span>Falhado</span>';
+    } else if (s.state === 'activating') {
+      statePill = '<span class="pf-pill warning"><span class="status-dot-sm live-pulse"></span>Iniciando...</span>';
+    }
+
+    const bootPill = s.enabled !== false
+      ? '<span style="color:var(--pf-green-light); font-size:0.72rem; font-weight:600;">Habilitado</span>'
+      : '<span style="color:var(--pf-text-muted); font-size:0.72rem;">Desabilitado</span>';
+
+    return `
+      <tr>
+        <td class="pf-table-mono" style="font-weight:700; color:var(--pf-text-primary);">${escapeHtml(s.unit)}</td>
+        <td class="col-category"><span class="pf-pill">${s.category.toUpperCase()}</span></td>
+        <td>${escapeHtml(s.desc)}</td>
+        <td>${statePill}</td>
+        <td>${bootPill}</td>
+        <td style="text-align:right;">
+          <div style="display:inline-flex; gap:0.25rem;">
+            ${s.active 
+              ? `<button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="serviceActionConfirm('${s.unit}', 'restart')">Reiniciar</button>
+                 <button class="pf-btn pf-btn-danger pf-btn-sm" onclick="serviceActionConfirm('${s.unit}', 'stop')">Parar</button>`
+              : `<button class="pf-btn pf-btn-primary pf-btn-sm" onclick="serviceActionConfirm('${s.unit}', 'start')">Iniciar</button>`
+            }
+            <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="viewServiceLogs('${s.unit}')" title="Ver logs desta unidade">Logs</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.getElementById('services-search-input')?.addEventListener('input', renderServicesTable);
+
+function serviceActionConfirm(unit, action) {
+  const actionsPt = { start: 'Iniciar', stop: 'Parar', restart: 'Reiniciar' };
+  showConfirmDialog(
+    `${actionsPt[action] || action} Serviço`,
+    `Tem certeza que deseja executar '${action}' em '${unit}'? Isso pode afetar o funcionamento dos módulos em execução.`,
+    `${actionsPt[action] || action}`,
+    action === 'stop' || action === 'restart',
+    async () => {
+      try {
+        const res = await fetch(`/api/services/${unit}/${action}`, { method: 'POST' });
+        if (res.ok) {
+          showToast(`Comando '${action}' enviado para ${unit}!`, 'success');
+          setTimeout(loadServices, 1500);
+        } else {
+          showToast(`Falha ao executar ${action} em ${unit}.`, 'error');
+        }
+      } catch (err) {
+        showToast('Erro de comunicação.', 'error');
+      }
+    }
+  );
+}
+
+function viewServiceLogs(unit) {
+  window.location.hash = 'logs';
+  const sel = document.getElementById('log-unit-select');
+  if (sel) {
+    sel.value = unit;
+    loadSystemLogs();
+  }
+}
+
+// Module Hub Loader & Actions
+function getModuleSvgIcon(category, id) {
+  const cat = (category || '').toLowerCase();
+  const modId = (id || '').toLowerCase();
+  if (cat === 'ai' || modId.includes('totem') || modId.includes('mina')) {
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>`;
+  }
+  if (cat === 'data' || modId.includes('scraping')) {
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`;
+  }
+  if (cat === 'display' || modId.includes('kiosk') || modId.includes('framebuffer')) {
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+  }
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>`;
+}
+
+async function loadModulesHub() {
+  const container = document.getElementById('modules-container');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/rest/modules');
+    const data = await res.json();
+    const modules = data.modules || [];
+
+    document.getElementById('badge-modules-count').textContent = `${modules.length + 1} Apps`;
+
+    container.innerHTML = modules.map(m => {
+      const state = (m.status && m.status.state) || 'available';
+      const isRunning = state === 'running';
+      const isInstalled = state === 'installed' || isRunning;
+
+      let statusPill = '<span class="pf-pill">Disponível</span>';
+      if (isRunning) {
+        statusPill = '<span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Rodando</span>';
+      } else if (isInstalled) {
+        statusPill = '<span class="pf-pill info">Instalado</span>';
+      }
+
+      const req = m.requirements || {};
+      const minRam = req.min_ram_mb ? `${req.min_ram_mb} MB RAM` : '32 MB MIN';
+
+      let actionButtons = '';
+      if (!isInstalled) {
+        actionButtons = `
+          <button class="pf-btn pf-btn-primary pf-btn-sm" style="flex:1;" onclick="moduleAction('${m.id}', 'install')">Instalar Módulo</button>
+        `;
+      } else {
+        actionButtons = `
+          <button class="pf-btn pf-btn-primary pf-btn-sm" style="flex:1;" onclick="moduleAction('${m.id}', 'start')">Iniciar</button>
+          <button class="pf-btn pf-btn-danger pf-btn-sm" onclick="moduleAction('${m.id}', 'uninstall')">Desinstalar</button>
+        `;
+      }
+
+      return `
+        <div class="pf-card" style="justify-content:space-between; min-height:220px;">
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+              <div style="background:var(--pf-bg-inset); padding:0.45rem; border-radius:var(--pf-radius); border:1px solid var(--pf-border-subtle); display:flex; align-items:center; justify-content:center;">
+                ${getModuleSvgIcon(m.category, m.id)}
+              </div>
+              ${statusPill}
+            </div>
+
+            <h3 style="font-size:0.92rem; font-weight:700; color:var(--pf-text-primary); margin-bottom:0.15rem;">
+              ${escapeHtml(m.name)}
+            </h3>
+            <div style="font-size:0.68rem; color:var(--pf-text-muted); margin-bottom:0.45rem;">
+              ID: <code>${m.id}</code> · v${m.version || '1.0'}
+            </div>
+
+            <p style="font-size:0.75rem; color:var(--pf-text-secondary); line-height:1.35; margin-bottom:0.65rem;">
+              ${escapeHtml(m.description)}
+            </p>
+
+            <div style="display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:0.65rem;">
+              <span class="pf-pill">${minRam}</span>
+              <span class="pf-pill">${m.category ? m.category.toUpperCase() : 'APP'}</span>
+              <span class="pf-pill">ARM64</span>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:0.4rem; padding-top:0.55rem; border-top:1px solid var(--pf-border-subtle);">
+            ${actionButtons}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Built-in Kiosk Slot
+    container.innerHTML += `
+      <div class="pf-card" style="justify-content:space-between; min-height:220px;">
+        <div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+            <div style="background:var(--pf-bg-inset); padding:0.45rem; border-radius:var(--pf-radius); border:1px solid var(--pf-border-subtle); display:flex; align-items:center; justify-content:center;">
+              ${getModuleSvgIcon('display', 'kiosk-display')}
+            </div>
+            <span class="pf-pill success"><span class="status-dot-sm live-pulse"></span>Rodando</span>
+          </div>
+
+          <h3 style="font-size:0.92rem; font-weight:700; color:var(--pf-text-primary); margin-bottom:0.15rem;">
+            Kiosk HDMI Framebuffer
+          </h3>
+          <div style="font-size:0.68rem; color:var(--pf-text-muted); margin-bottom:0.45rem;">
+            ID: <code>kiosk-display</code> · Integrado (/dev/fb0)
+          </div>
+
+          <p style="font-size:0.75rem; color:var(--pf-text-secondary); line-height:1.35; margin-bottom:0.65rem;">
+            Renderizador gráfico 1080p sem flicker em /dev/fb0 com Dual QR Code e telemetria de hardware ao vivo.
+          </p>
+
+          <div style="display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:0.65rem;">
+            <span class="pf-pill">32 MB RAM</span>
+            <span class="pf-pill">DISPLAY</span>
+            <span class="pf-pill">NATIVO</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:0.4rem; padding-top:0.55rem; border-top:1px solid var(--pf-border-subtle);">
+          <button class="pf-btn pf-btn-secondary" style="width:100%;" onclick="showToast('Controlador HDMI ativo em /dev/fb0.', 'info')">Configurar Display</button>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    showToast('Falha ao consultar catálogo de módulos.', 'error');
+  }
+}
+
+async function moduleAction(id, action) {
+  const actionsPt = { install: 'Instalar', start: 'Iniciar', stop: 'Pausar', uninstall: 'Desinstalar' };
+  showConfirmDialog(
+    `${actionsPt[action] || action} Módulo`,
+    `Deseja executar '${action}' no módulo '${id}'?`,
+    `${actionsPt[action] || action}`,
+    action === 'uninstall',
+    async () => {
+      try {
+        const res = await fetch(`/api/modules/${id}/${action}`, { method: 'POST' });
+        if (res.ok) {
+          showToast(`Módulo '${id}': ação '${action}' concluída!`, 'success');
+          setTimeout(loadModulesHub, 1000);
+        } else {
+          showToast('Erro na ação do módulo.', 'error');
+        }
+      } catch (err) {
+        showToast('Erro de comunicação.', 'error');
+      }
+    }
+  );
+}
+
+// Log Viewer System (RFC 5424)
+async function loadSystemLogs() {
+  const selUnit = document.getElementById('log-unit-select')?.value || 'all';
+  const url = `/api/logs?unit=${encodeURIComponent(selUnit)}&level=${currentLogLevel}&lines=120`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    currentLogs = data.logs || [];
+    renderLogLines();
+  } catch (err) {}
+}
+
+function filterLogLevel(lvl) {
+  currentLogLevel = lvl;
+  document.querySelectorAll('.log-chip').forEach(c => {
+    c.classList.toggle('active', c.getAttribute('data-lvl') === lvl);
+  });
+  loadSystemLogs();
+}
+
+function filterLogsRealtime() {
+  renderLogLines();
+}
+
+function renderLogLines() {
+  const container = document.getElementById('log-container');
+  if (!container) return;
+
+  const search = (document.getElementById('log-search-input')?.value || '').toLowerCase();
+  const filtered = currentLogs.filter(l => {
+    const matchSearch = !search || l.raw.toLowerCase().includes(search);
+    const matchLevel = (currentLogLevel === 'all') || (l.level === currentLogLevel);
+    return matchSearch && matchLevel;
+  });
+
+  container.innerHTML = filtered.map(l => `
+    <div class="log-row log-${l.level}">
+      <span class="log-time">${l.time}</span>
+      <span class="log-unit">[${escapeHtml(l.unit)}]</span>
+      <span class="log-msg">${escapeHtml(l.message)}</span>
+    </div>
+  `).join('');
+
+  if (isLogFollowActive) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+// Follow / Tail & Scroll Detection
+const logContainer = document.getElementById('log-container');
+if (logContainer) {
+  logContainer.addEventListener('scroll', () => {
+    const atBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 30;
+    const floatingBtn = document.getElementById('floating-scroll-btn');
+    if (floatingBtn) {
+      floatingBtn.style.display = atBottom ? 'none' : 'flex';
+    }
+  });
+}
+
+function toggleLogFollow() {
+  isLogFollowActive = !isLogFollowActive;
+  const btn = document.getElementById('btn-toggle-follow');
+  if (btn) {
+    btn.classList.toggle('active', isLogFollowActive);
+    btn.textContent = isLogFollowActive ? '● Seguir (Tail)' : '○ Pausado';
+  }
+  if (isLogFollowActive) scrollToLogBottom();
+}
+
+function scrollToLogBottom() {
+  const container = document.getElementById('log-container');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+    document.getElementById('floating-scroll-btn').style.display = 'none';
+  }
+}
+
+function copyLogsToClipboard() {
+  const lines = currentLogs.map(l => l.raw).join('\n');
+  navigator.clipboard.writeText(lines).then(() => {
+    showToast(`${currentLogs.length} linhas de log copiadas para a área de transferência!`, 'success');
+  });
+}
+
+function exportLogsToFile() {
+  const lines = currentLogs.map(l => l.raw).join('\n');
+  const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `forgeos_journal_${Date.now()}.log`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Arquivo de logs exportado com sucesso!', 'success');
+}
+
+function confirmClearLogs() {
+  showConfirmDialog(
+    'Limpar Logs do Journal',
+    'Isso irá arquivar e rotacionar os logs do journalctl no sistema (journalctl --vacuum-time=1d). Recomendado exportar antes.',
+    'Limpar Logs',
+    true,
+    async () => {
+      try {
+        const res = await fetch('/api/logs/vacuum', { method: 'POST' });
+        if (res.ok) {
+          showToast('Logs rotacionados com sucesso!', 'success');
+          setTimeout(loadSystemLogs, 1000);
+        } else {
+          showToast('Erro ao limpar logs.', 'error');
+        }
+      } catch (err) {
+        showToast('Erro de comunicação.', 'error');
+      }
+    }
+  );
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>

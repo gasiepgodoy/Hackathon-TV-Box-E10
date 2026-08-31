@@ -1,0 +1,176 @@
+/* RESPONSIVE - Medium-large screens (< 900px) */
+@media (max-width: 900px) {
+  .header {
+    padding: 16px 24px;
+  }
+
+  .logo-main {
+    height: 42px;
+  }
+
+  .header-step-label {
+    font-size: 11px;
+  }
+
+  .header-step-indicator {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .header-step {
+    padding: 4px 10px;
+    gap: 5px;
+  }
+
+  .header-steps {
+    gap: 3px;
+  }
+
+  /* Stack the stage: board on top, panel below. */
+  .flash-stage {
+    flex-direction: column;
+    gap: 20px;
+    padding: 16px 4px;
+  }
+
+  .flash-stage__board .flash-board-image {
+    max-width: clamp(180px, 42vw, 260px);
+  }
+
+  .flash-stage__main {
+    max-width: 520px;
+    width: 100%;
+    gap: var(--space-lg);
+  }
+
+  /* Center summary + panel content when stacked. */
+  .flash-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .flash-info-badges {
+    justify-content: center;
+  }
+
+  /* Stacked: center the summary + progress block. */
+  .flash-info,
+  .flash-progress {
+    align-items: center;
+    text-align: center;
+  }
+  .flash-progress {
+    min-height: auto;
+  }
+  .flash-track {
+    margin-inline: auto;
+  }
+  .flash-dots {
+    margin-inline: auto;
+  }
+  .flash-fallback {
+    min-height: auto;
+  }
+}
+
+/* RESPONSIVE - Medium screens (< 700px) */
+@media (max-width: 700px) {
+  .header {
+    padding: 12px 16px;
+  }
+
+  .logo-main {
+    height: 36px;
+  }
+
+  .header-step-label {
+    font-size: 10px;
+  }
+
+  .header-step-indicator {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .header-step {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .header-steps {
+    gap: 2px;
+  }
+
+  /* Drop step text on narrow widths, keep the numbered indicators */
+  .header-step-label {
+    display: none;
+  }
+
+  /* Stack: sidebar on top, focus panel below */
+  .split {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .split-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .focus-visual {
+    height: 110px;
+    margin-bottom: 14px;
+  }
+
+  .focus-visual img {
+    max-height: 110px;
+  }
+}
+
+/* RESPONSIVE - Small screens (< 600px) */
+@media (max-width: 600px) {
+  .focus-title {
+    font-size: 19px;
+  }
+
+  .modal {
+    max-height: 95vh;
+    max-width: 98vw;
+    border-radius: var(--radius-lg);
+  }
+
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .flash-stage__board .flash-board-image {
+    max-width: clamp(160px, 50vw, 220px);
+  }
+
+  .flash-info h2 {
+    font-size: 18px;
+  }
+
+  .flash-progress__label {
+    font-size: clamp(16px, 5vw, 20px);
+  }
+}
+
+/* RESPONSIVE - Large screens (> 1200px) */
+@media (min-width: 1200px) {
+  .modal {
+    max-width: 950px;
+    max-height: 85vh;
+  }
+
+  .flash-stage {
+    max-width: 1120px;
+  }
+
+  /* Grow the hero board toward the Home north-star size. */
+  .flash-stage__board .flash-board-image {
+    max-width: clamp(480px, 44vw, 740px);
+  }
+}

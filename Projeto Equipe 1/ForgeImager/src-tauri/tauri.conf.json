@@ -1,0 +1,99 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Forge Imager",
+  "version": "2.0.0",
+  "identifier": "org.forge.imager",
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Forge Imager",
+        "width": 1100,
+        "height": 700,
+        "resizable": true,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "center": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
+    },
+    "macOSPrivateApi": true
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": false,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "category": "Utility",
+    "shortDescription": "Flash Forge OS images",
+    "longDescription": "Forge Imager is a utility for flashing OS images to SD cards and USB drives.",
+    "macOS": {
+      "entitlements": "./entitlements.plist",
+      "signingIdentity": null,
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "background": "./dmg-background.png",
+        "windowSize": {
+          "width": 540,
+          "height": 380
+        },
+        "appPosition": {
+          "x": 140,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 400,
+          "y": 170
+        }
+      }
+    },
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "nsis": {
+        "installerIcon": "icons/icon.ico"
+      }
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYxQzgxMEQ3QUI1RjRDQ0UKUldUT1RGK3IxeERJOGJnSzNrVG1EZ2JVcVRGYllCdFBQNDFVa0l0WjF5NFNndk9YVzhlMDIrS04K",
+      "endpoints": [
+        "https://github.com/multi-forge/multi-forge/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

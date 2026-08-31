@@ -1,0 +1,24 @@
+# ForgeDB Module Catalog — Central registry of all ForgeOS modules
+version: "1.0"
+updated: "2026-08-29"
+
+modules:
+  - id: totem
+    name: "Mina — Assistente Virtual Acadêmica"
+    version: "1.0.0"
+    category: ai
+    icon: "🤖"
+    description: "Quiosque de voz inteligente com PyQt5, Picovoice Porcupine, TTS/STT e classificador de intenções acadêmicas (MABI)."
+    source_path: "ForgeModules/totem"
+    tier: stable
+    promoted: true
+
+  - id: web-scraping
+    name: "Coletor Acadêmico & RAG Agent"
+    version: "1.0.0"
+    category: data
+    icon: "🕸️"
+    description: "Pipeline assíncrono de coleta de dados universitários com FastAPI, LangChain RAG, PostgreSQL, Redis e dashboard."
+    source_path: "ForgeModules/sub-modulos/web-scraping"
+    tier: beta
+    promoted: false

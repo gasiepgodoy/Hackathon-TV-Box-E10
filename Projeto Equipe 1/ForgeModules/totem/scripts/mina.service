@@ -1,0 +1,19 @@
+[Unit]
+Description=Mina Virtual Assistant GUI
+After=network.target systemd-user-sessions.service
+
+[Service]
+WorkingDirectory=/home/kali/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A
+User=root
+Group=root
+Environment=DISPLAY=:0
+Environment=CHAT_BACKEND=groq
+# Launches Xorg with screensaver and DPMS disabled, then runs the app
+ExecStart=/usr/bin/xinit /usr/bin/python3 main_gui.py -f -g right -- :0 -s 0 -dpms
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

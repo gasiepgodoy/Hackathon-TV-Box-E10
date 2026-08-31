@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForgeOS — WiFi Provisioner & Mina Setup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-badge">FO</div>
+                <div class="brand-info">
+                    <span class="brand-title">ForgeOS</span>
+                    <span class="brand-version">WiFiProvisioner v1.2</span>
+                </div>
+            </div>
+
+            <nav class="wizard-nav">
+                <div class="nav-step active" data-step="1">
+                    <div class="step-badge">1</div>
+                    <div class="step-label">
+                        <span class="title">Hardware</span>
+                        <span class="sub">Telemetria BTV E10</span>
+                    </div>
+                </div>
+                <div class="nav-step" data-step="2">
+                    <div class="step-badge">2</div>
+                    <div class="step-label">
+                        <span class="title">Rede Wi-Fi</span>
+                        <span class="sub">Scanner & Sinal dBm</span>
+                    </div>
+                </div>
+                <div class="nav-step" data-step="3">
+                    <div class="step-badge">3</div>
+                    <div class="step-label">
+                        <span class="title">Mina Assistente</span>
+                        <span class="sub">API & Janela</span>
+                    </div>
+                </div>
+                <div class="nav-step" data-step="4">
+                    <div class="step-badge">4</div>
+                    <div class="step-label">
+                        <span class="title">Provisionar</span>
+                        <span class="sub">Gravação eMMC</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="status-panel">
+                <div class="status-header">Status da TV Box</div>
+                <div class="status-rows">
+                    <div class="row"><span class="lbl">SoC:</span><span class="val">Amlogic S905X2</span></div>
+                    <div class="row"><span class="lbl">Kernel:</span><span class="val">Linux 6.18.29</span></div>
+                    <div class="row"><span class="lbl">DRM Status:</span><span class="val tag-warn" id="sys-drm">connected</span></div>
+                    <div class="row"><span class="lbl">Wi-Fi Chip:</span><span class="val">RTL8189FTV</span></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel -->
+        <main class="content-panel">
+            <header class="header-bar">
+                <div class="header-pills">
+                    <span class="pill">Hotspot: <strong>ForgeOS</strong></span>
+                    <span class="pill">IP Portal: <strong>192.168.4.1</strong></span>
+                </div>
+                <span class="tag-dev">WiFi Provisioner Adaptado</span>
+            </header>
+
+            <!-- Step 1: Hardware Diagnostics (Dev Telemetry) -->
+            <section class="card-step active" id="step-1">
+                <div class="card-title">
+                    <h2>Telemetria de Hardware (BTV E10)</h2>
+                    <p>Leitura dos dados do sistema e status do Kernel DRM/KMS.</p>
+                </div>
+
+                <div class="telemetry-table-container">
+                    <table class="dev-table">
+                        <thead>
+                            <tr>
+                                <th>Parâmetro</th>
+                                <th>Valor Lido (Sysfs / Procfs)</th>
+                                <th>Especificação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SoC Architecture</td>
+                                <td><code>Amlogic S905X2 (G12A)</code></td>
+                                <td>4x ARM Cortex-A53 @ 1.9GHz</td>
+                            </tr>
+                            <tr>
+                                <td>Memory (RAM)</td>
+                                <td><code>460 MB / 2048 MB (22.4%)</code></td>
+                                <td>LPDDR4 (Budget ≤150MB)</td>
+                            </tr>
+                            <tr>
+                                <td>Storage (eMMC)</td>
+                                <td><code>1.8 GB / 8.0 GB (22.5%)</code></td>
+                                <td>Flash Integrada eMMC 5.1</td>
+                            </tr>
+                            <tr>
+                                <td>GPU / Display Driver</td>
+                                <td><code>ARM Mali-G31 MP2 (Panfrost DRM)</code></td>
+                                <td>Direct KMS / Framebuffer</td>
+                            </tr>
+                            <tr>
+                                <td>HDMI Hotplug Status</td>
+                                <td><code class="val-success" id="dev-hdmi">connected</code></td>
+                                <td><code>/sys/class/drm/card1-HDMI-A-1/status</code></td>
+                            </tr>
+                            <tr>
+                                <td>Wi-Fi Chipset</td>
+                                <td><code>Realtek RTL8189FTV (SDIO)</code></td>
+                                <td>Driver: <code>8189fs.ko</code> (Kernel 6.1)</td>
+                            </tr>
+                            <tr>
+                                <td>SoC Temperature</td>
+                                <td><code>47.5 °C</code></td>
+                                <td><code>/sys/class/thermal/thermal_zone0/temp</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Step 2: Adapted WiFi Provisioner (Scanner, Signal dBm, Hidden SSID) -->
+            <section class="card-step" id="step-2">
+                <div class="card-title-row">
+                    <div class="card-title">
+                        <h2>Scanner de Redes Sem Fio</h2>
+                        <p>Selecione uma rede detectada pelo chip RTL8189FTV ou insira manualmente.</p>
+                    </div>
+                    <button class="btn btn-secondary btn-icon" id="btn-refresh-wifi" onclick="scanWifiNetworks()">
+                        <span class="icon-refresh" id="refresh-icon">🔄</span> Atualizar Redes
+                    </button>
+                </div>
+
+                <div class="wifi-table-container">
+                    <table class="dev-table wifi-scan-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>SSID da Rede</th>
+                                <th>Sinal (dBm)</th>
+                                <th>Segurança</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wifi-scan-list">
+                            <tr onclick="selectWifiRow('UNESP-Academica', '-52 dBm (Forte)')">
+                                <td><input type="radio" name="wifi_radio" value="UNESP-Academica" checked></td>
+                                <td><strong>UNESP-Academica</strong></td>
+                                <td><span class="signal-badge strong">📶 -52 dBm (Excelente)</span></td>
+                                <td><span class="sec-badge">WPA2/WPA3</span></td>
+                            </tr>
+                            <tr onclick="selectWifiRow('Lab-GASI-5G', '-68 dBm (Médio)')">
+                                <td><input type="radio" name="wifi_radio" value="Lab-GASI-5G"></td>
+                                <td><strong>Lab-GASI-5G</strong></td>
+                                <td><span class="signal-badge medium">📶 -68 dBm (Bom)</span></td>
+                                <td><span class="sec-badge">WPA2-PSK</span></td>
+                            </tr>
+                            <tr onclick="selectWifiRow('Rede-Hospitalar-SUS', '-78 dBm (Fraco)')">
+                                <td><input type="radio" name="wifi_radio" value="Rede-Hospitalar-SUS"></td>
+                                <td><strong>Rede-Hospitalar-SUS</strong></td>
+                                <td><span class="signal-badge weak">📶 -78 dBm (Regular)</span></td>
+                                <td><span class="sec-badge">WPA2 Enterprise</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="form-group" style="margin-top: 14px;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="toggle-hidden-wifi" onchange="toggleHiddenWifi(this.checked)">
+                        <span>Inserir SSID de Rede Oculta / Manualmente</span>
+                    </label>
+                </div>
+
+                <div class="grid-2" id="wifi-inputs-row">
+                    <div class="form-group">
+                        <label for="wifi-ssid">SSID Selecionado</label>
+                        <input type="text" id="wifi-ssid" value="UNESP-Academica">
+                    </div>
+                    <div class="form-group">
+                        <label for="wifi-pass">Senha de Acesso (WPA Passphrase)</label>
+                        <input type="password" id="wifi-pass" placeholder="••••••••••••">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dhcp-check" checked>
+                        <span>Ativar DHCP (Obter IP automático da rede)</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Step 3: Mina Assistant Config (Groq / Cerebras API + Mutually Exclusive Window Selector) -->
+            <section class="card-step" id="step-3">
+                <div class="card-title">
+                    <h2>Configuração da Mina Assistente</h2>
+                    <p>Provedor de API LLM (Groq / Cerebras) e modo de janela CLI (-F / -g).</p>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="api-provider">Provedor de API LLM</label>
+                        <select id="api-provider" onchange="updateApiBaseUrl()">
+                            <option value="groq" selected>Groq Cloud API (groq.com)</option>
+                            <option value="cerebras">Cerebras AI API (cerebras.ai)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="api-base-url">API Base URL (Predefinida)</label>
+                        <input type="text" id="api-base-url" value="https://api.groq.com/openai/v1" readonly class="readonly-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="api-key">Chave de API (API Key)</label>
+                    <input type="password" id="api-key" placeholder="gsk_... ou csk_...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Modo de Janela (Seleção Exclusiva CLI)</label>
+                    <div class="window-mode-options">
+                        <label class="radio-option">
+                            <input type="radio" name="window-mode" value="-f" onchange="updateWindowMode(this.value)">
+                            <div class="radio-content">
+                                <span class="opt-title">Fullscreen (<code>-F</code> / <code>-f</code>)</span>
+                                <span class="opt-desc">Ocupa 100% do display em modo Totem Kiosk.</span>
+                            </div>
+                        </label>
+
+                        <label class="radio-option active">
+                            <input type="radio" name="window-mode" value="-g right" checked onchange="updateWindowMode(this.value)">
+                            <div class="radio-content">
+                                <span class="opt-title">Girar / Lado Direito (<code>-g right</code>)</span>
+                                <span class="opt-desc">Ajusta e fixa a janela no canto direito da tela.</span>
+                            </div>
+                        </label>
+
+                        <label class="radio-option">
+                            <input type="radio" name="window-mode" value="-g left" onchange="updateWindowMode(this.value)">
+                            <div class="radio-content">
+                                <span class="opt-title">Girar / Lado Esquerdo (<code>-g left</code>)</span>
+                                <span class="opt-desc">Ajusta e fixa a janela no canto esquerdo da tela.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 4: Finalize & Provision -->
+            <section class="card-step" id="step-4">
+                <div class="card-title">
+                    <h2>Provisionar ForgeOS</h2>
+                    <p>Gravação dos arquivos de configuração em <code>/boot/forge/</code>.</p>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-grid">
+                        <div><strong>Wi-Fi SSID:</strong> <span id="sum-wifi">UNESP-Academica (DHCP)</span></div>
+                        <div><strong>Provedor LLM:</strong> <span id="sum-provider">Groq Cloud (https://api.groq.com/openai/v1)</span></div>
+                        <div><strong>Chave de API:</strong> <span id="sum-key">Configurada</span></div>
+                        <div><strong>Argumento CLI Janela:</strong> <code id="sum-window">-g right</code></div>
+                    </div>
+                </div>
+
+                <div class="terminal-container">
+                    <div class="terminal-bar">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                        <span class="term-title">forge-provisioner.log</span>
+                    </div>
+                    <div class="terminal-output" id="terminal-log">
+                        <p class="log">[PROVISION] Daemon pronto para gravar /boot/forge/network.yaml e /boot/forge/mina.yaml</p>
+                    </div>
+                </div>
+
+                <div class="bottom-actions">
+                    <button class="btn btn-emerald btn-large" onclick="executeProvision()">
+                        🚀 Gravar & Iniciar ForgeOS + Mina
+                    </button>
+                </div>
+            </section>
+
+            <!-- Footer Navigation -->
+            <footer class="footer-bar">
+                <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" disabled>← Voltar</button>
+                <div class="step-counter">Passo <span id="step-num-display">1</span> de 4</div>
+                <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Próximo Passo →</button>
+            </footer>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

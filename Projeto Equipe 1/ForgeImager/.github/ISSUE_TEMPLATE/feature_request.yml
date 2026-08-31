@@ -1,0 +1,94 @@
+name: Sugestão de Recurso (Feature Request)
+description: Sugira um novo recurso ou melhoria para o Forge Imager
+title: "[Recurso]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por sugerir um novo recurso! Por favor, descreva sua ideia em detalhes para que possamos avaliar e potencialmente implementá-la.
+
+  - type: checkboxes
+    id: existing-request
+    attributes:
+      label: Pré-requisitos
+      description: Por favor, confirme o seguinte antes de enviar
+      options:
+        - label: Eu pesquisei nas issues existentes e este recurso não foi solicitado anteriormente
+          required: true
+
+  - type: dropdown
+    id: feature-area
+    attributes:
+      label: Área do Recurso
+      description: A qual área do aplicativo este recurso se refere?
+      options:
+        - Interface de Usuário / UX
+        - Funcionalidade de download
+        - Funcionalidade de gravação/escrita
+        - Detecção de dispositivo
+        - Seleção de imagem / Suporte a placas
+        - Manipulação de imagem personalizada
+        - Verificação / Validação
+        - Suporte a plataformas (Windows/macOS/Linux)
+        - Localização / Traduções
+        - Desempenho
+        - Acessibilidade
+        - Outro
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Descrição do Problema
+      description: A sua solicitação de recurso está relacionada a algum problema? Por favor, descreva o problema que você está tentando resolver.
+      placeholder: "Eu sempre fico frustrado quando... / Atualmente não há como..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solução Proposta
+      description: Descreva a solução que você gostaria de ver implementada
+      placeholder: "Eu gostaria de ser capaz de..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas Consideradas
+      description: Descreva quaisquer soluções alternativas ou contornos que você considerou
+      placeholder: "Eu tentei... mas não funciona porque..."
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Quão importante é este recurso para você?
+      options:
+        - Seria bom ter (Nice to have)
+        - Melhoraria significativamente meu fluxo de trabalho
+        - Crítico para o meu caso de uso
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Caso de Uso
+      description: Descreva um cenário específico onde este recurso seria útil
+      placeholder: "Quando estou gravando várias placas, eu preciso de..."
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Exemplos
+      description: Se aplicável, adicione mockups, esboços ou exemplos de outros aplicativos
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Contexto Adicional
+      description: Adicione qualquer outro contexto sobre a solicitação de recurso aqui

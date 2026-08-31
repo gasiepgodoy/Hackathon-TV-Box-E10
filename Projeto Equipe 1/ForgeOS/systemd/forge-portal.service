@@ -1,0 +1,16 @@
+[Unit]
+Description=ForgeOS Captive Portal Web UI
+After=forge-ap.service
+Wants=forge-ap.service
+
+[Service]
+Type=simple
+KillMode=process
+ExecStart=/usr/bin/python3 /opt/forgeos/web/server.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/forge-portal.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

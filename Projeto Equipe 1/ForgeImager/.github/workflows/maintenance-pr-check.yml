@@ -1,0 +1,442 @@
+name: "Maintenance: PR check"
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".env*"
+      - ".github/**"
+      - "images/**"
+      - "scripts/**"
+      - "releases/**"
+      - "build/**"
+      - "dist/**"
+      - "*.png"
+      - "*.jpg"
+      - "*.jpeg"
+      - "*.gif"
+      - "*.svg"
+      - "*.ico"
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  TAURI_CLI_VERSION: '2.9.6'
+
+jobs:
+  # ===========================================
+  # Frontend Checks (runs once, platform-independent)
+  # ===========================================
+  frontend:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  # ===========================================
+  # Rust Checks (runs once, platform-independent)
+  # ===========================================
+  rust-lint:
+    name: Rust Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          cache-on-failure: true
+          shared-key: "v1-linux-x64"
+
+      - name: Check formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # ===========================================
+  # Build Test - All Platforms
+  # ===========================================
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: [frontend, rust-lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x64
+          - platform: linux-x64
+            os: ubuntu-24.04
+            bundles: deb,appimage
+            artifact_path: |
+              src-tauri/target/release/bundle/deb/*.deb
+              src-tauri/target/release/bundle/appimage/*.AppImage
+
+          # Windows x64
+          - platform: windows-x64
+            os: windows-latest
+            bundles: nsis
+            artifact_path: |
+              src-tauri/target/release/bundle/nsis/*.exe
+
+          # macOS Apple Silicon
+          - platform: macos-arm
+            os: macos-latest
+            bundles: dmg
+            artifact_path: |
+              src-tauri/target/release/bundle/dmg/*.dmg
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set trunk version and disable signing/updater
+        shell: bash
+        run: |
+          VERSION="0.0.0-pr.${{ github.event.pull_request.number }}"
+          echo "Setting version to $VERSION"
+          echo "Disabling code signing and updater for test builds"
+
+          # Update version in package.json
+          jq --arg v "$VERSION" '.version = $v' package.json > tmp.json && mv tmp.json package.json
+
+          # Update version and disable updater in tauri.conf.json
+          jq --arg v "$VERSION" '
+            .version = $v |
+            .bundle.createUpdaterArtifacts = false |
+            .plugins.updater.endpoints = []
+          ' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+
+          # Update version in Cargo.toml (no jq for TOML, use sed)
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          else
+            sed -i "s/^version = \".*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          fi
+
+          echo "=== Configuration updated ==="
+          echo "package.json version: $(jq -r '.version' package.json)"
+          echo "tauri.conf.json version: $(jq -r '.version' src-tauri/tauri.conf.json)"
+          echo "createUpdaterArtifacts: $(jq -r '.bundle.createUpdaterArtifacts' src-tauri/tauri.conf.json)"
+          echo "updater endpoints: $(jq -r '.plugins.updater.endpoints' src-tauri/tauri.conf.json)"
+          grep "^version" src-tauri/Cargo.toml
+
+      # Linux dependencies
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+          cache-on-failure: true
+          shared-key: "v1-${{ matrix.platform }}"
+
+      - name: Cache Tauri CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: tauri-cli-${{ matrix.platform }}-${{ env.TAURI_CLI_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Tauri CLI
+        shell: bash
+        run: |
+          if ! command -v cargo-tauri >/dev/null 2>&1; then
+            cargo install tauri-cli --version "${TAURI_CLI_VERSION}" --locked
+          fi
+
+      - name: Build application
+        run: cargo tauri build --bundles ${{ matrix.bundles }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: ${{ matrix.artifact_path }}
+          retention-days: 7
+
+  # ===========================================
+  # Post PR Comment with Artifact Links
+  # ===========================================
+  comment:
+    name: Post Artifact Links
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always() && needs.build.result != 'cancelled'
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Post comment with artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ github.event.pull_request.number }};
+            const runId = context.runId;
+            const version = `0.0.0-pr.${prNumber}`;
+
+            // nightly.link provides public download URLs without GitHub login
+            const nightlyBase = `https://nightly.link/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+
+            // Check which artifacts were uploaded
+            const { data: { artifacts } } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            const artifactNames = new Set(artifacts.map(a => a.name));
+
+            const platforms = [
+              { name: 'linux-x64', label: 'Linux x64', files: '.deb / .AppImage' },
+              { name: 'windows-x64', label: 'Windows x64', files: '.exe' },
+              { name: 'macos-arm', label: 'macOS ARM64', files: '.dmg' }
+            ];
+
+            const rows = platforms.map(({ name, label, files }) => {
+              if (artifactNames.has(name)) {
+                return `| ${label} | [📦 ${files}](${nightlyBase}/${name}.zip) |`;
+              }
+              return `| ${label} | ⏭️ Skipped |`;
+            }).join('\n');
+
+            const buildSuccess = platforms.some(p => artifactNames.has(p.name));
+            const statusIcon = buildSuccess ? '🧪' : '❌';
+            const statusText = buildSuccess ? 'ready for testing' : 'failed';
+
+            const body = [
+              `## ${statusIcon} Test Builds`,
+              '',
+              `**Version:** \`${version}\` | **PR:** #${prNumber} | **Status:** ${statusText}`,
+              '',
+              '| Platform | Download |',
+              '|----------|----------|',
+              rows,
+              '',
+              '<details>',
+              '<summary>ℹ️ About these builds</summary>',
+              '',
+              '- 🔓 **Public downloads** via [nightly.link](https://nightly.link) (no GitHub login required)',
+              '- ⚠️ **Unsigned builds** for testing purposes only',
+              '- ⏰ **Expires in 7 days**',
+              '- 🔄 Updated on every push to this PR',
+              '',
+              '</details>'
+            ].join('\n');
+
+            // Find and update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+
+            const marker = '## 🧪 Test Builds';
+            const altMarker = '## ❌ Test Builds';
+            const existingComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              (c.body.includes(marker) || c.body.includes(altMarker))
+            );
+
+            const commentParams = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            };
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                ...commentParams,
+                comment_id: existingComment.id
+              });
+              core.info(`Updated comment ${existingComment.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                ...commentParams,
+                issue_number: prNumber
+              });
+              core.info('Created new comment');
+            }
+
+            // Add "status: ready for review" label if all builds succeeded
+            const allBuildsSucceeded = platforms.every(p => artifactNames.has(p.name));
+            if (allBuildsSucceeded) {
+              const labelName = 'status: ready for review';
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  labels: [labelName]
+                });
+                core.info(`Added label: ${labelName}`);
+              } catch (e) {
+                core.warning(`Failed to add label: ${e.message}`);
+              }
+            }
+
+  # ===========================================
+  # Security Audit
+  # ===========================================
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ runner.os }}
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked || true
+
+      - name: Run cargo audit
+        working-directory: src-tauri
+        run: cargo audit
+        continue-on-error: true
+
+  # ===========================================
+  # Cleanup old workflow runs
+  # ===========================================
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [frontend, rust-lint, build, comment, security]
+    if: always()
+    permissions:
+      actions: write
+    steps:
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 7
+          keep_minimum_runs: 5

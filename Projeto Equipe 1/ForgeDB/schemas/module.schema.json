@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://multi-forge.dev/schemas/module.schema.json",
+  "title": "ForgeDB Module Manifest",
+  "description": "JSON Schema for module.yaml files — describes a ForgeOS module's metadata, dependencies, lifecycle, and deployment variants.",
+  "type": "object",
+  "required": ["id", "name", "version", "description", "category", "source", "lifecycle"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique module identifier (lowercase, hyphens allowed).",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable module name."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version string.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9.]+)?$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the module."
+    },
+    "category": {
+      "type": "string",
+      "description": "Module category.",
+      "enum": ["ai", "data", "media", "networking", "system", "other"]
+    },
+    "icon": {
+      "type": "string",
+      "description": "Emoji icon for the module."
+    },
+    "author": {
+      "type": "string",
+      "description": "Author or organization name."
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier.",
+      "examples": ["MIT", "Apache-2.0", "GPL-3.0-only"]
+    },
+    "requirements": {
+      "type": "object",
+      "description": "Resource and dependency requirements.",
+      "properties": {
+        "min_ram_mb": {
+          "type": "integer",
+          "description": "Minimum RAM in megabytes.",
+          "minimum": 0
+        },
+        "min_storage_mb": {
+          "type": "integer",
+          "description": "Minimum storage in megabytes.",
+          "minimum": 0
+        },
+        "python": {
+          "type": "string",
+          "description": "Python version constraint (PEP 440).",
+          "examples": [">=3.9", ">=3.12"]
+        },
+        "docker": {
+          "type": "boolean",
+          "description": "Whether Docker is required."
+        },
+        "docker_compose": {
+          "type": "boolean",
+          "description": "Whether Docker Compose is required."
+        },
+        "system_packages": {
+          "type": "array",
+          "description": "OS-level packages (apt/pacman/dnf).",
+          "items": { "type": "string" }
+        },
+        "pip_packages": {
+          "type": "array",
+          "description": "Python pip packages with optional version pins.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "description": "Source location of the module.",
+      "required": ["type", "path"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["local", "git", "registry"],
+          "description": "Source type."
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path from repo root."
+        },
+        "repo": {
+          "type": "string",
+          "format": "uri",
+          "description": "Git repository URL (for git source type)."
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch (defaults to main)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "lifecycle": {
+      "type": "object",
+      "description": "Commands for module lifecycle management.",
+      "properties": {
+        "install": { "type": "string", "description": "Installation command." },
+        "install_headless": { "type": "string", "description": "Headless/CI installation command." },
+        "start": { "type": "string", "description": "Start command (default/CLI mode)." },
+        "start_gui": { "type": "string", "description": "GUI start command." },
+        "start_gui_fullscreen": { "type": "string", "description": "Fullscreen GUI start command." },
+        "stop": { "type": "string", "description": "Stop command." },
+        "healthcheck": { "type": "string", "description": "Health check command." },
+        "logs": { "type": "string", "description": "Log viewing command." },
+        "systemd_unit": { "type": "string", "description": "Systemd service unit name." }
+      },
+      "additionalProperties": false
+    },
+    "native_components": {
+      "type": "array",
+      "description": "Native C/C++/Rust components that require compilation.",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": { "type": "string" },
+          "source": { "type": "string", "description": "Source file path." },
+          "output": { "type": "string", "description": "Output binary path (may include {arch} placeholder)." },
+          "libraries": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Required native libraries."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "variants": {
+      "type": "array",
+      "description": "Deployment variants (e.g. full Docker vs lite local).",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "default": { "type": "boolean", "default": false },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "docker": { "type": "boolean" },
+              "docker_compose": { "type": "boolean" },
+              "min_ram_mb": { "type": "integer", "minimum": 0 },
+              "min_storage_mb": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": { "type": "string" },
+                "image": { "type": "string" },
+                "build": { "type": "string" },
+                "port": { "type": "integer" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "environment": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "lifecycle": {
+            "type": "object",
+            "properties": {
+              "install": { "type": "string" },
+              "start": { "type": "string" },
+              "stop": { "type": "string" },
+              "healthcheck": { "type": "string" },
+              "logs": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "llm_providers": {
+      "type": "array",
+      "description": "Supported LLM provider configurations.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "config": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "conflicts_with": {
+      "type": "array",
+      "description": "List of module IDs that cannot run concurrently with this module.",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

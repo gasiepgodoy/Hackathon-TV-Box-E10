@@ -1,0 +1,48 @@
+schema: forgedb/v1
+id: btve10
+slug: btv-e10
+name: BTV E10
+manufacturer: BTV
+category: TV Box
+status: supported
+description: "BTV E10 com SoC Amlogic S905X2, 2GB LPDDR4 e 8GB eMMC."
+
+hardware:
+  soc:
+    vendor: Amlogic
+    model: S905X2
+    architecture: ARM64
+  memory:
+    ram: 2GB
+    storage: 8GB
+  wireless:
+    wifi: RTL8189FTV # Essencial para o Forge Agent validar clones de lote comercial
+
+boot:
+  dtb: meson-g12a-sei510.dtb
+  aml_autoscript: true
+  preferred_tool: "/root/install-aml.sh"
+  dtb_url: "https://raw.githubusercontent.com/multi-forge/multi-forge/main/ForgeDB/devices/btv/e10/dtb/meson-g12a-sei510.dtb"
+
+images:
+  - id: forgeos-btv-e10-desktop
+    distribution: ForgeOS Desktop
+    version: v1.0.0-test (Kernel 6.1.y)
+    url: "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0-test/forgeos-btv-e10.img.xz"
+    recommended: true
+  - id: forgeos-server
+    distribution: ForgeOS Server
+    version: Bullseye ARM64
+    url: "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0-test/forgeos-server-arm64.img.xz"
+    recommended: false
+  - id: forgeos-iot
+    distribution: ForgeOS IoT Gateway
+    version: Alpine ARM64
+    url: "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0-test/forgeos-iot-arm64.img.xz"
+    recommended: false
+
+known_issues:
+  - title: Incompatibilidade armbian-install
+    description: "Processadores Amlogic exigem script dedicado para fixação na eMMC interna."
+    workaround: "Rode '/root/install-aml.sh' via terminal para transferir o sistema do pendrive para a memória interna."
+    severity: high

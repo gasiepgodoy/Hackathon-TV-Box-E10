@@ -1,0 +1,621 @@
+/* MODAL ANIMATIONS */
+
+@keyframes modalOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalOverlayFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modalContentSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalContentSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+@keyframes listItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes boardGridFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Staggered fade-in for modal list items */
+.modal-list .list-item {
+  opacity: 0;
+  animation: listItemFadeIn var(--dur-medium) ease-out forwards;
+}
+
+/* Disable animations for dynamically updated lists (DeviceModal) */
+.modal-list.no-animations .list-item {
+  opacity: 1 !important;
+  animation: none !important;
+}
+
+.modal-list .list-item:nth-child(1) { animation-delay: 0.15s; }
+.modal-list .list-item:nth-child(2) { animation-delay: 0.175s; }
+.modal-list .list-item:nth-child(3) { animation-delay: 0.2s; }
+.modal-list .list-item:nth-child(4) { animation-delay: 0.225s; }
+.modal-list .list-item:nth-child(5) { animation-delay: 0.25s; }
+.modal-list .list-item:nth-child(6) { animation-delay: 0.275s; }
+.modal-list .list-item:nth-child(7) { animation-delay: 0.3s; }
+.modal-list .list-item:nth-child(8) { animation-delay: 0.325s; }
+.modal-list .list-item:nth-child(9) { animation-delay: 0.35s; }
+.modal-list .list-item:nth-child(10) { animation-delay: 0.375s; }
+
+/* Cap the delay for items beyond the 10th */
+.modal-list .list-item:nth-child(n+11) {
+  animation-delay: calc(0.15s + (0.025s * (10 - 1)));
+}
+
+/* Staggered fade-in for board grid items */
+.board-grid-container .board-grid-item {
+  opacity: 0;
+  animation: boardGridFadeIn 0.35s var(--ease-spring) forwards;
+}
+
+.board-grid-container .board-grid-item:nth-child(1) { animation-delay: 0.15s; }
+.board-grid-container .board-grid-item:nth-child(2) { animation-delay: 0.175s; }
+.board-grid-container .board-grid-item:nth-child(3) { animation-delay: 0.2s; }
+.board-grid-container .board-grid-item:nth-child(4) { animation-delay: 0.225s; }
+.board-grid-container .board-grid-item:nth-child(5) { animation-delay: 0.25s; }
+.board-grid-container .board-grid-item:nth-child(6) { animation-delay: 0.275s; }
+.board-grid-container .board-grid-item:nth-child(7) { animation-delay: 0.3s; }
+.board-grid-container .board-grid-item:nth-child(8) { animation-delay: 0.325s; }
+.board-grid-container .board-grid-item:nth-child(9) { animation-delay: 0.35s; }
+.board-grid-container .board-grid-item:nth-child(10) { animation-delay: 0.375s; }
+.board-grid-container .board-grid-item:nth-child(11) { animation-delay: 0.4s; }
+.board-grid-container .board-grid-item:nth-child(12) { animation-delay: 0.425s; }
+
+.board-grid-container .board-grid-item:nth-child(n+13) {
+  animation-delay: calc(0.15s + (0.025s * (12 - 1)));
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal {
+    animation: none !important;
+  }
+
+  .modal-list .list-item,
+  .board-grid-container .board-grid-item {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .list-item,
+  .board-grid-item {
+    transition: background var(--dur-fast) ease;
+  }
+
+  .list-item:hover,
+  .board-grid-item:hover {
+    transform: none;
+  }
+}
+
+/* MODAL / DIALOG */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  /* Plain dark dim, no blur, matching the update modal */
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.modal-overlay.modal-entering {
+  animation: modalOverlayFadeIn 0.25s ease-out forwards;
+}
+
+.modal-overlay.modal-exiting {
+  animation: modalOverlayFadeOut var(--dur-base) ease-in forwards;
+}
+
+.modal {
+  background: var(--bg-modal);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: min(92vw, 850px);
+  max-height: min(88vh, 800px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modal.modal-entering {
+  animation: modalContentSlideIn 0.35s var(--ease-spring) forwards;
+}
+
+.modal.modal-exiting {
+  animation: modalContentSlideOut var(--dur-base) ease-in forwards;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-back {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--dur-fast) ease;
+}
+
+.modal-back:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--dur-base) ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  transform: rotate(90deg);
+}
+
+.modal-close:active {
+  transform: rotate(90deg) scale(0.95);
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px var(--space-lg);
+  background: var(--color-warning-bg);
+  border-left: 3px solid var(--color-warning);
+  color: var(--color-warning-text);
+  font-size: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .modal-warning-banner {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+  }
+}
+
+.modal-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.modal-refresh-bottom {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.modal-refresh-bottom .btn {
+  gap: 6px;
+}
+
+.modal-filter-bar {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.modal-filter-bar .filter-btn {
+  padding: 10px 18px;
+  font-size: 13px;
+}
+
+/* COMPACT MODAL (e.g. Forge Board Detection) */
+.modal.modal-compact {
+  max-width: min(92vw, 640px);
+}
+
+.Forge-board-modal {
+  text-align: center;
+  padding: 32px 40px 28px;
+}
+
+.Forge-board-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px 0 16px;
+  margin: 4px 0 18px;
+}
+
+/* Circular gradient "ball" behind the board, gently breathing (same motif as the flashing screen). */
+.Forge-board-hero::before {
+  content: '';
+  position: absolute;
+  width: 280px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--accent-rgb), 0.30) 0%,
+    rgba(var(--accent-rgb), 0.1) 40%,
+    transparent 70%
+  );
+  filter: blur(16px);
+  z-index: 0;
+  animation: confirmGlow 6s ease-in-out infinite;
+}
+
+.Forge-board-modal .Forge-board-image {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+}
+
+/* Board drifts over the halo, matching the flashing hero. */
+.Forge-board-modal .Forge-board-image img {
+  width: 300px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 26px 40px rgba(0, 0, 0, 0.45));
+  animation: confirmFloat 5.5s ease-in-out infinite;
+}
+
+/* Shown when no board image is available */
+.Forge-board-modal .board-image-placeholder {
+  width: 272px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-xl);
+  color: var(--text-muted);
+  animation: confirmFloat 5.5s ease-in-out infinite;
+}
+
+.Forge-board-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+  letter-spacing: -0.2px;
+}
+
+.Forge-board-modal .board-grid-badges {
+  margin-bottom: 12px;
+}
+
+.Forge-board-modal .Forge-board-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+  line-height: 1.5;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.Forge-board-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.Forge-board-actions .btn {
+  min-width: 140px;
+}
+
+.Forge-board-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+/* CONFIRM MODAL */
+/* .modal.confirm-modal (not just .confirm-modal) to outrank the responsive `@media (min-width:1200px) .modal { max-width:950px }` rule. */
+.modal.confirm-modal {
+  max-width: 420px;
+  text-align: center;
+  padding: var(--space-2xl) var(--space-2xl) var(--space-xl);
+  /* Premium island shell (matches the Settings/Cache modals), not the old flat card. */
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--island-shadow);
+  animation: confirmContentIn var(--dur-medium) var(--ease-out-expo) both;
+}
+
+/* Icon sits in a soft tinted disc: amber for warnings, red for destructive actions. */
+.confirm-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto var(--space-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: rgba(var(--color-warning-rgb), 0.12);
+  color: var(--color-warning);
+}
+
+.confirm-modal.is-danger .confirm-icon {
+  background: rgba(var(--color-error-rgb), 0.12);
+  color: var(--color-error);
+}
+
+.confirm-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.confirm-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.confirm-device {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+}
+
+.confirm-device strong {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.confirm-device span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.confirm-warning {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-error);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  margin-top: var(--space-xl);
+}
+
+/* Modernized pill buttons, scoped to the dialog so the global .btn stays untouched. */
+.confirm-actions .btn {
+  flex: 1;
+  max-width: 200px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+
+/* MODAL SEARCH */
+.modal-search {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-modal);
+}
+
+.modal-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.modal-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.modal-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* LIST ITEM STYLES */
+.list-item.selected {
+  background: var(--bg-hover);
+}
+
+.list-item.selected .list-item-title {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+  white-space: nowrap;
+}
+
+.btn-sm:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.btn-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Logs Modal */
+
+/* Changelog Modal */
+.changelog-body .pr-number {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.92em;
+  padding: 1px 6px;
+  border-radius: var(--radius-md);
+  background: rgba(var(--accent-rgb), 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
+  white-space: nowrap;
+}
+
+/* Cache Manager Modal visual layer lives entirely in settings.css (single owner). */
+
+/* Forge "board detected" modal: airy, headerless layout (variant 4) with a floating
+   board over a theme-aware glow. Surface still matches the Settings shell. */
+.modal.Forge-modal {
+  position: relative;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--island-shadow);
+}
+
+/* Floating close, no header bar. */
+.Forge-board-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--dur-fast) ease;
+}
+
+.Forge-board-close:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+/* Glowing confirm to match the airy hero. */
+.Forge-board-actions .btn-primary {
+  box-shadow: 0 10px 24px -10px rgba(var(--accent-rgb), 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .Forge-board-hero::before,
+  .Forge-board-modal .Forge-board-image img,
+  .Forge-board-modal .board-image-placeholder {
+    animation: none;
+  }
+}

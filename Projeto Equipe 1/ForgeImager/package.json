@@ -1,0 +1,63 @@
+{
+  "name": "forge-imager",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Flash Forge OS images to SD cards and USB drives",
+  "author": "Forge",
+  "maintainers": [
+    "SuperKali <hello@superkali.me>"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "--dev": "Development commands",
+    "dev": "vite",
+    "build:dev": "tsc -b && vite build --mode development",
+    "tauri:dev": "tauri dev",
+    "tauri:build:dev": "tauri build --debug",
+    "--prod": "Production commands",
+    "build": "tsc -b && vite build",
+    "build:prod": "tsc -b && vite build --mode production",
+    "tauri:build": "tauri build",
+    "tauri:build:prod": "tauri build",
+    "--other": "Other commands",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules dist src-tauri/target",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.0",
+    "@tauri-apps/plugin-fs": "2.4.4",
+    "@tauri-apps/plugin-process": "2.3.1",
+    "@tauri-apps/plugin-shell": "2.3.3",
+    "@tauri-apps/plugin-store": "2.4.1",
+    "@tauri-apps/plugin-updater": "2.9.0",
+    "@types/qrcode": "^1.5.6",
+    "ansi-to-html": "^0.7.0",
+    "i18next": "^25.7.2",
+    "lucide-react": "^0.560.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2",
+    "react-i18next": "^16.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tauri-apps/cli": "^2.11.2",
+    "@twemoji/svg": "^15.0.0",
+    "@types/node": "^24.10.3",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.49.0",
+    "vite": "^8.0.16"
+  }
+}

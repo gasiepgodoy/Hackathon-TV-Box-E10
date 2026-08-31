@@ -1,0 +1,212 @@
+/* THEME SYSTEM - Auto Light/Dark */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root,
+.theme-light {
+  /* Multi-Forge Brand — warm amber flame (#f26419) as primary action; anvil teal (#22a079) as secondary/success. */
+  --Forge-orange: #f26419;
+  --Forge-orange-hover: #d9530f;
+  --Forge-teal: #22a079;
+  --Forge-teal-hover: #1b8563;
+  --Forge-red: #e63946;
+
+  /* Light Theme */
+  --bg-app: #f4f7f6;
+  --bg-secondary: #e8eeec;
+  --bg-card: #ffffff;
+  --bg-hover: #dfe7e4;
+  --bg-modal: #ffffff;
+  --bg-overlay: rgba(12, 24, 20, 0.5);
+
+  --text-primary: #111d1a;
+  --text-secondary: #354742;
+  --text-muted: #5c706a;
+
+  --border-color: #cdd9d5;
+  --border-light: #e0e9e6;
+
+  /* Grey base with a lighter sweeping highlight */
+  --skeleton-base: #e2ebe8;
+  --skeleton-shine: #f0f6f4;
+
+  --accent: var(--Forge-orange);
+  --accent-hover: var(--Forge-orange-hover);
+  --accent-teal: var(--Forge-teal);
+  --accent-teal-hover: var(--Forge-teal-hover);
+
+  --shadow-sm: 0 1px 3px rgba(12, 24, 20, 0.08);
+  --shadow-md: 0 4px 12px rgba(12, 24, 20, 0.1);
+  --shadow-lg: 0 8px 24px rgba(12, 24, 20, 0.12);
+
+  /* Floating islands (sidebar, content panel): frosted glass over the aurora */
+  --island-bg: rgba(255, 255, 255, 0.7);
+  --island-shadow: 0 16px 40px -20px rgba(17, 29, 26, 0.16);
+  --island-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --island-border: rgba(255, 255, 255, 0.7);
+
+  /* Cards floating on the glass: resting lift plus soft hover elevation */
+  --card-shadow: 0 1px 2px rgba(17, 29, 26, 0.04), 0 10px 24px -14px rgba(17, 29, 26, 0.12);
+  --card-hover-shadow: 0 24px 50px -18px rgba(17, 29, 26, 0.25), 0 0 30px -12px rgba(242, 100, 25, 0.22);
+
+  /* Semantic Colors */
+  --color-success: #22a079;
+  --color-success-dark: #1b8563;
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-info: #2a9d8f;
+  --color-info-dark: #1f7a6f;
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #92400e;
+
+  /* RGB channels for alpha compositing */
+  --accent-rgb: 242, 100, 25;
+  --accent-teal-rgb: 34, 160, 121;
+  --color-error-rgb: 239, 68, 68;
+  --color-warning-rgb: 245, 158, 11;
+  --color-success-rgb: 34, 160, 121;
+
+  /* Motion easing curves (theme-agnostic) */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Motion durations (theme-agnostic) */
+  --dur-fast: 0.15s;
+  --dur-base: 0.2s;
+  --dur-medium: 0.3s;
+  --dur-slow: 0.4s;
+  --dur-slower: 0.6s;
+  --dur-loop: 1.5s;
+
+  /* Pill radius and blur scale (theme-agnostic) */
+  --radius-pill: 999px;
+  --blur-md: 12px;
+  --blur-lg: 22px;
+  --blur-xl: 26px;
+
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+  --space-2xl: 24px;
+  --space-3xl: 32px;
+  --space-4xl: 48px;
+
+  /* Border Radius Scale */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 50%;
+
+  /* Header - Light */
+  --header-bg: #ffffff;
+  --header-border: #d0d4d8;
+  --header-steps-bg: #f0f2f4;
+  --header-steps-border: #d0d4d8;
+  --header-step-bg: #e0e3e6;
+  --header-step-color: #666666;
+}
+
+/* Dark Theme */
+.theme-dark {
+  --bg-app: #0d1614;
+  --bg-secondary: #13221e;
+  --bg-card: #192c27;
+  --bg-hover: #213933;
+  --bg-modal: #162622;
+  --bg-overlay: rgba(5, 10, 8, 0.75);
+
+  --text-primary: #f0f7f5;
+  --text-secondary: #b8ccc6;
+  --text-muted: #748c85;
+
+  --border-color: #274039;
+  --border-light: #1d302b;
+
+  /* Dark base with a lighter sweeping highlight */
+  --skeleton-base: #1b2e29;
+  --skeleton-shine: #263e37;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  --island-bg: rgba(19, 34, 30, 0.65);
+  --island-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.65);
+  --island-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --island-border: rgba(46, 196, 182, 0.15);
+
+  --card-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --card-hover-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px -10px rgba(242, 100, 25, 0.28);
+
+  /* RGB channels for alpha compositing */
+  --accent-rgb: 242, 100, 25;
+  --accent-teal-rgb: 34, 160, 121;
+  --color-error-rgb: 239, 68, 68;
+  --color-warning-rgb: 245, 158, 11;
+  --color-success-rgb: 34, 160, 121;
+
+  /* Header - Dark */
+  --header-bg: #0d1614;
+  --header-border: #213933;
+  --header-steps-bg: rgba(255, 255, 255, 0.05);
+  --header-steps-border: rgba(46, 196, 182, 0.12);
+  --header-step-bg: rgba(255, 255, 255, 0.08);
+  --header-step-color: #8da49d;
+}
+
+/* Auto Theme - System Preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.theme-light):not(.theme-dark) {
+    --bg-app: #0d1614;
+    --bg-secondary: #13221e;
+    --bg-card: #192c27;
+    --bg-hover: #213933;
+    --bg-modal: #162622;
+    --bg-overlay: rgba(5, 10, 8, 0.75);
+
+    --text-primary: #f0f7f5;
+    --text-secondary: #b8ccc6;
+    --text-muted: #748c85;
+
+    --border-color: #274039;
+    --border-light: #1d302b;
+
+    --skeleton-base: #1b2e29;
+    --skeleton-shine: #263e37;
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+    --island-bg: rgba(19, 34, 30, 0.65);
+    --island-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.65);
+    --island-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    --island-border: rgba(46, 196, 182, 0.15);
+
+    --card-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+    --card-hover-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px -10px rgba(242, 100, 25, 0.28);
+
+    /* RGB channels for alpha compositing */
+    --accent-rgb: 242, 100, 25;
+    --accent-teal-rgb: 34, 160, 121;
+    --color-error-rgb: 239, 68, 68;
+    --color-success-rgb: 34, 160, 121;
+
+    /* Header - Dark */
+    --header-bg: #0d1614;
+    --header-border: #213933;
+    --header-steps-bg: rgba(255, 255, 255, 0.05);
+    --header-steps-border: rgba(46, 196, 182, 0.12);
+    --header-step-bg: rgba(255, 255, 255, 0.08);
+    --header-step-color: #8da49d;
+  }
+}

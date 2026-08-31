@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://multi-forge.dev/schemas/device.schema.json",
+  "title": "ForgeDB Device Descriptor",
+  "description": "JSON Schema for ForgeDB device.yaml files — describes hardware compatibility, boot configuration, images, and known issues.",
+  "type": "object",
+  "required": ["schema", "id", "slug", "name", "manufacturer", "category", "status", "hardware", "boot"],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "description": "Schema version identifier.",
+      "pattern": "^forgedb/v[0-9]+$",
+      "examples": ["forgedb/v1"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique device identifier (no spaces, lowercase).",
+      "pattern": "^[a-z0-9_-]+$"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly device slug.",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable device name."
+    },
+    "manufacturer": {
+      "type": "string",
+      "description": "Device manufacturer."
+    },
+    "category": {
+      "type": "string",
+      "description": "Device category.",
+      "enum": ["TV Box", "SBC", "Router", "NAS", "Mini PC", "Other"]
+    },
+    "status": {
+      "type": "string",
+      "description": "Support status.",
+      "enum": ["supported", "experimental", "deprecated", "unsupported"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief human-readable description of the device."
+    },
+    "hardware": {
+      "type": "object",
+      "description": "Hardware specifications.",
+      "required": ["soc", "memory"],
+      "properties": {
+        "soc": {
+          "type": "object",
+          "required": ["vendor", "model", "architecture"],
+          "properties": {
+            "vendor": { "type": "string" },
+            "model": { "type": "string" },
+            "architecture": {
+              "type": "string",
+              "enum": ["ARM64", "ARMv7", "x86_64", "RISC-V"]
+            }
+          },
+          "additionalProperties": false
+        },
+        "memory": {
+          "type": "object",
+          "required": ["ram", "storage"],
+          "properties": {
+            "ram": {
+              "type": "string",
+              "description": "RAM size (e.g. '2GB').",
+              "pattern": "^[0-9]+(MB|GB)$"
+            },
+            "storage": {
+              "type": "string",
+              "description": "Internal storage size (e.g. '8GB').",
+              "pattern": "^[0-9]+(MB|GB|TB)$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "wireless": {
+          "type": "object",
+          "description": "Wireless chipset information.",
+          "properties": {
+            "wifi": {
+              "type": "string",
+              "description": "Wi-Fi chipset model."
+            },
+            "bluetooth": {
+              "type": "string",
+              "description": "Bluetooth chipset model."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "boot": {
+      "type": "object",
+      "description": "Boot configuration for flashing and installation.",
+      "required": ["dtb"],
+      "properties": {
+        "dtb": {
+          "type": "string",
+          "description": "Device Tree Blob filename."
+        },
+        "aml_autoscript": {
+          "type": "boolean",
+          "description": "Whether the device supports Amlogic autoscript boot."
+        },
+        "preferred_tool": {
+          "type": "string",
+          "description": "Path to preferred installation script."
+        },
+        "dtb_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to download the DTB file."
+        }
+      },
+      "additionalProperties": false
+    },
+    "images": {
+      "type": "array",
+      "description": "Available OS images for this device.",
+      "items": {
+        "type": "object",
+        "required": ["id", "distribution", "version", "url"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique image identifier."
+          },
+          "distribution": {
+            "type": "string",
+            "description": "OS distribution name."
+          },
+          "version": {
+            "type": "string",
+            "description": "OS version string."
+          },
+          "kernel": {
+            "type": ["string", "null"],
+            "description": "Kernel version (null if unspecified)."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Download URL for the image."
+          },
+          "recommended": {
+            "type": "boolean",
+            "description": "Whether this is the recommended image.",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "known_issues": {
+      "type": "array",
+      "description": "List of known issues and workarounds.",
+      "items": {
+        "type": "object",
+        "required": ["title", "description", "severity"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Issue title."
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed issue description."
+          },
+          "workaround": {
+            "type": "string",
+            "description": "Known workaround."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

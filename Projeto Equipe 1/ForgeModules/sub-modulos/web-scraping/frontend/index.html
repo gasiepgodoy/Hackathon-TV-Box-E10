@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente Acadêmico Local</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header__brand">
+      <h1>Assistente Acadêmico Local (UNESP)</h1>
+      <p class="subtitle">Monitoramento em tempo real de aulas, eventos e notícias da UNESP Bauru</p>
+    </div>
+    <div class="header__status" id="connection-status">
+      <span class="dot dot--loading"></span>
+      <span>Conectando...</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="cards">
+      <article class="card">
+        <h3>Aulas Ativas (BCC)</h3>
+        <p class="metric" id="metric-temperature">—</p>
+        <span class="unit">aulas</span>
+      </article>
+      <article class="card">
+        <h3>Eventos Acadêmicos</h3>
+        <p class="metric" id="metric-wind">—</p>
+        <span class="unit">eventos</span>
+      </article>
+      <article class="card">
+        <h3>Notícias do Portal</h3>
+        <p class="metric" id="metric-humidity">—</p>
+        <span class="unit">notícias</span>
+      </article>
+      <article class="card">
+        <h3>Última Atualização</h3>
+        <p class="metric metric--small" id="metric-updated">—</p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Status do Coletor</h2>
+        <span id="collector-badge" class="badge badge--unknown">—</span>
+      </div>
+      <div class="stats-grid">
+        <div><strong>Registros:</strong> <span id="stat-records">0</span></div>
+        <div><strong>Último sucesso:</strong> <span id="stat-success">—</span></div>
+        <div><strong>Último erro:</strong> <span id="stat-error">—</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Gráficos — Histórico Recente</h2>
+      <div class="charts">
+        <canvas id="chart-temperature"></canvas>
+        <canvas id="chart-wind"></canvas>
+        <canvas id="chart-humidity"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Agente de IA</h2>
+      <div class="chat">
+        <div id="chat-messages" class="chat__messages"></div>
+        <form id="chat-form" class="chat__form">
+          <input type="text" id="chat-input" placeholder="Ex: Quais são as aulas ativas agora?" autocomplete="off">
+          <button type="submit">Perguntar</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Atualização automática a cada 5 segundos · Dados oficiais da UNESP (Jornal e Aulas)</p>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

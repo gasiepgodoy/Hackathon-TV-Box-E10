@@ -1,0 +1,15 @@
+[Unit]
+Description=ForgeOS QR Display (sem flicker)
+After=forge-ap.service forge-fbcon-disable.service
+Wants=forge-ap.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/forgeos/display/qr_screen.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/var/log/forge-display.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

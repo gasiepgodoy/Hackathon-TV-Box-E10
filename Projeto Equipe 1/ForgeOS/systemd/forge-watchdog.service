@@ -1,0 +1,12 @@
+[Unit]
+Description=ForgeOS Provisioning Watchdog (rollback AP fallback)
+After=forge-ap.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /opt/forgeos/bin/watchdog.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

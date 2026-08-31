@@ -1,0 +1,11 @@
+[Unit]
+Description=Desativa console no framebuffer (evita overwrite do QR)
+Before=forge-display.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "echo 0 > /sys/class/vtconsole/vtcon1/bind; setterm -cursor off > /dev/tty1 2>&1 || true"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

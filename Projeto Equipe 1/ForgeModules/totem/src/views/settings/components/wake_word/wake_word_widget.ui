@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>WakeWordWidget</class>
+ <widget class="QWidget" name="WakeWordWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>580</width>
+    <height>500</height>
+   </rect>
+  </property>
+    <property name="windowTitle">
+     <string>Wake Words</string>
+    </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>578</width>
+        <height>480</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="contentLayout">
+       <item>
+        <widget class="QCheckBox" name="use_wake_word_check">
+         <property name="text">
+          <string>Enable Wake Word Detection</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="model_group">
+         <property name="title">
+          <string>Model Settings</string>
+         </property>
+         <layout class="QFormLayout" name="modelLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_model_path">
+            <property name="text">
+             <string>Model Path:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <layout class="QHBoxLayout" name="model_path_layout">
+            <item>
+             <widget class="QLineEdit" name="model_path_edit"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="model_path_btn">
+              <property name="text">
+               <string>Browse...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_porcupine_model_path">
+             <property name="text">
+              <string>Porcupine Model (.pv):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <layout class="QHBoxLayout" name="porcupine_model_path_layout">
+             <item>
+              <widget class="QLineEdit" name="porcupine_model_path_edit"/>
+             </item>
+             <item>
+              <widget class="QPushButton" name="porcupine_model_path_btn">
+               <property name="text">
+                <string>Browse...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_porcupine_keyword_path">
+             <property name="text">
+              <string>Wake Word File (.ppn):</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <layout class="QHBoxLayout" name="porcupine_keyword_path_layout">
+             <item>
+              <widget class="QLineEdit" name="porcupine_keyword_path_edit"/>
+             </item>
+             <item>
+              <widget class="QPushButton" name="porcupine_keyword_path_btn">
+               <property name="text">
+                <string>Browse...</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="keywords_group">
+         <property name="title">
+          <string>Wake Word Settings</string>
+         </property>
+         <layout class="QVBoxLayout" name="keywords_layout">
+          <item>
+           <widget class="QLabel" name="keywords_help">
+            <property name="text">
+             <string>Please enter wake words in Chinese; they will be converted to pinyin when saved.\nExample: 小米小米 (will be converted to: x iǎo m ǐ x iǎo m ǐ @小米小米)</string>
+            </property>
+            <property name="styleSheet">
+             <string>color: #90a7c4; font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="wake_words_edit">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>200</height>
+             </size>
+            </property>
+             <property name="placeholderText">
+             <string>Please enter wake words in Chinese, one per line (e.g. 小米小米)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      <item>
+       <widget class="QGroupBox" name="webhook_group">
+        <property name="title">
+         <string>Webhooks</string>
+        </property>
+        <layout class="QFormLayout" name="webhook_form">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_webhook_start">
+           <property name="text">
+            <string>On Listening Start (URL):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="listening_webhook_edit"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_webhook_stop">
+           <property name="text">
+            <string>On Listening Stop (URL):</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="listening_stop_webhook_edit"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

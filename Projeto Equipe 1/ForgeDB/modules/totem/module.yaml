@@ -1,0 +1,85 @@
+# ForgeDB Module Manifest — totem (Mina)
+# Auto-generated from source investigation on 2026-08-29
+
+id: totem
+name: "Mina — Assistente Virtual Acadêmica"
+version: "1.0.0"
+description: "Quiosque de voz inteligente com PyQt5, Picovoice Porcupine wake-word, STT/TTS e classificador de intenções acadêmicas (MABI)."
+category: ai
+icon: "🤖"
+author: "G.E.R.A — UNESP Sorocaba"
+license: MIT
+
+requirements:
+  min_ram_mb: 512
+  min_storage_mb: 300
+  python: ">=3.9"
+  system_packages:
+    # Debian/Ubuntu (from install.py)
+    - build-essential
+    - gcc
+    - g++
+    - cmake
+    - libcjson-dev
+    - libcurl4-openssl-dev
+    - portaudio19-dev
+    - libasound2-dev
+    - python3-dev
+    - python3-pip
+    - python3-venv
+    - python3-pyqt5
+    - python3-pyqt5.qtsvg
+    - qt5-qmake
+    - qtbase5-dev
+  pip_packages:
+    # Qt / GUI
+    - "PyQt5>=5.15.0"
+    - "qasync>=0.27.0"
+    # Utilities
+    - "colorlog==6.9.0"
+    - "pillow==11.3.0"
+    - "requests==2.32.3"
+    - "aiohttp==3.12.13"
+    # Config / device management
+    - "cryptography==44.0.1"
+    - "py-machineid==0.8.0"
+    - "python-dateutil==2.9.0.post0"
+    # Audio / VAD
+    - numpy
+    - sounddevice
+    - onnxruntime
+    - miniaudio
+    # Wake word (Picovoice)
+    - pvporcupine
+    - pvrecorder
+    # System utilities
+    - "psutil==7.0.0"
+    - edge-tts
+
+source:
+  type: local
+  path: "ForgeModules/totem"
+  repo: "https://github.com/GERA-UNESP/Mina-a-Assistente-Virtual.git"
+
+lifecycle:
+  install: "python install.py"
+  install_headless: "python install.py --skip-sys-deps"
+  start: "python main_cli.py"
+  start_gui: "python main_gui.py"
+  start_gui_fullscreen: "python main_gui.py --fullscreen"
+  stop: "pkill -f 'main_cli.py|main_gui.py'"
+  healthcheck: "pgrep -f 'main_cli.py|main_gui.py' > /dev/null"
+  systemd_unit: "forge-totem.service"
+
+native_components:
+  - name: apicomm
+    source: "c_src/apicomm.c"
+    output: "bin/{arch}/apicomm"
+    libraries: [libcurl, libcjson]
+  - name: libstt
+    source: "c_src/stt.c"
+    output: "libs/{arch}/libstt.so"
+    libraries: [portaudio, libcurl]
+
+conflicts_with:
+  - web-scraping

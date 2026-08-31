@@ -1,0 +1,89 @@
+[package]
+name = "forge-imager"
+version = "2.0.0"
+description = "Forge Imager - Flash OS images to SD cards and USB drives"
+authors = ["Forge Contributors"]
+edition = "2021"
+rust-version = "1.85.0"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api"] }
+
+# Security Note: glib 0.18.5 is a transitive dependency via tauri → wry → gtk → glib
+# Vulnerability: GHSA-wrw7-89jp-8q8g (NULL pointer dereference)
+# This application does NOT use glib directly. The fix must come from upstream:
+# - Tracking issue: https://github.com/tauri-apps/tauri/issues/12048
+# - Waiting for: Tauri/wry to update to glib 0.20+ which fixes this vulnerability
+# - Current versions: tauri 2.9.5, wry 0.53.5, glib 0.18.5
+# - Last checked: 2025-01-21
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+futures-util = "0.3"
+# Multi-threaded decompression libraries
+lzma-rust2 = { version = "0.15", features = ["xz", "std", "optimization"] }
+xz2 = "0.1"
+bzip2 = "0.4"
+flate2 = "1.0"
+zstd = "0.13"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+dirs = "5"
+# QDL (Qualcomm Device Loader) for EDL-based board flashing (e.g., Arduino UNO Q)
+qdl = { git = "https://github.com/qualcomm/qdlrs", rev = "4cc11c81bad548504ec243493d30f5fb33c6ceff", features = ["usb"] }
+nusb = "0.2"
+tar = "0.4"
+xmltree = "0.11"
+indexmap = "2"
+once_cell = "1.21.3"
+chrono = "0.4"
+sys-locale = "0.3"
+filetime = "0.2"
+# In-repo crate: writes the first-boot autoconfig file into an image's ext4 rootfs
+forge-write-conf = { path = "../crates/forge-write-conf" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Linux-specific dependencies for block device access
+libc = "0.2"
+# UDisks2 for privilege escalation via polkit
+udisks2 = "0.3"
+# Pin zbus to 5.12 to avoid breaking changes in 5.13+ (Rust 2024 edition)
+zbus = "=5.12.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# macOS-specific dependencies
+libc = "0.2"
+security-framework = "2.11"
+security-framework-sys = "2.11"
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Windows-specific dependencies
+windows-sys = { version = "0.61.2", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Ioctl",
+    "Win32_System_IO"
+] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
