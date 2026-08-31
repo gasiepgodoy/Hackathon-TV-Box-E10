@@ -129,9 +129,9 @@ Projeto Equipe 1/
 
 ### 1. Download dos Binarios Oficiais
 * Imagem do Sistema Operacional (ISO/IMG):  
-  https://github.com/alguemaiYT/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
+  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
 * Gravador Desktop:  
-  https://github.com/alguemaiYT/Hackathon-TV-Box-E10/releases/tag/equipe1-forgeimager-v2.0.0
+  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-forgeimager-v2.0.0
 
 ### 2. Passo a Passo de Execucao
 1. Grave o arquivo .img.xz no MicroSD utilizando o ForgeImager ou Raspberry Pi Imager.
