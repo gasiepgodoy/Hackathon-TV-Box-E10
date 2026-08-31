@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/gasiepgodoy/Hackathon-TV-Box-E10/main/Projeto%20Equipe%201/imagens/logo.png" alt="MultiForge Banner" width="100%" />
 </p>
 
-# Equipe 1 — MultiForge / ForgeOS: Ecossistema Modular e Sistema Operacional para TV Box BTV E10
+# Equipe 1 — MultiForge: Ecossistema Modular e Sistema Operacional para TV Box BTV E10
 
 > 1º Hackathon TV Box Unesp Sorocaba  
 > Transformando hardware apreendido em infraestrutura educacional, totens inteligentes de IA e servidores de alta eficiencia.
