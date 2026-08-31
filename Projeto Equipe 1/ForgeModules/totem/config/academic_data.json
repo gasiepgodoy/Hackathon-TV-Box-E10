@@ -1,0 +1,23 @@
+{
+  "professors": [
+    {"name": "Prof. Eduardo", "room": "Sala 01 - Depto. ECA", "email": "eduardo@unesp.br", "dept": "Controle e Automação"},
+    {"name": "Profa. Maria", "room": "Sala 02 - Depto. Matemática", "email": "maria@unesp.br", "dept": "Matemática"},
+    {"name": "Prof. José Silva", "room": "Sala 03 - Depto. ECA", "email": "jose.silva@unesp.br", "dept": "Controle e Automação"},
+    {"name": "Profa. Ana Costa", "room": "Sala 04 - Depto. Ambiental", "email": "ana.costa@unesp.br", "dept": "Ambiental"},
+    {"name": "Prof. Marcos Paulo", "room": "Sala 05 - Depto. ECA", "email": "marcos.paulo@unesp.br", "dept": "Controle e Automação"},
+    {"name": "Profa. Juliana", "room": "Sala 06 - Depto. Ambiental", "email": "juliana@unesp.br", "dept": "Ambiental"},
+    {"name": "Prof. Roberto", "room": "Sala 07 - Depto. Física", "email": "roberto@unesp.br", "dept": "Física"}
+  ],
+  "schedules": [
+    {"subject": "Cálculo Diferencial e Integral I", "weekday": 0, "start": "08:00", "end": "11:40", "room": "Sala 1 (ECA 1º Termo)", "teacher": "Profa. Maria"},
+    {"subject": "Química Geral", "weekday": 0, "start": "14:00", "end": "17:40", "room": "Lab 1 (Amb 1º Termo)", "teacher": "Profa. Ana Costa"},
+    {"subject": "Física I", "weekday": 1, "start": "08:00", "end": "11:40", "room": "Sala 2 (ECA 1º Termo)", "teacher": "Prof. Roberto"},
+    {"subject": "Introdução à Engenharia de Controle e Automação", "weekday": 1, "start": "14:00", "end": "16:00", "room": "Sala 1 (ECA 1º Termo)", "teacher": "Prof. Eduardo"},
+    {"subject": "Circuitos Elétricos I", "weekday": 2, "start": "08:00", "end": "11:40", "room": "Lab 2 (ECA 3º Termo)", "teacher": "Prof. José Silva"},
+    {"subject": "Ecologia Básica", "weekday": 2, "start": "14:00", "end": "17:40", "room": "Sala 3 (Amb 3º Termo)", "teacher": "Profa. Juliana"},
+    {"subject": "Sistemas de Controle I", "weekday": 3, "start": "08:00", "end": "11:40", "room": "Lab 3 (ECA 5º Termo)", "teacher": "Prof. Marcos Paulo"},
+    {"subject": "Tratamento de Água", "weekday": 3, "start": "14:00", "end": "17:40", "room": "Lab 1 (Amb 5º Termo)", "teacher": "Profa. Ana Costa"},
+    {"subject": "Instrumentação Industrial", "weekday": 4, "start": "08:00", "end": "11:40", "room": "Lab 2 (ECA 5º Termo)", "teacher": "Prof. Eduardo"},
+    {"subject": "Gestão Ambiental", "weekday": 4, "start": "14:00", "end": "17:40", "room": "Sala 4 (Amb 7º Termo)", "teacher": "Profa. Juliana"}
+  ]
+}

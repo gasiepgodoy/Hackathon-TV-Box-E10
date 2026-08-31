@@ -1,0 +1,14 @@
+[project]
+name = "academic-assistant"
+version = "1.0.0"
+description = "Assistente acadêmico local com IA, FastAPI, PostgreSQL e Redis"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["collector", "database", "api", "agent", "config"]

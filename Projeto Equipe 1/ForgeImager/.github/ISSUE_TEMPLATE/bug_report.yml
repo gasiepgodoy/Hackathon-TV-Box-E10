@@ -1,0 +1,139 @@
+name: Relato de Bug (Bug Report)
+description: Relate um bug ou comportamento inesperado no Forge Imager
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por dedicar seu tempo para relatar um bug! Por favor, preencha o formulário abaixo para nos ajudar a investigar e corrigir o problema.
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: Pré-requisitos
+      description: Por favor, confirme o seguinte antes de enviar
+      options:
+        - label: Eu pesquisei nas issues existentes e este bug não foi relatado anteriormente
+          required: true
+        - label: Estou usando a versão mais recente do Forge Imager
+          required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema Operacional
+      description: Qual sistema operacional você está usando?
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS (Intel)
+        - macOS (Apple Silicon)
+        - Linux (Ubuntu)
+        - Linux (Debian)
+        - Linux (Linux Mint)
+        - Linux (Outro baseado em Debian)
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Versão do SO
+      description: Versão específica do seu sistema operacional
+      placeholder: "ex: Windows 11 23H2, macOS 14.2, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Versão do Forge Imager
+      description: Versão do Forge Imager (exibida no canto inferior direito da tela inicial)
+      placeholder: "ex: 1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Tipo de Operação
+      description: O que você estava tentando fazer quando o bug ocorreu?
+      options:
+        - Baixando uma imagem
+        - Gravando em cartão SD
+        - Gravando em pendrive USB
+        - Verificando uma gravação
+        - Selecionando uma placa/imagem
+        - Usando uma imagem personalizada
+        - Detecção de dispositivo
+        - Inicialização do aplicativo
+        - Outro
+    validations:
+      required: true
+
+  - type: input
+    id: target-device
+    attributes:
+      label: Dispositivo de Destino (se aplicável)
+      description: O modelo/marca do cartão SD ou pendrive USB no qual estava gravando
+      placeholder: "ex: SanDisk Ultra 32GB, Samsung EVO 64GB"
+
+  - type: input
+    id: target-board
+    attributes:
+      label: Placa de Destino (se aplicável)
+      description: A placa do Forge para a qual estava tentando gravar uma imagem
+      placeholder: "ex: Orange Pi 5, Raspberry Pi 4, Khadas VIM3"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição do Bug
+      description: Uma descrição clara e concisa do que é o bug
+      placeholder: Descreva o que aconteceu...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento Esperado
+      description: O que você esperava que acontecesse?
+      placeholder: Descreva o que deveria ter acontecido...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para Reproduzir
+      description: Passos para reproduzir o comportamento
+      placeholder: |
+        1. Abra o Forge Imager
+        2. Selecione a placa '...'
+        3. Clique em '...'
+        4. Veja o erro
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Mensagens de Erro / Logs
+      description: |
+        Se aplicável, cole quaisquer mensagens de erro ou logs aqui.
+        Você pode usar o recurso "Enviar Logs" no Forge Imager para obter um link temporário.
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Capturas de Tela
+      description: Se aplicável, adicione capturas de tela para ajudar a explicar seu problema
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Contexto Adicional
+      description: Adicione qualquer outro contexto sobre o problema aqui

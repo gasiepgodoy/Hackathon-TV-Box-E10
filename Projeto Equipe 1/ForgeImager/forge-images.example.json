@@ -1,0 +1,70 @@
+﻿{
+  "boards": [
+    {
+      "slug": "btv-e10",
+      "name": "BTV E10 (Amlogic S905X2)",
+      "vendor_slug": "btv",
+      "vendor_name": "BTV",
+      "support_tier": "platinum",
+      "image_count": 2,
+      "has_desktop": true,
+      "promoted": true,
+      "soc": "Amlogic S905X2",
+      "architecture": "arm64",
+      "summary": "2GB LPDDR4, 8GB eMMC, Realtek RTL8189FTV Wi-Fi AP 25MHz."
+    },
+    {
+      "slug": "forge-pi-5",
+      "name": "Forge Pi 5",
+      "vendor_slug": "multi-forge",
+      "vendor_name": "Multi-Forge",
+      "support_tier": "platinum",
+      "image_count": 1,
+      "has_desktop": true,
+      "promoted": true,
+      "soc": "Cortex-A76",
+      "architecture": "arm64",
+      "summary": "High-performance Multi-Forge developer board"
+    }
+  ],
+  "images": [
+    {
+      "id": "forgeos-btv-e10-desktop",
+      "board_slug": "btv-e10",
+      "variant": "desktop",
+      "distribution": "ForgeOS",
+      "release": "v1.0.0",
+      "kernel_branch": "current",
+      "kernel_version": "6.1.y",
+      "application": "totem-ai",
+      "promoted": true,
+      "stability": "stable",
+      "format": "sd",
+      "download": {
+        "file_url": "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0/forgeos-btv-e10.img.xz",
+        "direct_url": "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0/forgeos-btv-e10.img.xz",
+        "sha_url": "https://github.com/multi-forge/multi-forge/releases/download/v1.0.0/forgeos-btv-e10.img.xz.sha256",
+        "size_bytes": 891289600,
+        "updated_at": "2026-08-20"
+      }
+    }
+  ],
+  "vendors": [
+    {
+      "slug": "btv",
+      "name": "BTV (Amlogic TV Boxes)",
+      "website": "https://github.com/multi-forge/multi-forge",
+      "description": "Amlogic S905X2 and TV box platforms",
+      "board_count": 1,
+      "partner_tier": "platinum"
+    },
+    {
+      "slug": "multi-forge",
+      "name": "Multi-Forge",
+      "website": "https://github.com/multi-forge/multi-forge",
+      "description": "Official Multi-Forge SBC devices",
+      "board_count": 1,
+      "partner_tier": "platinum"
+    }
+  ]
+}

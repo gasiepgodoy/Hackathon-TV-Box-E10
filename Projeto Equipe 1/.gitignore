@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Node / Web
+node_modules/
+dist/
+.next/
+out/
+build/
+
+# Rust / Cargo
+target/
+Cargo.lock.orig
+
+# IDEs & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs & Temp
+*.log
+tmp/
+temp/

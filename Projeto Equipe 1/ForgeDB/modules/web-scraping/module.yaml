@@ -1,0 +1,116 @@
+# ForgeDB Module Manifest — web-scraping (Coletor Acadêmico)
+# Auto-generated from source investigation on 2026-08-29
+
+id: web-scraping
+name: "Coletor Acadêmico & RAG Agent"
+version: "1.0.0"
+description: "Pipeline assíncrono de coleta de dados universitários com FastAPI, LangChain RAG, PostgreSQL, Redis e dashboard."
+category: data
+icon: "🕸️"
+author: "G.E.R.A — UNESP Sorocaba"
+license: MIT
+
+requirements:
+  min_ram_mb: 1024
+  min_storage_mb: 500
+  python: ">=3.12"
+  pip_packages:
+    # Core
+    - "fastapi==0.115.6"
+    - "uvicorn[standard]==0.34.0"
+    - "pydantic==2.10.4"
+    - "pydantic-settings==2.7.0"
+    - "python-dotenv==1.0.1"
+    # Async HTTP & DB
+    - "aiohttp==3.11.11"
+    - "asyncpg==0.30.0"
+    - "sqlalchemy[asyncio]==2.0.36"
+    - "redis==5.2.1"
+    # LangChain
+    - "langchain==0.3.14"
+    - "langchain-community==0.3.14"
+    - "langchain-core==0.3.29"
+    - "langchain-openai==0.2.14"
+    - "tiktoken==0.7.0"
+    # Utilitários
+    - "httpx==0.28.1"
+    - "structlog==24.4.0"
+    # Testes
+    - "pytest==8.3.4"
+    - "pytest-asyncio==0.25.0"
+    - "pytest-cov==6.0.0"
+    - "aiosqlite==0.20.0"
+
+source:
+  type: local
+  path: "ForgeModules/sub-modulos/web-scraping"
+
+# ──────────────────────────────────────────────────────────
+# Variants: full (Docker + PostgreSQL + Redis) and lite (SQLite)
+# ──────────────────────────────────────────────────────────
+variants:
+  - id: full
+    name: "Full (Docker Compose)"
+    description: "Stack completa com PostgreSQL 16, Redis 7 e containers Docker para API e Coletor."
+    default: true
+    requirements:
+      docker: true
+      docker_compose: true
+      min_ram_mb: 2048
+      min_storage_mb: 1500
+    services:
+      - name: postgres
+        image: "postgres:16-alpine"
+        port: 5432
+      - name: redis
+        image: "redis:7-alpine"
+        port: 6379
+      - name: api
+        build: "docker/Dockerfile"
+        port: 8000
+      - name: collector
+        build: "docker/Dockerfile.collector"
+    lifecycle:
+      install: "docker compose build"
+      start: "docker compose up -d"
+      stop: "docker compose down"
+      healthcheck: "curl -f http://localhost:8000/status"
+      logs: "docker compose logs -f"
+
+  - id: lite
+    name: "Lite (SQLite local)"
+    description: "Execução direta com SQLite e sem Redis — ideal para desenvolvimento e testes em dispositivos com poucos recursos."
+    default: false
+    requirements:
+      docker: false
+      min_ram_mb: 256
+      min_storage_mb: 200
+    environment:
+      DATABASE_URL: "sqlite+aiosqlite:///./academic.db"
+      REDIS_HOST: ""
+      LLM_PROVIDER: "mock"
+    lifecycle:
+      install: "pip install -r requirements.txt"
+      start: "uvicorn api.main:app --host 0.0.0.0 --port 8000"
+      stop: "pkill -f 'uvicorn api.main:app'"
+      healthcheck: "curl -f http://localhost:8000/status"
+
+llm_providers:
+  - id: mock
+    name: "Mock (sem IA real)"
+    description: "Respostas simuladas — padrão para testes."
+  - id: ollama
+    name: "Ollama (local)"
+    description: "LLM local via Ollama (llama3.2 por padrão)."
+    config:
+      OLLAMA_BASE_URL: "http://localhost:11434"
+      OLLAMA_MODEL: "llama3.2"
+  - id: openai
+    name: "OpenAI API"
+    description: "GPT-4o-mini via API da OpenAI."
+    config:
+      OPENAI_API_KEY: ""
+      OPENAI_MODEL: "gpt-4o-mini"
+
+conflicts_with:
+  - totem

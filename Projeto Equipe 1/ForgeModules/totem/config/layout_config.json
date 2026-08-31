@@ -1,0 +1,161 @@
+{
+    "root": {
+        "color": "#060f18"
+    },
+    "titleBar": {
+        "height": 36,
+        "color": "#0d1826",
+        "x": null,
+        "y": null,
+        "width": null,
+        "height_canvas": null,
+        "offsetX": 0.0,
+        "offsetY": 0.0
+    },
+    "statusDot": {
+        "width": 8,
+        "height": 8,
+        "radius": 4,
+        "colorReady": "#4de28f",
+        "colorListening": "#ffbf69",
+        "colorThinking": "#66c2ff",
+        "colorError": "#ff7285",
+        "colorDefault": "#5e7087",
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "statusText": {
+        "fontSize": 11,
+        "color": "#8ea5c4",
+        "maxWidth": 200,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "btnMin": {
+        "width": 24,
+        "height": 24,
+        "radius": 6,
+        "colorPressed": "#182536",
+        "colorHover": "#122031",
+        "colorNormal": "transparent",
+        "iconColor": "#9cb7d7",
+        "iconSize": 14,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "btnClose": {
+        "width": 24,
+        "height": 24,
+        "radius": 6,
+        "colorPressed": "#ff5d72",
+        "colorHover": "#ff7c8c",
+        "colorNormal": "transparent",
+        "iconColor": "#8fa6c5",
+        "iconColorHover": "white",
+        "iconSize": 14,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "contentArea": {
+        "margins": 12,
+        "spacing": 12,
+        "x": null,
+        "y": null,
+        "width": null,
+        "height": null,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "emotionArea": {
+        "minimumHeight": 80,
+        "sizeFactor": 1.0,
+        "minSize": 60,
+        "offsetX": 0.0,
+        "offsetY": 0.0
+    },
+    "emotionGlow": {
+        "scaleFactor": 1.05,
+        "colorInner": "#2b9dff",
+        "colorOuter": "transparent",
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "ttsArea": {
+        "height": 80,
+        "color": "#0c1724",
+        "textMargins": 10,
+        "fontSize": 18.0,
+        "textColor": "#edf5ff",
+        "offsetX": 0.0,
+        "offsetY": 0.0
+    },
+    "buttonBar": {
+        "height": 64.0,
+        "color": "#0d1826",
+        "margins": 12,
+        "bottomMargin": 10,
+        "spacing": 6,
+        "x": null,
+        "y": null,
+        "width": null,
+        "height_canvas": null,
+        "offsetX": 0.0,
+        "offsetY": 0.0
+    },
+    "autoButton": {
+        "preferredWidth": 100,
+        "maxWidth": 140,
+        "height": 35.0,
+        "radius": 8,
+        "colorNormal": "#2f9fff",
+        "colorHover": "#5db7ff",
+        "colorPressed": "#227fd1",
+        "textColor": "white",
+        "fontSize": 12,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "abortButton": {
+        "preferredWidth": 80,
+        "maxWidth": 120,
+        "height": 38,
+        "radius": 8,
+        "colorNormal": "#132232",
+        "colorHover": "#1a2c40",
+        "colorPressed": "#0f1b2a",
+        "textColor": "#d8e6f8",
+        "fontSize": 12,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "textInput": {
+        "height": 38,
+        "radius": 6.0,
+        "bgColor": "#0b1520",
+        "borderColorFocused": "#6dc9ff",
+        "borderColorNormal": "#223952",
+        "borderWidthFocused": 2,
+        "borderWidthNormal": 1,
+        "textColor": "#eff6ff",
+        "placeholderColor": "#6f86a3",
+        "fontSize": 12,
+        "leftMargin": 10,
+        "rightMargin": 10,
+        "offsetX": 0,
+        "offsetY": 0
+    },
+    "sendButton": {
+        "preferredWidth": 60,
+        "maxWidth": 84,
+        "height": 38,
+        "radius": 8,
+        "colorNormal": "#2f9fff",
+        "colorHover": "#5db7ff",
+        "colorPressed": "#227fd1",
+        "colorDisabled": "#1d3953",
+        "textColor": "white",
+        "fontSize": 12,
+        "offsetX": 0,
+        "offsetY": 0
+    }
+}

@@ -1,0 +1,340 @@
+//! Structured, formatted logging to the app's log directory, with timestamps
+//! and log level indicators.
+
+use chrono::{DateTime, Local};
+use once_cell::sync::Lazy;
+use std::fs::{self, File, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use crate::config;
+use crate::utils::logs_dir;
+
+/// Log levels for categorizing messages
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogLevel {
+    #[allow(dead_code)]
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl LogLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Debug => "DEBUG",
+            LogLevel::Info => "INFO",
+            LogLevel::Warn => "WARN",
+            LogLevel::Error => "ERROR",
+        }
+    }
+}
+
+/// Logger configuration
+pub struct LoggerConfig {
+    /// Minimum log level to output
+    pub min_level: LogLevel,
+    /// Whether to output to stderr
+    pub console_output: bool,
+    /// Whether to output to file
+    pub file_output: bool,
+    /// Whether to use colors in console output
+    pub use_colors: bool,
+}
+
+impl Default for LoggerConfig {
+    fn default() -> Self {
+        Self {
+            min_level: LogLevel::Info,
+            console_output: true,
+            file_output: true,
+            use_colors: true,
+        }
+    }
+}
+
+/// Global logger instance
+struct Logger {
+    config: LoggerConfig,
+    log_file: Option<File>,
+    log_path: Option<PathBuf>,
+}
+
+impl Logger {
+    fn new() -> Self {
+        let config = LoggerConfig::default();
+        let (log_file, log_path) = Self::create_log_file();
+
+        Self {
+            config,
+            log_file,
+            log_path,
+        }
+    }
+
+    /// Update the minimum log level at runtime
+    fn set_min_level(&mut self, level: LogLevel) {
+        self.config.min_level = level;
+    }
+
+    fn create_log_file() -> (Option<File>, Option<PathBuf>) {
+        let log_dir = get_log_dir();
+
+        if let Err(e) = fs::create_dir_all(&log_dir) {
+            eprintln!("Failed to create log directory: {}", e);
+            return (None, None);
+        }
+
+        let timestamp = Local::now().format("%Y%m%d_%H%M%S");
+        let log_filename = format!("forge-imager_{}.log", timestamp);
+        let log_path = log_dir.join(&log_filename);
+
+        match OpenOptions::new().create(true).append(true).open(&log_path) {
+            Ok(file) => (Some(file), Some(log_path)),
+            Err(e) => {
+                eprintln!("Failed to create log file: {}", e);
+                (None, None)
+            }
+        }
+    }
+
+    fn log(&mut self, level: LogLevel, module: &str, message: &str) {
+        if level < self.config.min_level {
+            return;
+        }
+
+        let timestamp = Local::now();
+        let formatted_colored = self.format_message_colored(level, module, message, &timestamp);
+
+        if self.config.console_output {
+            if self.config.use_colors {
+                eprintln!("{}", formatted_colored);
+            } else {
+                let formatted = self.format_message_plain(level, module, message, &timestamp);
+                eprintln!("{}", formatted);
+            }
+        }
+
+        // Keep ANSI colors in the file so hastebin renders them.
+        if self.config.file_output {
+            if let Some(ref mut file) = self.log_file {
+                let _ = writeln!(file, "{}", formatted_colored);
+                let _ = file.flush();
+            }
+        }
+    }
+
+    fn format_message_colored(
+        &self,
+        level: LogLevel,
+        module: &str,
+        message: &str,
+        timestamp: &DateTime<Local>,
+    ) -> String {
+        let reset = "\x1b[0m";
+        let dim = "\x1b[90m";
+
+        let (icon, level_color) = match level {
+            LogLevel::Debug => ("●", "\x1b[35m"),
+            LogLevel::Info => ("●", "\x1b[32m"),
+            LogLevel::Warn => ("●", "\x1b[33m"),
+            LogLevel::Error => ("●", "\x1b[31m"),
+        };
+
+        format!(
+            "{}{} {}{}{} {}{}:{} {}",
+            dim,
+            timestamp.format("%H:%M:%S"),
+            level_color,
+            icon,
+            reset,
+            level_color,
+            module,
+            reset,
+            message
+        )
+    }
+
+    fn format_message_plain(
+        &self,
+        level: LogLevel,
+        module: &str,
+        message: &str,
+        timestamp: &DateTime<Local>,
+    ) -> String {
+        format!(
+            "[{}] [{}] [{}] {}",
+            timestamp.format("%Y-%m-%d %H:%M:%S%.3f"),
+            level.as_str(),
+            module,
+            message
+        )
+    }
+}
+
+/// Global logger instance
+static LOGGER: Lazy<Mutex<Logger>> = Lazy::new(|| Mutex::new(Logger::new()));
+
+/// Get the log directory path
+pub fn get_log_dir() -> PathBuf {
+    logs_dir()
+}
+
+/// Get the current log file path (if any)
+pub fn get_current_log_path() -> Option<PathBuf> {
+    LOGGER.lock().ok()?.log_path.clone()
+}
+
+/// Log a debug message
+#[allow(dead_code)]
+pub fn debug(module: &str, message: &str) {
+    if let Ok(mut logger) = LOGGER.lock() {
+        logger.log(LogLevel::Debug, module, message);
+    }
+}
+
+/// Log an info message
+pub fn info(module: &str, message: &str) {
+    if let Ok(mut logger) = LOGGER.lock() {
+        logger.log(LogLevel::Info, module, message);
+    }
+}
+
+/// Log a warning message
+pub fn warn(module: &str, message: &str) {
+    if let Ok(mut logger) = LOGGER.lock() {
+        logger.log(LogLevel::Warn, module, message);
+    }
+}
+
+/// Log an error message
+pub fn error(module: &str, message: &str) {
+    if let Ok(mut logger) = LOGGER.lock() {
+        logger.log(LogLevel::Error, module, message);
+    }
+}
+
+/// Set the minimum log level at runtime (Debug if enabled, else Info)
+pub fn set_log_level(debug_enabled: bool) {
+    if let Ok(mut logger) = LOGGER.lock() {
+        let new_level = if debug_enabled {
+            LogLevel::Debug
+        } else {
+            LogLevel::Info
+        };
+        logger.set_min_level(new_level);
+
+        let level_str = if debug_enabled { "DEBUG" } else { "INFO" };
+        logger.log(
+            LogLevel::Info,
+            "logging",
+            &format!("Log level changed to {}", level_str),
+        );
+    }
+}
+
+/// Log a message with format arguments (debug level)
+#[macro_export]
+macro_rules! log_debug {
+    ($module:expr, $($arg:tt)*) => {
+        $crate::logging::debug($module, &format!($($arg)*))
+    };
+}
+
+/// Log a message with format arguments (info level)
+#[macro_export]
+macro_rules! log_info {
+    ($module:expr, $($arg:tt)*) => {
+        $crate::logging::info($module, &format!($($arg)*))
+    };
+}
+
+/// Log a message with format arguments (warn level)
+#[macro_export]
+macro_rules! log_warn {
+    ($module:expr, $($arg:tt)*) => {
+        $crate::logging::warn($module, &format!($($arg)*))
+    };
+}
+
+/// Log a message with format arguments (error level)
+#[macro_export]
+macro_rules! log_error {
+    ($module:expr, $($arg:tt)*) => {
+        $crate::logging::error($module, &format!($($arg)*))
+    };
+}
+
+/// Clean up old log files, keeping only the most recent ones
+pub fn cleanup_old_logs(keep_count: usize) -> Result<usize, String> {
+    let log_dir = get_log_dir();
+
+    if !log_dir.exists() {
+        return Ok(0);
+    }
+
+    let mut log_files: Vec<_> = fs::read_dir(&log_dir)
+        .map_err(|e| format!("Failed to read log directory: {}", e))?
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "log"))
+        .collect();
+
+    // Newest first, so the skip below drops the oldest.
+    log_files.sort_by(|a, b| {
+        let a_time = a.metadata().and_then(|m| m.modified()).ok();
+        let b_time = b.metadata().and_then(|m| m.modified()).ok();
+        b_time.cmp(&a_time)
+    });
+
+    let mut deleted = 0;
+    for entry in log_files.into_iter().skip(keep_count) {
+        if fs::remove_file(entry.path()).is_ok() {
+            deleted += 1;
+        }
+    }
+
+    Ok(deleted)
+}
+
+/// Initialize the logger (call at application startup)
+pub fn init() {
+    // Force the lazy static to initialize now.
+    drop(LOGGER.lock());
+
+    info("logger", "Forge Imager logging initialized");
+
+    if let Some(path) = get_current_log_path() {
+        info("logger", &format!("Log file: {}", path.display()));
+    }
+
+    match cleanup_old_logs(config::log_files::MAX_LOG_FILES) {
+        Ok(deleted) if deleted > 0 => {
+            info("logger", &format!("Cleaned up {} old log files", deleted));
+        }
+        Err(e) => {
+            warn("logger", &format!("Failed to cleanup old logs: {}", e));
+        }
+        _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_level_ordering() {
+        assert!(LogLevel::Debug < LogLevel::Info);
+        assert!(LogLevel::Info < LogLevel::Warn);
+        assert!(LogLevel::Warn < LogLevel::Error);
+    }
+
+    #[test]
+    fn test_log_dir() {
+        let log_dir = get_log_dir();
+        assert!(log_dir.to_string_lossy().contains("forge-imager"));
+        assert!(log_dir.to_string_lossy().contains("logs"));
+    }
+}

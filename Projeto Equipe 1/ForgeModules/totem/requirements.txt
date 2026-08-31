@@ -1,0 +1,35 @@
+# GUI dependencies for Xiaozhi AI Client (Mina Assistant)
+
+# Qt and GUI framework
+PyQt5>=5.15.0; sys_platform == "win32"
+qasync>=0.27.0
+
+# Utilities
+colorlog==6.9.0
+pillow==11.3.0
+requests==2.32.3
+aiohttp==3.12.13
+
+# Configuration and device management
+cryptography==44.0.1
+py-machineid==0.8.0
+python-dateutil==2.9.0.post0
+
+# Audio Processing & VAD
+numpy
+sounddevice
+onnxruntime
+miniaudio
+
+# Wake word (Picovoice Porcupine)
+pvporcupine
+pvrecorder
+
+# System utilities
+psutil==7.0.0
+edge-tts
+
+# Windows-specific (optional, only for Windows)
+comtypes==1.4.6; sys_platform == "win32"
+pycaw==20240210; sys_platform == "win32"
+pywin32==306; sys_platform == "win32"

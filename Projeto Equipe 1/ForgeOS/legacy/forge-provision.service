@@ -1,0 +1,12 @@
+[Unit]
+Description=ForgeOS First Boot Provisioning Service
+Before=getty@tty1.service
+After=local-fs.target network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/bin/forge-agent --provision
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

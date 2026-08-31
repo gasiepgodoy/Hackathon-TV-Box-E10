@@ -1,0 +1,54 @@
+[
+  {
+    "sample": 1,
+    "chars": 62,
+    "latency_cold_s": 0.0152,
+    "latency_warm_s": 0.0149,
+    "server_latency_s": 0.0,
+    "bytes": 26640,
+    "file": "/root/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A/tts_api/tts_api_outputs/api_sample_01.mp3"
+  },
+  {
+    "sample": 2,
+    "chars": 60,
+    "latency_cold_s": 0.0152,
+    "latency_warm_s": 0.0152,
+    "server_latency_s": 0.0,
+    "bytes": 23328,
+    "file": "/root/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A/tts_api/tts_api_outputs/api_sample_02.mp3"
+  },
+  {
+    "sample": 3,
+    "chars": 65,
+    "latency_cold_s": 0.0153,
+    "latency_warm_s": 0.0149,
+    "server_latency_s": 0.0,
+    "bytes": 26496,
+    "file": "/root/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A/tts_api/tts_api_outputs/api_sample_03.mp3"
+  },
+  {
+    "sample": 4,
+    "chars": 69,
+    "latency_cold_s": 0.0156,
+    "latency_warm_s": 0.015,
+    "server_latency_s": 0.0,
+    "bytes": 28224,
+    "file": "/root/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A/tts_api/tts_api_outputs/api_sample_04.mp3"
+  },
+  {
+    "sample": 5,
+    "chars": 68,
+    "latency_cold_s": 0.0156,
+    "latency_warm_s": 0.0151,
+    "server_latency_s": 0.0,
+    "bytes": 30528,
+    "file": "/root/Repos/Mina-a-Assistente-Virtual-Do-G.E.R.A/tts_api/tts_api_outputs/api_sample_05.mp3"
+  },
+  {
+    "sample": "stream",
+    "first_chunk_s": 1.2376,
+    "total_s": 1.7201,
+    "chunks": 28,
+    "bytes": 28512
+  }
+]
