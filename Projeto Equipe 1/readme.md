@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gasiepgodoy/Hackathon-TV-Box-E10/main/Projeto%20Equipe%201/imagens/logo.png" alt="MultiForge Banner" width="100%" />
+</p>
+
 # Equipe 1 — MultiForge / ForgeOS: Ecossistema Modular e Sistema Operacional para TV Box BTV E10
 
 > 1º Hackathon TV Box Unesp Sorocaba  
@@ -131,11 +135,11 @@ Projeto Equipe 1/
 * Imagem do Sistema Operacional (ISO/IMG):  
   https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
 * Gravador Desktop:  
-  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-forgeimager-v2.0.0
+  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
 
 ### 2. Passo a Passo de Execucao
 1. Grave o arquivo .img.xz no MicroSD utilizando o ForgeImager ou Raspberry Pi Imager.
-2. Insira o cartao na BTV Express E10 e ligue o cabo de energia e o cabo HDMI.
+2. Insira o cartao na TV Box BTV E10 e ligue o cabo de energia e o cabo HDMI.
 3. Aponte a camera do seu celular para o QR Code da tela da TV para conectar ao Wi-Fi RTL8189FTV_AP (senha: tvbox12345).
 4. Abra o navegador em http://192.168.4.1:8080 e selecione a sua rede Wi-Fi.
 5. Para acesso administrativo via terminal:  
