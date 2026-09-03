@@ -209,6 +209,86 @@
       color: var(--pf-text-muted);
     }
 
+    /* --- SEARCH BARS (RESPONSIVE & ACCESSIBLE) --- */
+    .masthead-search-bar {
+      flex: 1;
+      max-width: 440px;
+      margin: 0 1.25rem;
+      height: 34px;
+      background: var(--pf-bg-base);
+      border: 1px solid var(--pf-border-subtle);
+      border-radius: var(--pf-radius);
+      display: flex;
+      align-items: center;
+      padding: 0 0.75rem;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .masthead-search-bar:hover, .masthead-search-bar:focus-within {
+      border-color: var(--pf-blue-light);
+      background: var(--pf-bg-card);
+      box-shadow: 0 0 0 2px var(--pf-blue-surface);
+    }
+    .masthead-search-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--pf-text-primary);
+      font-size: 0.82rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .masthead-search-input::placeholder {
+      color: var(--pf-text-muted);
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 240px;
+      max-width: 440px;
+    }
+    .search-input-wrapper .search-input-icon {
+      position: absolute;
+      left: 0.75rem;
+      color: var(--pf-text-muted);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .search-input-styled {
+      width: 100% !important;
+      height: 36px !important;
+      font-size: 0.84rem !important;
+      padding-left: 2.2rem !important;
+      padding-right: 0.75rem !important;
+      border-radius: var(--pf-radius) !important;
+      background: var(--pf-bg-inset) !important;
+      border: 1px solid var(--pf-border-subtle) !important;
+      transition: all 0.15s ease !important;
+      color: var(--pf-text-primary) !important;
+    }
+    .search-input-styled:focus {
+      border-color: var(--pf-blue-light) !important;
+      box-shadow: 0 0 0 2px var(--pf-blue-surface) !important;
+      outline: none !important;
+    }
+    .search-input-styled::placeholder {
+      color: var(--pf-text-muted) !important;
+    }
+
+    .log-toolbar-controls {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
     /* --- MAIN LAYOUT & SIDEBAR --- */
     .cockpit-main-layout { display: flex; flex: 1; min-height: calc(100vh - 48px); }
 
@@ -735,10 +815,13 @@
       color: var(--pf-blue-light);
     }
 
-    /* --- MOBILE RESPONSIVENESS --- */
+    /* --- MOBILE & TABLET RESPONSIVENESS --- */
     @media (max-width: 900px) {
       .pf-grid-4 { grid-template-columns: repeat(2, 1fr); }
       .pf-grid-2 { grid-template-columns: 1fr; }
+      .masthead-search-bar { max-width: 260px; margin: 0 0.5rem; }
+      .masthead-search-bar .cmd-shortcut-badge { display: none; }
+      .log-search-wrapper { max-width: 320px; }
     }
     @media (max-width: 680px) {
       .cockpit-sidebar {
@@ -760,6 +843,72 @@
       .cockpit-sidebar-backdrop.open { display: block; }
       .masthead-toggle-btn { display: block; }
       .pf-grid-4 { grid-template-columns: 1fr; }
+      .masthead-search-bar { display: none; }
+      .search-input-wrapper { min-width: 100% !important; max-width: 100% !important; width: 100% !important; }
+      .log-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.65rem !important;
+        padding: 0.75rem !important;
+      }
+      .log-chips-group {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      .log-toolbar-controls {
+        width: 100% !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem !important;
+      }
+      .log-search-wrapper {
+        min-width: 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        order: 1 !important;
+        margin-bottom: 0 !important;
+      }
+      #log-unit-select {
+        width: 100% !important;
+        order: 2 !important;
+      }
+      .log-toolbar-controls > button {
+        order: 3 !important;
+      }
+      .wifi-header-actions { flex-wrap: wrap; }
+      #btn-quick-reset span { display: none; }
+      .pf-card-header {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.65rem !important;
+      }
+      .pf-card-header > div {
+        width: 100% !important;
+      }
+      .services-search-wrapper {
+        min-width: 100% !important;
+        max-width: 100% !important;
+      }
+      .masthead-tools {
+        gap: 0.25rem;
+      }
+      #top-status-badge {
+        padding: 0.15rem 0.35rem;
+        font-size: 0.65rem;
+      }
+    }
+    @media (min-width: 681px) {
+      #btn-open-cmd { display: none; }
+    }
+    @media (max-width: 420px) {
+      #top-status-text {
+        display: none;
+      }
+      #top-status-badge {
+        padding: 0.35rem;
+        border-radius: 50%;
+      }
     }
   </style>
 </head>
@@ -776,6 +925,13 @@
         <img src="/logo.png" alt="ForgeOS" class="masthead-logo-img">
         <span class="masthead-title">ForgeOS</span>
       </div>
+    </div>
+ 
+    <!-- Global Masthead Search Bar (Prominent & Accessible across all screens) -->
+    <div class="masthead-search-bar" id="masthead-search-box" onclick="openCommandPalette()" role="search" title="Buscar serviços, logs, IP ou comandos (Ctrl+K)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" class="masthead-search-input" id="masthead-search-input" placeholder="Buscar serviços, logs, rede ou comandos..." readonly aria-label="Busca global de comandos">
+      <kbd class="cmd-shortcut-badge">Ctrl+K</kbd>
     </div>
 
     <div class="masthead-tools">
@@ -1013,8 +1169,11 @@
                 </div>
               </div>
 
-              <div style="margin-bottom:0.65rem;">
-                <input type="text" class="pf-input" id="wifi-filter-input" placeholder="Filtrar por nome de rede (SSID)..." aria-label="Filtrar redes Wi-Fi">
+              <div style="margin-bottom:0.75rem;">
+                <div class="search-input-wrapper wifi-search-wrapper" style="width:100%; max-width:100%;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="pf-input search-input-styled" id="wifi-filter-input" placeholder="Filtrar redes Wi-Fi por nome (SSID)..." aria-label="Filtrar redes Wi-Fi">
+                </div>
               </div>
 
               <div id="wifi-networks-container" style="max-height:440px; overflow-y:auto; padding-right:2px;">
@@ -1130,9 +1289,12 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                 Gerenciador de Serviços do Sistema (systemd Units)
               </span>
-              <div style="display:flex; gap:0.35rem; align-items:center;">
-                <input type="text" class="pf-input" id="services-search-input" placeholder="Filtrar serviços..." style="width:160px; height:28px; font-size:0.72rem;" aria-label="Filtrar serviços systemd">
-                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="loadServices()" aria-label="Atualizar lista de serviços">↻ Atualizar</button>
+              <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <div class="search-input-wrapper services-search-wrapper" style="min-width:240px; max-width:340px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="pf-input search-input-styled" id="services-search-input" placeholder="Filtrar serviços systemd..." aria-label="Filtrar serviços systemd">
+                </div>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="loadServices()" style="height:36px;" aria-label="Atualizar lista de serviços">↻ Atualizar</button>
               </div>
             </div>
 
@@ -1183,8 +1345,8 @@
                 <button class="log-chip" data-lvl="debug" onclick="filterLogLevel('debug')">Debug</button>
               </div>
 
-              <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
-                <select class="pf-select" id="log-unit-select" style="width:160px; height:28px; font-size:0.72rem;" onchange="loadSystemLogs()">
+              <div class="log-toolbar-controls">
+                <select class="pf-select" id="log-unit-select" style="width:170px; height:36px; font-size:0.8rem;" onchange="loadSystemLogs()" aria-label="Filtrar por unidade systemd">
                   <option value="all">Todas as Unidades</option>
                   <option value="forge-portal.service">forge-portal.service</option>
                   <option value="forge-ap.service">forge-ap.service</option>
@@ -1194,12 +1356,15 @@
                   <option value="kernel">kernel</option>
                 </select>
 
-                <input type="text" class="pf-input" id="log-search-input" placeholder="Buscar nos logs..." style="width:140px; height:28px; font-size:0.72rem;" oninput="filterLogsRealtime()">
+                <div class="search-input-wrapper log-search-wrapper" style="min-width:260px; max-width:440px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-input-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="pf-input search-input-styled" id="log-search-input" placeholder="Buscar texto nos logs (ex: wlan0, dhcp, error, fail, eth0)..." oninput="filterLogsRealtime()" aria-label="Buscar nos logs">
+                </div>
 
-                <button class="pf-btn pf-btn-secondary pf-btn-sm active" id="btn-toggle-follow" onclick="toggleLogFollow()">● Seguir (Tail)</button>
-                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="copyLogsToClipboard()">Copiar Logs</button>
-                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="exportLogsToFile()">Exportar</button>
-                <button class="pf-btn pf-btn-danger pf-btn-sm" onclick="confirmClearLogs()">Limpar Logs</button>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm active" id="btn-toggle-follow" onclick="toggleLogFollow()" style="height:36px;">● Seguir (Tail)</button>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="copyLogsToClipboard()" style="height:36px;">Copiar Logs</button>
+                <button class="pf-btn pf-btn-secondary pf-btn-sm" onclick="exportLogsToFile()" style="height:36px;">Exportar</button>
+                <button class="pf-btn pf-btn-danger pf-btn-sm" onclick="confirmClearLogs()" style="height:36px;">Limpar Logs</button>
               </div>
             </div>
 
@@ -2121,10 +2286,22 @@ async function loadSystemLogs() {
 
   try {
     const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     currentLogs = data.logs || [];
     renderLogLines();
-  } catch (err) {}
+  } catch (err) {
+    console.warn('Erro ao consultar /api/logs:', err);
+    const container = document.getElementById('log-container');
+    if (container && currentLogs.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 2.5rem 1rem; text-align: center; color: var(--pf-text-muted);">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--pf-orange-warning);">Aviso de conexão com o coletor de logs</div>
+          <div style="font-size: 0.74rem; margin-top: 0.3rem;">Sincronizando com o daemon do sistema... (${escapeHtml(err.message)})</div>
+        </div>
+      `;
+    }
+  }
 }
 
 function filterLogLevel(lvl) {
@@ -2145,10 +2322,30 @@ function renderLogLines() {
 
   const search = (document.getElementById('log-search-input')?.value || '').toLowerCase();
   const filtered = currentLogs.filter(l => {
-    const matchSearch = !search || l.raw.toLowerCase().includes(search);
+    const matchSearch = !search || (l.raw && l.raw.toLowerCase().includes(search)) || (l.message && l.message.toLowerCase().includes(search));
     const matchLevel = (currentLogLevel === 'all') || (l.level === currentLogLevel);
     return matchSearch && matchLevel;
   });
+
+  if (filtered.length === 0) {
+    if (currentLogs.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 3rem 1rem; text-align: center; color: var(--pf-text-muted);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 0.6rem; opacity: 0.5;"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--pf-text-secondary);">Aguardando telemetria de logs da TV Box</div>
+          <div style="font-size: 0.74rem; margin-top: 0.3rem;">Os logs do journald ou syslog serão exibidos automaticamente assim que forem gerados.</div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="padding: 2.5rem 1rem; text-align: center; color: var(--pf-text-muted);">
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--pf-text-secondary);">Nenhum evento corresponde aos filtros selecionados</div>
+          <div style="font-size: 0.74rem; margin-top: 0.3rem;">Tente selecionar o filtro "Todos" ou limpar a barra de busca.</div>
+        </div>
+      `;
+    }
+    return;
+  }
 
   container.innerHTML = filtered.map(l => `
     <div class="log-row log-${l.level}">
