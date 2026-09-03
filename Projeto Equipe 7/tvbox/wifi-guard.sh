@@ -11,6 +11,16 @@
 # coisa destrutiva. Recarregar o módulo sorteia MAC novo e recria as duas vifs,
 # e no histórico foi seguido de outra queda em ~45 s — é remédio pior que a
 # doença aqui, e por isso ficou lá atrás na fila.
+#
+# GOTCHA que já derrubou a box de vez (03/09): o perfil pode ficar TRAVADO num
+# BSSID específico (802-11-wireless.bssid), provavelmente de um
+# `nmcli device wifi connect ... bssid ...` rodado uma vez para testar. Com a
+# trava, a escada inteira é inútil: reconectar, recarregar o módulo, nada disso
+# muda a configuração salva em disco, e se o AP travado sair do ar de vez —
+# mesmo com outros AVs do mesmo SSID no ar e com sinal bom — a box escala até
+# o reboot, reinicia, sobe com a MESMA trava, e cai nisso de novo. Um laço sem
+# saída. Por isso step_reconnect solta a trava antes de cada tentativa: é
+# barato, idempotente, e esta rede é feita para o roaming entre APs mesmo.
 set -u
 
 IFACE=${IFACE:-wlan1}
@@ -81,9 +91,22 @@ snapshot() {
     return 0
 }
 
+clear_bssid_lock() {
+    # Se o perfil estiver preso a um AP especifico, solta -- ver o gotcha no
+    # topo do arquivo. "--" e string vazia sao as duas formas de "sem trava"
+    # que o nmcli usa dependendo da versao, entao checa as duas.
+    local locked
+    locked=$(nmcli -g 802-11-wireless.bssid connection show "$PROFILE" 2>/dev/null)
+    if [ -n "$locked" ] && [ "$locked" != "--" ]; then
+        log "  perfil estava travado no AP $locked -- destravando para permitir roaming"
+        nmcli connection modify "$PROFILE" 802-11-wireless.bssid "" 2>/dev/null
+    fi
+}
+
 step_reconnect() {
     # O conserto certo para o caso comum: reativar o perfil força DHCP novo e
     # devolve endereço e rota coerentes com o AP em que a box está agora.
+    clear_bssid_lock
     log "  reconectando o perfil $PROFILE"
     nmcli connection up "$PROFILE" >/dev/null 2>&1
 }
