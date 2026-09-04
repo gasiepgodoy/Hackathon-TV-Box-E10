@@ -18,6 +18,8 @@ movimento, remux de clipes e LEDs de status.
 | [`gen-cameras.py`](gen-cameras.py) | `/opt/secbox/` | Detecta as câmeras e gera o `mediamtx.yml` conforme qualidade/retenção. |
 | [`clear-rec.sh`](clear-rec.sh) | `/opt/mediamtx/` | Apaga todas as gravações. |
 | [`sd-guard.sh`](sd-guard.sh) | `/opt/mediamtx/` | Limpa gravações antigas por espaço livre. |
+| [`migrar-para-emmc.sh`](migrar-para-emmc.sh) | (ferramenta) | Copia o sistema do cartão para a eMMC interna (fase 1). |
+| [`preparar-cartao-dados.sh`](preparar-cartao-dados.sh) | (ferramenta) | Transforma o cartão em disco de dados puro (fase 3). |
 | [`rec-prune.py`](rec-prune.py) | `/opt/secbox/` | Descarta os trechos sem movimento das câmeras em modo "só com movimento". |
 | [`usb-guard.py`](usb-guard.py) | `/opt/secbox/` | Impede que uma porta USB instável derrube as outras (ver abaixo). |
 | [`wifi-guard.sh`](wifi-guard.sh) | `/opt/secbox/` | Detecta a queda do Wi-Fi interno e recupera sem intervenção (reconecta → recarrega o driver → reinicia). |
@@ -26,6 +28,38 @@ movimento, remux de clipes e LEDs de status.
 | [`WIFI-INTERNO.md`](WIFI-INTERNO.md) | (documentação) | Ativar o Wi-Fi interno (RTL8189FTV) e liberar a porta USB do dongle. |
 | [`ALARME.md`](ALARME.md) | (documentação) | Sirene por MQTT — e por que o jack AV não toca com o DTB genérico. |
 | [`GRAVACAO.md`](GRAVACAO.md) | (documentação) | Gravar só com movimento: por que é descarte e não liga/desliga da captura. |
+
+## Onde mora cada coisa
+
+O sistema fica na **eMMC interna** (`mmcblk1`, 7,1 GB) e o cartão SD
+(`mmcblk0`, 28,9 GB) é só disco de dados. A razão é o desgaste: gravação de
+vídeo contínua mata cartão SD — um já morreu neste projeto — e o sistema é
+quase só leitura. Assim o componente que sofre é o descartável, e a morte dele
+deixou de derrubar a box.
+
+| Ponto | Onde | O quê |
+|---|---|---|
+| `/` e `/boot` | eMMC | sistema, ~2,2 GB de 5,1 GB |
+| `/mnt/dados` | cartão SD | 29 GB, só dados |
+| `/opt/mediamtx/rec` | bind de `/mnt/dados/rec` | gravação |
+| `/opt/secbox-clip/cache` | bind de `/mnt/dados/cache` | cache de clipes |
+
+**As três montagens do cartão usam `nofail`**, e é isso que dá sentido à
+separação: com cartão morto, ausente ou ilegível, a box sobe, conecta e avisa
+que não está gravando — em vez de simplesmente não ligar.
+
+Os diretórios `rec` e `cache` na eMMC ficam marcados **imutáveis** por baixo das
+montagens. Sem essa trava, cartão ausente faria o MediaMTX gravar direto na
+eMMC até enchê-la, trocando "não grava" por "box travada". Imutáveis, a escrita
+falha na hora e o problema aparece no log em vez de no espaço em disco.
+
+Não foi preciso mexer no bootloader: o `bootscript` desta box deriva a raiz do
+dispositivo em que ele mesmo arrancou (`setenv root /dev/mmcblk${devnum}p2`),
+então arrancar da eMMC já monta a partição certa. O kernel a carregar vem de
+`release=` no `boot.config`, copiado junto.
+
+> Cartão e eMMC têm **rótulos idênticos** (`BOOT` e `ROOTFS`). Por isso o
+> `fstab` usa UUID: por rótulo, a montagem seria ambígua.
 
 ## Identidade do dispositivo
 

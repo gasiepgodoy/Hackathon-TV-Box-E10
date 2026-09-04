@@ -87,6 +87,10 @@ if ($cams) {
 
 $st = Get-Json "http://$BOX`:9997/storage" $TOKEN
 if ($st) {
+    # Desde que o sistema foi para a eMMC, o cartao e so disco de gravacao e e
+    # montado com nofail: se ele morrer, a box sobe normalmente e nada denuncia
+    # a perda. Este campo e o que transforma "parou de gravar" em alarme.
+    if ($null -ne $st.rec_mounted) { $e.cartao_montado = [bool]$st.rec_mounted }
     $e.disco_livre_gb = [math]::Round($st.free / 1GB, 1)
     $e.disco_uso_pct  = [math]::Round(100 * $st.used / $st.total)
     $e.gravacao_horas = [math]::Round($st.hours, 1)
@@ -162,6 +166,9 @@ if ($null -ne $e.cams_conectadas) {
 }
 if ($null -ne $e.disco_livre_gb) {
     "  disco     $($e.disco_livre_gb) GB livres ($($e.disco_uso_pct)% usado)  autonomia $($e.gravacao_horas) h  carga $($e.carga)/$($e.cpus)"
+}
+if ($null -ne $e.cartao_montado -and -not $e.cartao_montado) {
+    "  ATENCAO   CARTAO DE GRAVACAO NAO MONTADO -- a box esta no ar mas nao grava nada"
 }
 if ($e.ssh_box) {
     "  uptime    $([math]::Round($e.box_uptime_s/3600,1)) h   servicos: $($e.box_servicos)"

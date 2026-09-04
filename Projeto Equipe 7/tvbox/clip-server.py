@@ -155,7 +155,12 @@ def _storage():
     # Autonomia = quanto ainda cabe de gravação dividido pelo consumo somado.
     # O orçamento não é só o espaço livre: a gravação antiga é descartável, o
     # que não pode passar é o teto em que o sd-guard começa a apagar.
-    st = os.statvfs("/")
+    #
+    # Mede o disco DA GRAVAÇÃO, não o "/": desde que o sistema passou para a
+    # eMMC e o cartão virou disco de dados, são dois sistemas de arquivos
+    # diferentes, e medir o "/" reportaria os 5 GB da eMMC no lugar dos 29 GB
+    # do cartão.
+    st = os.statvfs(REC_DIR)
     total = st.f_blocks * st.f_frsize
     free = st.f_bavail * st.f_frsize
     used = total - st.f_bfree * st.f_frsize
@@ -182,7 +187,16 @@ def _storage():
         load = os.getloadavg()[0]
     except OSError:
         load = 0.0
-    return {"total": total, "free": free, "used": used, "rec_used": rec,
+    # Cartão fora do ar: a montagem falha (nofail) e REC_DIR volta a ser um
+    # diretório na eMMC. Mesmo st_dev que a raiz denuncia isso -- sem esta
+    # checagem, o app mostraria o espaço da eMMC como se fosse o do cartão e
+    # ninguém perceberia que parou de gravar.
+    try:
+        rec_montado = os.stat(REC_DIR).st_dev != os.stat("/").st_dev
+    except OSError:
+        rec_montado = False
+    return {"rec_mounted": rec_montado,
+            "total": total, "free": free, "used": used, "rec_used": rec,
             "budget": budget, "per_camera": per, "kbps_total": kbps,
             "hours": round(hours, 1), "load": round(load, 2),
             "cpus": os.cpu_count() or 1, "prune": _prune_stats()}
