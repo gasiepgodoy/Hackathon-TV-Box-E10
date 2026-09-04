@@ -136,10 +136,13 @@ def build(cams, settings):
         # cai para a maior resolução suportada se o preset não existir na câmera
         size = p["size"] if (not sizes or p["size"] in sizes) else sizes[0]
         ret = max(1, int(cfg["retention_h"]))
-        # O detector precisa estar ligado (na camera E no geral) para haver
-        # como saber o que descartar. Sem ele o modo cai para continuo, em vez
-        # de a box achar que esta economizando enquanto apaga as cegas.
-        det = bool(cfg["motion"]) and settings["notify"].get("motion", True)
+        # O detector precisa estar ligado NESTA camera para haver como saber o
+        # que descartar. Sem ele o modo cai para continuo, em vez de a box achar
+        # que esta economizando enquanto apaga as cegas.
+        #
+        # Nao olha notify.motion: aquilo governa o push ao celular, e silenciar
+        # o aviso nao pode rebaixar a gravacao nem desarmar a sirene.
+        det = bool(cfg["motion"])
         modo = cfg.get("record_mode")
         if modo not in REC_MODES or not det:
             modo = "continuo"

@@ -69,9 +69,9 @@ No modo movimento o `gen-cameras.py` grava em trechos de **60 s** em vez dos
 
 ## O modo depende do detector
 
-Sem detecção de movimento ligada (na câmera **e** em Notificações) não há como
-saber o que descartar. Nesse caso o `gen-cameras.py` rebaixa o modo para
-contínuo e informa isso no `cameras.json`:
+Sem detecção de movimento ligada **na câmera** não há como saber o que
+descartar. Nesse caso o `gen-cameras.py` rebaixa o modo para contínuo e informa
+isso no `cameras.json`:
 
 ```json
 { "record_mode": "continuo", "record_mode_pedido": "movimento" }
@@ -80,6 +80,12 @@ contínuo e informa isso no `cameras.json`:
 O app guarda o *pedido* — para a escolha não se perder — e desabilita a opção
 enquanto o detector estiver desligado, em vez de oferecer um botão que não faz
 o que promete.
+
+O interruptor de **notificações** de movimento não influencia nada disso. Ele
+governa só o aviso no celular; detectar é decisão local que alimenta a sirene e
+a gravação, e as duas têm de continuar funcionando com o push silenciado. As
+duas coisas já foram acopladas, e o efeito era desligar as notificações e
+descobrir depois que o alarme tinha parado junto.
 
 ## O que o app mostra
 

@@ -150,10 +150,11 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
 
   bool _porMovimento(String id) => _edit[id]!['record_mode'] == 'movimento';
 
-  // A detecção precisa estar ligada nos dois níveis: sem detector não há como
-  // saber o que descartar, e a box rebaixa o modo para contínuo.
-  bool _detectando(String id) =>
-      (_edit[id]!['motion'] as bool? ?? true) && (_notify['motion'] ?? true);
+  // Só o interruptor da própria câmera. Notificar e detectar são coisas
+  // diferentes: a detecção alimenta a sirene e a gravação por movimento, que
+  // são decisões tomadas dentro da box, e silenciar o aviso no celular não
+  // pode desligar nenhuma das duas.
+  bool _detectando(String id) => _edit[id]!['motion'] as bool? ?? true;
 
   // Espaço que a retenção pedida exige: bitrate × tempo. Gravando só com
   // movimento, o que fica é uma fração disso — e usar a fração MEDIDA é o que
@@ -348,12 +349,13 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
             const Text('Notificações',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const Text(
-                'Desligado aqui, o alerta nem chega a ser enviado pela TV box.',
+                'Silencia o aviso no celular. A câmera continua detectando: a '
+                'sirene e a gravação por movimento seguem funcionando.',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Movimento'),
-              subtitle: const Text('Quando alguma câmera detecta movimento'),
+              subtitle: const Text('Avisar no celular quando detectar movimento'),
               value: _notify['motion'] ?? true,
               onChanged: (v) => setState(() => _notify['motion'] = v),
             ),
@@ -501,12 +503,13 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
             contentPadding: EdgeInsets.zero,
             dense: true,
             title: const Text('Detectar movimento'),
+            subtitle: const Text(
+                'Alimenta a sirene e a gravação só com movimento, mesmo com '
+                'as notificações desligadas'),
             value: e['motion'] as bool? ?? true,
-            onChanged: (_notify['motion'] ?? true)
-                ? (v) => setState(() => e['motion'] = v)
-                : null, // notificação de movimento está desligada no geral
+            onChanged: (v) => setState(() => e['motion'] = v),
           ),
-          if ((e['motion'] as bool? ?? true) && (_notify['motion'] ?? true)) ...[
+          if (e['motion'] as bool? ?? true) ...[
             const Text('Sensibilidade', style: TextStyle(fontSize: 13)),
             const SizedBox(height: 6),
             Wrap(
