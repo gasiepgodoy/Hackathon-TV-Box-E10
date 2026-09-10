@@ -1,0 +1,182 @@
+/* Tela de início — porta de entrada do sistema */
+
+body.tela-inicio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px 20px;
+  /* Brilho sutil atrás do conteúdo, para a tela não parecer um retângulo
+     preto vazio em telas grandes (é comum a TV box ser ligada numa TV). */
+  background:
+    radial-gradient(700px 380px at 50% 22%, rgba(53, 214, 168, 0.07), transparent 70%),
+    var(--bg);
+}
+
+.inicio-wrap {
+  width: 100%;
+  max-width: 620px;
+  text-align: center;
+  animation: surgir 0.5s ease-out both;
+}
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio-wrap { animation: none; }
+  .inicio-arte .pulsos circle,
+  .inicio-arte .halo { animation: none; display: none; }
+}
+
+/* ---------- Ilustração ---------- */
+
+.inicio-arte {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin-bottom: 22px;
+}
+
+.inicio-arte .no-protocolo rect {
+  fill: var(--panel);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.inicio-arte .no-protocolo text {
+  fill: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-anchor: middle;
+}
+
+.inicio-arte .halo {
+  transform-origin: 181px 100px;
+  animation: pulsar 2.8s ease-out infinite;
+}
+
+@keyframes pulsar {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* ---------- Texto ---------- */
+
+.inicio-titulo {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin: 0 0 10px;
+}
+
+.inicio-sub {
+  color: var(--text-dim);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0 auto 20px;
+  max-width: 460px;
+}
+
+.inicio-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 28px;
+}
+
+.inicio-tags span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+}
+
+/* ---------- Botão ---------- */
+
+.inicio-botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--accent);
+  color: #06251C;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  padding: 13px 34px;
+  border-radius: 10px;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.inicio-botao:hover {
+  background: #2CC69A;
+  transform: translateY(-1px);
+}
+
+.inicio-botao:active { transform: none; }
+
+.inicio-botao i { font-size: 17px; }
+
+/* ---------- Recursos ---------- */
+
+.inicio-recursos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 40px;
+  text-align: left;
+}
+
+@media (max-width: 620px) {
+  .inicio-recursos { grid-template-columns: 1fr; }
+  .inicio-titulo { font-size: 24px; }
+}
+
+.recurso {
+  display: flex;
+  gap: 11px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.recurso i {
+  color: var(--accent);
+  font-size: 19px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.recurso strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.recurso span {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+/* ---------- Rodapé de status ---------- */
+
+.inicio-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 28px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}

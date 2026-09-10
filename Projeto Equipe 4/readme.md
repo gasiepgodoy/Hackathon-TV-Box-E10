@@ -1,69 +1,122 @@
-# Gateway IoT universal — TV box
+<div align="center">
 
-## Introdução
+<img src="docs/logo.svg" alt="Gateway IoT Universal" width="560">
 
-A maioria dos ambientes com sensores acumula, com o tempo, uma mistura de
-protocolos: um sensor industrial fala Modbus, outro fala OPC UA, um novo
-módulo Wi-Fi fala MQTT, e cada um chega com seu próprio software de
-monitoramento, sua própria tela, seu próprio banco de dados. Esse projeto
-nasceu para resolver esse problema na raiz: um único gateway, rodando numa
-TV box comum, que fala com qualquer protocolo de sensor e entrega tudo
-num único dashboard, com um único histórico organizado.
+**Gateway IoT Universal para Aquisição, Normalização e Análise de Dados de Sensores Multiprotocolo em Computação de Borda**
 
-## Objetivo
+`MQTT` · `OPC UA` · `Modbus TCP` · `HTTP` · `Simulado`
 
-Construir um gateway IoT **verdadeiramente universal** — não apenas
-suportando dois ou três protocolos fixos, mas com uma arquitetura de
-adapters plugáveis onde adicionar um protocolo novo (Modbus, BLE, CoAP,
-o que for) não exige tocar em nenhuma outra parte do sistema. A partir
-disso, o gateway se propõe a:
+</div>
 
-- Traduzir qualquer protocolo de sensor para um formato normalizado único;
-- Armazenar o histórico de forma organizada e consultável no InfluxDB,
-  diferenciando cada sensor sem precisar de arquivos separados;
-- Exibir tudo em tempo real num dashboard web, com gráficos, exportação
-  em CSV e cadastro de sensores independente do protocolo;
-- Ir além da simples visualização: analisar estatisticamente a saúde de
-  cada sensor, detectar anomalias por múltiplos métodos complementares, e
-  prever a tendência de curto prazo com banda de confiança — tudo rodando
-  na própria borda, em hardware de baixo custo (TV box, ARM, poucos GB de
-  RAM), sem depender de nuvem.
+---
 
-## O que diferencia este projeto
+## Resumo
 
-A maior parte dos gateways multiprotocolo se limita a dois ou três
-protocolos embutidos diretamente no núcleo do sistema — adicionar um
-protocolo novo significa reescrever o core. Aqui, o "core" (InfluxDB,
-WebSocket, dashboard) nunca sabe de qual protocolo um dado veio: cada
-adapter (`backend/app/adapters/`) apenas traduz seu protocolo específico
-para um formato comum (`Leitura`) antes de entregá-lo ao resto do
-sistema. Ver a seção *"Adicionando um novo protocolo"* mais abaixo.
+Ambientes com sensores acumulam, com o tempo, uma mistura de protocolos:
+um equipamento industrial fala Modbus, um CLP fala OPC UA, um módulo Wi-Fi
+novo fala MQTT. Cada um chega com seu próprio software, sua própria tela e
+seu próprio banco de dados — e o resultado é que ninguém consegue olhar
+para a planta inteira de uma vez.
 
-Além disso, a camada de **análise** (estatística descritiva, detecção de
-anomalias por múltiplos métodos, e previsão com banda de confiança) roda
-inteiramente na borda, calibrada e validada empiricamente contra falsos
-positivos — inclusive com hardware real (ESP32 via MQTT), não só dados
-sintéticos. Essas seções estão detalhadas mais abaixo neste documento.
+**A solução.** Um único gateway, rodando numa TV box comum, que conversa
+com sensores de qualquer protocolo, traduz tudo para um formato único,
+armazena num banco de séries temporais e apresenta num só dashboard —
+com análise estatística e previsão rodando no próprio dispositivo, sem
+depender de nuvem.
+
+**O objetivo.** Ser universal de verdade, e não apenas suportar alguns
+protocolos fixos. A arquitetura separa *quem fala o protocolo* (os
+adapters) de *quem trata o dado* (armazenamento, dashboard, análise).
+O núcleo do sistema nunca sabe de onde o dado veio, e por isso adicionar
+um protocolo novo custa um arquivo e duas linhas de registro — sem tocar
+em nenhuma outra parte.
+
+**Para que serve.** Centraliza o monitoramento de sensores heterogêneos e
+responde três perguntas que costumam exigir três ferramentas diferentes:
+
+| Pergunta | Como o sistema responde |
+|---|---|
+| O que está acontecendo agora? | Dashboard ao vivo via WebSocket, um gráfico por sensor |
+| O que aconteceu naquele período? | Histórico no InfluxDB, com recorte por data ou seleção no gráfico, e exportação em CSV |
+| Meus sensores estão confiáveis? | Diagnóstico de saúde: descalibração, ruído, travamento, perda de leituras e anomalias |
+
+**Aplicação principal.** Monitoramento industrial e predial em pequena e
+média escala — galpões, laboratórios, salas técnicas, estufas, casas de
+máquinas — onde convivem equipamentos de fabricantes e épocas diferentes
+e não se justifica (ou não se deseja) enviar dados para a nuvem. Roda em
+hardware de baixo custo: uma TV box com 2 GB de RAM é suficiente para
+coletar, armazenar, exibir e analisar.
+
+**O diferencial.** Além da arquitetura plugável, o gateway não se limita
+a mostrar gráficos: ele avalia a **saúde de cada sensor**. Combina
+estatística descritiva, ajuste de distribuições, oito detectores de
+anomalia complementares, teste de regularidade de entrega e previsão
+ARIMA com banda de confiança — tudo calibrado empiricamente contra falsos
+positivos e validado com hardware real (ESP32 via MQTT), não apenas com
+dados sintéticos.
+
+---
+
+## Índice
+
+- [Resumo](#resumo)
+- [Arquitetura](#arquitetura)
+- **Instalação** — [1. InfluxDB](#1-instalar-o-influxdb-na-própria-tv-box-ou-em-outra-máquina-da-rede) · [2. Backend](#2-configurar-e-rodar-o-backend) · [3. Teste sem hardware](#3-testar-sem-sensores-físicos) · [4. Frontend com Nginx](#4-publicar-o-frontend-com-nginx) · [5. Sensores reais](#5-cadastrando-sensores-reais)
+- **Uso** — [Dashboard](#dashboard) · [Seleção de período](#seleção-de-período-na-análise)
+- **Referência técnica** — [Organização no InfluxDB](#como-os-dados-ficam-organizados-no-influxdb) · [Adicionando um protocolo](#adicionando-um-novo-protocolo)
+- **Análise** — [Estatística e saúde](#análise-estatística-e-saúde-dos-sensores) · [Previsão ARIMA](#previsão-com-banda-de-confiança-arima)
+- [Validação com hardware real](#validação-com-hardware-real-esp32)
+
+---
 
 ## Arquitetura
 
-Gateway que recebe dados de sensores em qualquer protocolo (MQTT, OPC UA,
-HTTP, e o que você adicionar depois), grava no InfluxDB e mostra tudo em
-um dashboard em tempo real via WebSocket.
+O fluxo de dados atravessa quatro camadas, e a fronteira entre a primeira
+e as demais é o que torna o gateway extensível:
+
+```
+  sensores            adapters              núcleo                interface
+ ----------      -----------------    ------------------    -------------------
+  MQTT      \
+  OPC UA     \    cada adapter        Leitura normalizada    Dashboard ao vivo
+  Modbus TCP  >-->  fala UM           -->  InfluxDB      -->  Análise e previsão
+  HTTP       /      protocolo              WebSocket          Exportação CSV
+  (novos)   /
+```
+
+Do `Leitura` em diante, **nada no sistema sabe de qual protocolo o dado
+veio** — nem o armazenamento, nem o dashboard, nem os módulos de
+estatística. É por isso que um protocolo novo não exige mudar nenhuma
+dessas partes (veja *Adicionando um novo protocolo*).
+
+### Estrutura de pastas
 
 ```
 iot-gateway/
-├── backend/     -> API Python (FastAPI) + adapters de protocolo + escrita no InfluxDB + análise
-├── frontend/    -> Dashboard estático (HTML/CSS/JS puro, sem build step)
-├── nginx/       -> Configs de exemplo para servir tudo na TV box
-└── esp32/       -> Firmware de teste para validar o gateway com hardware real
+├── backend/    -> API Python (FastAPI): adapters, escrita no InfluxDB, análise
+│   └── app/
+│       ├── adapters/   -> um arquivo por protocolo
+│       ├── analytics/  -> estatística, anomalias, saúde e previsão
+│       └── routers/    -> endpoints REST e WebSocket
+├── frontend/   -> Dashboard estático (HTML/CSS/JS puro, sem build step)
+├── nginx/      -> Configs de exemplo para servir tudo na TV box
+├── esp32/      -> Firmware de teste para validar com hardware real
+└── docs/       -> Logo e material de apoio
 ```
 
-Protocolos suportados hoje: **MQTT**, **OPC UA**, **Modbus TCP**, **HTTP
-(polling)** e um gerador **simulado** para testes sem hardware.
+### Tecnologias
 
-```
-```
+| Camada | Escolha | Por quê |
+|---|---|---|
+| Backend | Python + FastAPI | REST e WebSocket no mesmo processo, com validação de dados |
+| Histórico | InfluxDB 2 | Banco de séries temporais: consulta por intervalo é nativa |
+| Cadastro | SQLite | Metadados dos sensores; leve e sem serviço extra |
+| Frontend | HTML/CSS/JS puro | Sem etapa de build — basta copiar os arquivos para o Nginx |
+| Análise | NumPy, SciPy, statsmodels | Estatística e ARIMA sem dependência pesada de GPU |
+| Servidor web | Nginx | Serve o estático e faz proxy do backend e do WebSocket |
+
+Protocolos suportados hoje: **MQTT**, **OPC UA**, **Modbus TCP**,
+**HTTP (polling)** e um gerador **simulado** para testes sem hardware.
 
 ---
 
@@ -136,8 +189,13 @@ sudo ln -s /etc/nginx/sites-available/gateway /etc/nginx/sites-enabled/gateway
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Acesse `http://<ip-da-tvbox>/` — o Nginx serve o dashboard estático e
-faz proxy de `/api/*` e `/ws` para o backend Python na porta 8000.
+Acesse `http://<ip-da-tvbox>/` — abre a tela de início, que confere se o
+backend está no ar antes de você entrar. O botão **Iniciar** leva ao
+dashboard. O Nginx serve os arquivos estáticos e faz proxy de `/api/*` e
+`/ws` para o backend Python na porta 8000.
+
+Páginas: `index.html` (início) · `dashboard.html` · `analise.html` ·
+`sensores.html`.
 
 Se o backend rodar em outra máquina/porta, edite `frontend/js/common.js`
 e defina `window.API_BASE` antes dele carregar, ou ajuste o proxy no
@@ -172,6 +230,36 @@ Na tela **Sensores**, clique em "Adicionar sensor" e escolha o protocolo:
 O campo **Tipo** vira o *measurement* no InfluxDB — sensores do mesmo
 tipo (ex: vários sensores `temperatura`) podem ser comparados/filtrados
 juntos nas consultas, mesmo sendo instâncias diferentes.
+
+## Dashboard
+
+Cada sensor tem seu **próprio gráfico**, em vez de todos sobrepostos num
+só. O motivo é prático: sensores medem grandezas diferentes (°C, %, hPa)
+em escalas diferentes, e num eixo Y compartilhado os de menor amplitude
+viram linhas retas. Separados, cada série usa a escala que lhe cabe.
+
+Os cartões mostram o último valor **e o horário daquela leitura**, com
+destaque quando ela chegou há menos de um minuto — assim dá para
+distinguir um valor que está atualizando agora de um que ficou parado na
+tela. Ao abrir a página os valores vêm de uma consulta ao InfluxDB
+(`/api/dados/ultimas`); depois disso o WebSocket mantém tudo ao vivo.
+
+## Seleção de período na análise
+
+Além dos atalhos (1 h, 24 h, 7 dias, 30 dias), a aba **Análise** aceita
+dois modos de recorte:
+
+- **Personalizado** — informe as datas inicial e final e clique em Aplicar.
+- **Arrastar sobre o gráfico** — selecione visualmente o trecho que
+  interessa e toda a análise (estatísticas, distribuição, anomalias,
+  saúde e previsão) é recalculada só para aquele intervalo.
+
+O segundo modo é o mais útil quando algo estranho aparece no gráfico: em
+vez de descobrir os horários e digitá-los, você seleciona o trecho
+diretamente e vê as estatísticas daquele evento isolado.
+
+Os dois modos são exclusivos entre si — escolher um atalho descarta o
+recorte, e vice-versa, para o período analisado nunca ficar ambíguo.
 
 ## Como os dados ficam organizados no InfluxDB
 
@@ -392,3 +480,46 @@ de "vagar aleatório" é estatisticamente difícil por natureza. Tendência
 real em série estacionária é detectada de forma confiável (100% nos
 testes); drift somado a um passeio é detectado com menos frequência. Isso
 é uma propriedade do problema, não da implementação.
+
+## Validação com hardware real (ESP32)
+
+Em `esp32/publicador_teste/` há um firmware que publica via MQTT e permite
+**provocar cada modo de falha sob comando**, pelo Monitor Serial. Serve
+para validar as detecções com hardware de verdade, em vez de depender só
+de dados sintéticos.
+
+| Comando | O que faz | O que o gateway deve acusar |
+|---|---|---|
+| `normal` | leitura saudável | nota alta, sem problemas |
+| `congelado` | repete sempre o mesmo valor | sensor congelado, estado crítico |
+| `drift` | desvio lento e cumulativo | desvio sustentado da média |
+| `picos` | leituras absurdas ocasionais | anomalias pontuais de alta confiança |
+| `ruido` | variabilidade muito maior | sensor ficou mais ruidoso |
+| `parar` | para de publicar | taxa de entrega abaixo do esperado |
+| `voltar` | retoma a publicação | volta ao normal |
+
+O firmware gera um **passeio aleatório**, não valores sorteados de forma
+independente: sensores reais têm inércia, e uma série sem autocorrelação
+não exercitaria o tratamento que o gateway faz para esse regime.
+
+### Intervalo esperado em MQTT
+
+Para o teste do comando `parar` funcionar, preencha **"Intervalo esperado
+entre publicações"** no cadastro do sensor MQTT (1 s, se usar o firmware
+como está). Em MQTT quem decide quando publicar é o dispositivo, então o
+gateway não tem como inferir a cadência sozinho — sem essa declaração a
+verificação de perda de leituras fica desligada, justamente para não
+acusar falha em sensores que apenas publicam noutro ritmo.
+
+### Roteiro sugerido de validação
+
+1. Cadastre o sensor MQTT com o intervalo esperado preenchido.
+2. Deixe em `normal` por ~10 minutos e confirme nota alta na aba Análise.
+3. Rode `congelado`, espere ~2 minutos, recarregue a análise.
+4. Volte para `normal`, rode `picos`, espere e verifique.
+5. Rode `parar`, espere ~1 minuto, verifique a queda na taxa de entrega.
+6. Rode `drift` e deixe rodar mais tempo — é o mais lento de aparecer,
+   por ser cumulativo por natureza.
+
+Registrar falha induzida → tempo até detectar → diagnóstico produzido
+transforma isso numa tabela de resultados verificável.

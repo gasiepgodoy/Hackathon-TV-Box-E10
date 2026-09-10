@@ -3,98 +3,121 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gateway IoT — Dashboard</title>
+<title>Gateway IoT Universal</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/inicio.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
-<body>
-<div class="app-shell">
+<body class="tela-inicio">
 
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-mark"></div>
+<main class="inicio-wrap">
+
+  <!-- Ilustração: sensores de protocolos distintos convergindo para o gateway.
+       SVG inline em vez de imagem externa — não depende de arquivo nem de rede. -->
+  <svg class="inicio-arte" viewBox="0 0 360 200" role="img" aria-label="Sensores de diferentes protocolos convergindo para um gateway central">
+    <defs>
+      <linearGradient id="gradNucleo" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#35D6A8"/>
+        <stop offset="100%" stop-color="#1C7A5C"/>
+      </linearGradient>
+    </defs>
+
+    <!-- linhas de convergência -->
+    <g class="linhas" fill="none" stroke="#2A3240" stroke-width="1.5">
+      <path d="M62 42 C 120 42, 130 90, 172 96"/>
+      <path d="M62 100 C 110 100, 130 100, 172 100"/>
+      <path d="M62 158 C 120 158, 130 110, 172 104"/>
+      <path d="M298 42 C 240 42, 230 90, 190 96"/>
+      <path d="M298 158 C 240 158, 230 110, 190 104"/>
+    </g>
+
+    <!-- pulsos percorrendo as linhas -->
+    <g class="pulsos" fill="#35D6A8">
+      <circle r="3"><animateMotion dur="2.6s" repeatCount="indefinite" path="M62 42 C 120 42, 130 90, 172 96"/></circle>
+      <circle r="3"><animateMotion dur="2.6s" begin="0.5s" repeatCount="indefinite" path="M62 100 C 110 100, 130 100, 172 100"/></circle>
+      <circle r="3"><animateMotion dur="2.6s" begin="1s" repeatCount="indefinite" path="M62 158 C 120 158, 130 110, 172 104"/></circle>
+      <circle r="3" fill="#5B8DEF"><animateMotion dur="2.6s" begin="1.5s" repeatCount="indefinite" path="M298 42 C 240 42, 230 90, 190 96"/></circle>
+      <circle r="3" fill="#F2A93C"><animateMotion dur="2.6s" begin="2s" repeatCount="indefinite" path="M298 158 C 240 158, 230 110, 190 104"/></circle>
+    </g>
+
+    <!-- nós de protocolo -->
+    <g class="no-protocolo">
+      <rect x="14" y="30" width="48" height="24" rx="6"/><text x="38" y="46">MQTT</text>
+      <rect x="8"  y="88" width="54" height="24" rx="6"/><text x="35" y="104">OPC UA</text>
+      <rect x="10" y="146" width="52" height="24" rx="6"/><text x="36" y="162">Modbus</text>
+      <rect x="298" y="30" width="48" height="24" rx="6"/><text x="322" y="46">HTTP</text>
+      <rect x="292" y="146" width="60" height="24" rx="6"/><text x="322" y="162">+ novos</text>
+    </g>
+
+    <!-- núcleo do gateway -->
+    <circle cx="181" cy="100" r="26" fill="url(#gradNucleo)" opacity="0.18"/>
+    <circle cx="181" cy="100" r="18" fill="url(#gradNucleo)"/>
+    <circle class="halo" cx="181" cy="100" r="26" fill="none" stroke="#35D6A8" stroke-width="1"/>
+    <path d="M174 100 l5 5 l9 -11" fill="none" stroke="#06251C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+
+  <h1 class="inicio-titulo">Gateway IoT Universal</h1>
+  <p class="inicio-sub">
+    Coleta, normaliza e analisa dados de sensores de qualquer protocolo —
+    rodando inteiramente na borda.
+  </p>
+
+  <div class="inicio-tags">
+    <span>MQTT</span><span>OPC UA</span><span>Modbus TCP</span><span>HTTP</span>
+  </div>
+
+  <a class="inicio-botao" href="dashboard.html">
+    Iniciar <i class="ti ti-arrow-right"></i>
+  </a>
+
+  <div class="inicio-recursos">
+    <div class="recurso">
+      <i class="ti ti-plug"></i>
       <div>
-        <div class="brand-name">Gateway IoT</div>
-        <div class="brand-sub">TV box · local</div>
+        <strong>Multiprotocolo</strong>
+        <span>Adapters plugáveis: um protocolo novo não toca no núcleo</span>
       </div>
     </div>
-    <nav class="nav">
-      <a href="index.html" class="active"><i class="ti ti-chart-bar"></i> Dashboard</a>
-      <a href="sensores.html"><i class="ti ti-plug"></i> Sensores</a>
-      <a href="analise.html"><i class="ti ti-activity"></i> Análise</a>
-    </nav>
-    <div class="sidebar-footer">v1.0 · influxdb + websocket</div>
-  </aside>
-
-  <div class="main">
-    <div class="topbar">
-      <h1>Dashboard</h1>
-      <div class="ws-status">
-        <span class="ws-dot off" id="ws-dot"></span>
-        <span id="ws-label">conectando…</span>
+    <div class="recurso">
+      <i class="ti ti-chart-line"></i>
+      <div>
+        <strong>Tempo real</strong>
+        <span>Leituras via WebSocket e histórico em série temporal</span>
       </div>
     </div>
-
-    <div class="content">
-
-      <section class="panel">
-        <div class="panel-title">Sensores</div>
-        <div id="sensor-grid" class="sensor-grid">
-          <div class="empty-state">Carregando sensores…</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Filtros</div>
-        <div class="controls-row">
-          <div class="field">
-            <label for="select-sensor">Sensor</label>
-            <select id="select-sensor">
-              <option value="">Todos os sensores</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label>Período</label>
-            <div class="chip-row" id="chip-row">
-              <div class="chip active" data-range="-1h">1 hora</div>
-              <div class="chip" data-range="-24h">24 horas</div>
-              <div class="chip" data-range="-7d">7 dias</div>
-              <div class="chip" data-range="-30d">30 dias</div>
-              <div class="chip" data-range="custom">Personalizado</div>
-            </div>
-          </div>
-
-          <div class="field" id="campo-inicio" style="display:none">
-            <label for="input-inicio">De</label>
-            <input type="datetime-local" id="input-inicio">
-          </div>
-          <div class="field" id="campo-fim" style="display:none">
-            <label for="input-fim">Até</label>
-            <input type="datetime-local" id="input-fim">
-          </div>
-
-          <button id="btn-atualizar">Atualizar</button>
-          <button id="btn-csv" class="primary"><i class="ti ti-download"></i> Baixar CSV</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Histórico</div>
-        <div class="chart-wrap">
-          <canvas id="grafico"></canvas>
-          <div class="chart-empty" id="chart-empty">Selecione um sensor e um período para ver os dados</div>
-        </div>
-      </section>
-
+    <div class="recurso">
+      <i class="ti ti-activity"></i>
+      <div>
+        <strong>Análise na borda</strong>
+        <span>Saúde do sensor, anomalias e previsão com banda de confiança</span>
+      </div>
     </div>
   </div>
-</div>
 
-<div id="toast-area"></div>
+  <div class="inicio-rodape">
+    <span class="ws-dot" id="dot-backend"></span>
+    <span id="txt-backend">verificando o backend…</span>
+  </div>
+
+</main>
 
 <script src="js/common.js"></script>
-<script src="js/dashboard.js"></script>
+<script>
+  // Confirma o backend antes do usuário entrar: é melhor descobrir aqui
+  // que o serviço está fora do ar do que numa tela cheia de erro.
+  (async () => {
+    const dot = document.getElementById('dot-backend');
+    const txt = document.getElementById('txt-backend');
+    try {
+      await api('/api/saude');
+      dot.className = 'ws-dot on';
+      txt.textContent = 'gateway online';
+    } catch (e) {
+      dot.className = 'ws-dot off';
+      txt.textContent = 'backend indisponível — verifique o serviço gateway-backend';
+    }
+  })();
+</script>
 </body>
 </html>

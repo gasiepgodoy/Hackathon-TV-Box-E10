@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gateway IoT — Análise</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/analise.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
@@ -13,15 +14,15 @@
 <div class="app-shell">
 
   <aside class="sidebar">
-    <div class="brand">
+    <a class="brand" href="index.html" title="Voltar ao início">
       <div class="brand-mark"></div>
       <div>
         <div class="brand-name">Gateway IoT</div>
         <div class="brand-sub">TV box · local</div>
       </div>
-    </div>
+    </a>
     <nav class="nav">
-      <a href="index.html"><i class="ti ti-chart-bar"></i> Dashboard</a>
+      <a href="dashboard.html"><i class="ti ti-chart-bar"></i> Dashboard</a>
       <a href="sensores.html"><i class="ti ti-plug"></i> Sensores</a>
       <a href="analise.html" class="active"><i class="ti ti-activity"></i> Análise</a>
     </nav>
@@ -50,8 +51,18 @@
               <div class="chip active" data-range="-24h">24 horas</div>
               <div class="chip" data-range="-7d">7 dias</div>
               <div class="chip" data-range="-30d">30 dias</div>
+              <div class="chip" data-range="custom">Personalizado</div>
             </div>
           </div>
+          <div class="field" id="campo-inicio" style="display:none">
+            <label for="input-inicio">De</label>
+            <input type="datetime-local" id="input-inicio">
+          </div>
+          <div class="field" id="campo-fim" style="display:none">
+            <label for="input-fim">Até</label>
+            <input type="datetime-local" id="input-fim">
+          </div>
+          <button id="btn-aplicar-periodo" style="display:none">Aplicar</button>
         </div>
       </section>
 
@@ -63,8 +74,17 @@
         </section>
 
         <section class="panel">
-          <div class="panel-title">Série e anomalias detectadas</div>
-          <div class="chart-wrap"><canvas id="grafico-analise"></canvas></div>
+          <div class="painel-cabecalho">
+            <div class="panel-title" style="margin:0">Série e anomalias detectadas</div>
+            <div class="acoes-selecao">
+              <span class="dica-selecao" id="dica-selecao">Arraste sobre o gráfico para analisar um trecho</span>
+              <button id="btn-limpar-selecao" style="display:none">Limpar seleção</button>
+            </div>
+          </div>
+          <div class="chart-wrap" id="wrap-serie">
+            <canvas id="grafico-analise"></canvas>
+            <div class="selecao-overlay" id="selecao-overlay"></div>
+          </div>
         </section>
 
         <section class="panel">

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Gateway IoT Universal">
+  <title>Gateway IoT Universal</title>
+  <defs>
+    <linearGradient id="nucleoIcone" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4DE3B8"/>
+      <stop offset="100%" stop-color="#1C7A5C"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="120" height="120" rx="28" fill="#171D27" stroke="#2A3240" stroke-width="1.5"/>
+
+  <g fill="none" stroke-width="2.2" stroke-linecap="round">
+    <path d="M30 34 C 48 34, 50 56, 62 60" stroke="#5B8DEF" stroke-opacity="0.75"/>
+    <path d="M30 60 L 62 60" stroke="#F2A93C" stroke-opacity="0.75"/>
+    <path d="M30 86 C 48 86, 50 64, 62 60" stroke="#E88BC5" stroke-opacity="0.75"/>
+  </g>
+
+  <circle cx="30" cy="34" r="5" fill="#5B8DEF"/>
+  <circle cx="30" cy="60" r="5" fill="#F2A93C"/>
+  <circle cx="30" cy="86" r="5" fill="#E88BC5"/>
+
+  <circle cx="70" cy="60" r="19" fill="#35D6A8" opacity="0.14"/>
+  <circle cx="70" cy="60" r="12.5" fill="url(#nucleoIcone)"/>
+
+  <path d="M83 60 L 96 60" stroke="#35D6A8" stroke-width="2" stroke-linecap="round"/>
+  <path d="M92 52 L 96 60 L 92 68" fill="none" stroke="#35D6A8" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

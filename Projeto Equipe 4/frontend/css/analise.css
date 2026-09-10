@@ -270,3 +270,53 @@
 }
 
 .btn-carregando { opacity: 0.6; pointer-events: none; }
+
+/* ---------- Seleção por arrasto no gráfico ---------- */
+
+#wrap-serie { position: relative; }
+
+/* A camada de seleção fica sobre o canvas e captura o arrasto.
+   `pointer-events: none` no retângulo evita que ele roube o mouse
+   durante o próprio arrasto. */
+.selecao-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+}
+
+.selecao-retangulo {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(53, 214, 168, 0.14);
+  border-left: 1px solid var(--accent);
+  border-right: 1px solid var(--accent);
+  pointer-events: none;
+}
+
+.acoes-selecao {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dica-selecao {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.dica-selecao.ativa { color: var(--accent); }
+
+#btn-limpar-selecao { padding: 6px 12px; font-size: 12px; }
+
+.faixa-selecionada {
+  background: rgba(53, 214, 168, 0.08);
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+  padding: 9px 13px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.faixa-selecionada strong { color: var(--text); }

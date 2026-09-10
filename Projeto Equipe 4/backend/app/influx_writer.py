@@ -155,6 +155,48 @@ def consultar_series(
     return pontos
 
 
+def consultar_ultimas(sensor_ids: Optional[list[str]] = None, janela: str = "-24h") -> dict[str, dict]:
+    """Última leitura de cada sensor, indexada por `sensor_id`.
+
+    Sem isso, ao abrir o dashboard os cartões ficam vazios até chegar uma
+    leitura nova pelo WebSocket. Num sensor que reporta a cada segundo
+    quase não se nota, mas num que reporta a cada 15 minutos a tela parece
+    quebrada. Aqui buscamos o estado atual de uma vez, em vez de uma
+    consulta por sensor.
+    """
+    if _client is None:
+        raise RuntimeError("InfluxDB não conectado")
+
+    filtro_sensores = ""
+    if sensor_ids:
+        lista = " or ".join(f'r.sensor_id == "{sid}"' for sid in sensor_ids)
+        filtro_sensores = f"|> filter(fn: (r) => {lista})"
+
+    flux = f'''
+    from(bucket: "{settings.influx_bucket}")
+      |> range(start: {janela})
+      |> filter(fn: (r) => r._field == "valor")
+      {filtro_sensores}
+      |> group(columns: ["sensor_id"])
+      |> last()
+    '''
+
+    tabelas = _client.query_api().query(flux)
+    ultimas: dict[str, dict] = {}
+    for tabela in tabelas:
+        for registro in tabela.records:
+            sid = registro.values.get("sensor_id")
+            if not sid:
+                continue
+            ultimas[sid] = {
+                "sensor_id": sid,
+                "tipo": registro.get_measurement(),
+                "valor": registro.get_value(),
+                "timestamp": registro.get_time().isoformat(),
+            }
+    return ultimas
+
+
 def gerar_csv(
     sensor_id: Optional[str],
     tipo: Optional[str],

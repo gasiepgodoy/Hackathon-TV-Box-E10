@@ -6,6 +6,9 @@ let sensores = [];
 let sensorSelecionado = '';
 let rangeAtual = '-24h';
 let grafico = null;
+// Quando o usuário seleciona um trecho (por arrasto ou pelas datas), a
+// análise passa a usar esse recorte em vez do período dos atalhos.
+let recorte = null;   // { inicio: Date, fim: Date }
 
 const elSelect = document.getElementById('select-sensor');
 const elConteudo = document.getElementById('conteudo-analise');
@@ -40,19 +43,84 @@ elSelect.addEventListener('change', () => {
   else { elConteudo.style.display = 'none'; elVazio.style.display = 'block'; }
 });
 
+const elCampoInicio = document.getElementById('campo-inicio');
+const elCampoFim = document.getElementById('campo-fim');
+const elInputInicio = document.getElementById('input-inicio');
+const elInputFim = document.getElementById('input-fim');
+const elBtnAplicar = document.getElementById('btn-aplicar-periodo');
+const elBtnLimpar = document.getElementById('btn-limpar-selecao');
+const elDica = document.getElementById('dica-selecao');
+
 elChipRow.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('click', () => {
     elChipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     rangeAtual = chip.dataset.range;
-    if (sensorSelecionado) carregarAnalise();
+    const personalizado = rangeAtual === 'custom';
+    elCampoInicio.style.display = personalizado ? 'flex' : 'none';
+    elCampoFim.style.display = personalizado ? 'flex' : 'none';
+    elBtnAplicar.style.display = personalizado ? 'inline-flex' : 'none';
+    // Trocar de atalho descarta o recorte: manter os dois ativos ao mesmo
+    // tempo produziria um período ambíguo.
+    limparRecorte(false);
+    if (!personalizado && sensorSelecionado) carregarAnalise();
   });
 });
+
+elBtnAplicar.addEventListener('click', () => {
+  if (!elInputInicio.value || !elInputFim.value) {
+    mostrarToast('Preencha as duas datas do período.', 'error');
+    return;
+  }
+  const ini = new Date(elInputInicio.value);
+  const fim = new Date(elInputFim.value);
+  if (fim <= ini) {
+    mostrarToast('A data final precisa ser depois da inicial.', 'error');
+    return;
+  }
+  recorte = { inicio: ini, fim: fim };
+  atualizarDica();
+  if (sensorSelecionado) carregarAnalise();
+});
+
+elBtnLimpar.addEventListener('click', () => limparRecorte(true));
+
+function limparRecorte(recarregar) {
+  recorte = null;
+  const ret = document.querySelector('.selecao-retangulo');
+  if (ret) ret.remove();
+  elBtnLimpar.style.display = 'none';
+  atualizarDica();
+  if (recarregar && sensorSelecionado) carregarAnalise();
+}
+
+function atualizarDica() {
+  if (recorte) {
+    elDica.textContent = `Trecho: ${formatarHora(recorte.inicio.getTime() / 1000)} → ${formatarHora(recorte.fim.getTime() / 1000)}`;
+    elDica.classList.add('ativa');
+    elBtnLimpar.style.display = 'inline-flex';
+  } else {
+    elDica.textContent = 'Arraste sobre o gráfico para analisar um trecho';
+    elDica.classList.remove('ativa');
+  }
+}
+
+/** Monta os parâmetros de período: o recorte tem prioridade sobre o atalho. */
+function paramsPeriodo() {
+  const p = new URLSearchParams();
+  if (recorte) {
+    p.set('inicio', recorte.inicio.toISOString());
+    p.set('fim', recorte.fim.toISOString());
+  } else {
+    p.set('inicio', rangeAtual);
+  }
+  return p;
+}
 
 async function carregarAnalise() {
   let dado;
   try {
-    dado = await api(`/api/analise/${sensorSelecionado}?inicio=${encodeURIComponent(rangeAtual)}`);
+    dado = await api(`/api/analise/${sensorSelecionado}?${paramsPeriodo().toString()}`);
   } catch (e) {
     mostrarToast('Não consegui carregar a análise: ' + e.message, 'error');
     return;
@@ -94,7 +162,14 @@ function renderSaude(dado) {
 
   const recomendacoes = (s.recomendacoes || []).map(r => `<li>${esc(r)}</li>`).join('');
 
+  const avisoRecorte = recorte
+    ? `<div class="faixa-selecionada">Analisando o trecho selecionado:
+         <strong>${formatarHora(recorte.inicio.getTime() / 1000)}</strong> até
+         <strong>${formatarHora(recorte.fim.getTime() / 1000)}</strong></div>`
+    : '';
+
   el.innerHTML = `
+    ${avisoRecorte}
     <div class="saude-topo">
       <div class="saude-medidor">
         <div class="saude-valor" style="color:${cor}">${s.pontuacao ?? '—'}</div>
@@ -350,7 +425,7 @@ async function carregarPrevisao() {
 
   let dado;
   try {
-    dado = await api(`/api/analise/${sensorSelecionado}/previsao?inicio=${encodeURIComponent(rangeAtual)}&passos=12`);
+    dado = await api(`/api/analise/${sensorSelecionado}/previsao?${paramsPeriodo().toString()}&passos=12`);
   } catch (e) {
     elBlocoPrev.innerHTML = `<div class="empty-state">Não consegui gerar a previsão: ${esc(e.message)}</div>`;
     return;
@@ -536,3 +611,103 @@ function desenharGraficoPrevisao(dado) {
     },
   });
 }
+
+/* ---------- Seleção por arrasto no gráfico ---------- */
+
+/*
+ * Converte a posição do mouse em instante de tempo usando a escala do
+ * próprio Chart.js (`getValueForPixel`), em vez de calcular proporção na
+ * mão: assim a seleção continua correta mesmo com a área do gráfico
+ * mudando de tamanho (margens dos eixos, redimensionar a janela).
+ */
+(function habilitarSelecao() {
+  const overlay = document.getElementById('selecao-overlay');
+  const wrap = document.getElementById('wrap-serie');
+  if (!overlay || !wrap) return;
+
+  let arrastando = false;
+  let xInicio = 0;
+  let retangulo = null;
+
+  const MIN_PIXELS = 8;   // abaixo disso é clique, não seleção
+
+  function posicaoX(evento) {
+    return evento.clientX - overlay.getBoundingClientRect().left;
+  }
+
+  function tempoEm(px) {
+    if (!grafico) return null;
+    const escala = grafico.scales.x;
+    // O canvas tem margens (área dos eixos); fora delas não há tempo válido
+    const limitado = Math.max(escala.left, Math.min(escala.right, px + overlay.offsetLeft));
+    return escala.getValueForPixel(limitado);
+  }
+
+  overlay.addEventListener('mousedown', (e) => {
+    if (!grafico || e.button !== 0) return;
+    arrastando = true;
+    xInicio = posicaoX(e);
+
+    const antigo = wrap.querySelector('.selecao-retangulo');
+    if (antigo) antigo.remove();
+
+    retangulo = document.createElement('div');
+    retangulo.className = 'selecao-retangulo';
+    retangulo.style.left = xInicio + 'px';
+    retangulo.style.width = '0px';
+    wrap.appendChild(retangulo);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!arrastando || !retangulo) return;
+    const xAtual = posicaoX(e);
+    retangulo.style.left = Math.min(xInicio, xAtual) + 'px';
+    retangulo.style.width = Math.abs(xAtual - xInicio) + 'px';
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!arrastando) return;
+    arrastando = false;
+
+    const xFim = posicaoX(e);
+    if (Math.abs(xFim - xInicio) < MIN_PIXELS) {
+      if (retangulo) retangulo.remove();
+      retangulo = null;
+      return;
+    }
+
+    const t1 = tempoEm(Math.min(xInicio, xFim));
+    const t2 = tempoEm(Math.max(xInicio, xFim));
+    if (t1 == null || t2 == null || !(t2 > t1)) {
+      if (retangulo) retangulo.remove();
+      retangulo = null;
+      return;
+    }
+
+    recorte = { inicio: new Date(t1), fim: new Date(t2) };
+
+    // O atalho de período deixa de valer enquanto houver recorte —
+    // dois períodos ativos ao mesmo tempo seria ambíguo.
+    elChipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+
+    atualizarDica();
+    carregarAnalise();
+  });
+
+  // Toque: mesma lógica, para uso em tablet/TV com tela sensível
+  overlay.addEventListener('touchstart', (e) => {
+    if (!grafico || e.touches.length !== 1) return;
+    overlay.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, button: 0 }));
+  }, { passive: true });
+
+  overlay.addEventListener('touchmove', (e) => {
+    if (e.touches.length !== 1) return;
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX }));
+  }, { passive: true });
+
+  overlay.addEventListener('touchend', (e) => {
+    const toque = e.changedTouches[0];
+    if (toque) window.dispatchEvent(new MouseEvent('mouseup', { clientX: toque.clientX }));
+  });
+})();

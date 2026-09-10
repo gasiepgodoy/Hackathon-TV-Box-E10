@@ -91,6 +91,17 @@ def exportar_csv(
     )
 
 
+@router.get("/ultimas")
+def ultimas_leituras(janela: str = Query("-24h", description="Até quando procurar a última leitura")):
+    """Última leitura de cada sensor cadastrado, para o dashboard já abrir
+    com os cartões preenchidos em vez de esperar o próximo WebSocket."""
+    sensores = database.listar_sensores()
+    ids = [s.id for s in sensores]
+    if not ids:
+        return {}
+    return _executar_consulta_influx(influx_writer.consultar_ultimas, sensor_ids=ids, janela=janela)
+
+
 @router.get("/tipos")
 def listar_tipos():
     """Lista os tipos (measurements) distintos com base nos sensores cadastrados,
