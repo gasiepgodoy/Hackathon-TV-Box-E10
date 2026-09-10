@@ -1,0 +1,20 @@
+[Unit]
+Description=Hub de sensores - coletor MQTT (Zigbee + LoRaWAN)
+# As duas origens de leitura. Ambas sao opcionais: o systemd ignora unidades
+# ausentes em After=, e o coletor so assina topicos — se um publicador nao
+# existir, aquela origem fica silenciosa em vez de impedir a inicializacao.
+After=network.target mosquitto.service zigbee2mqtt.service chirpstack.service
+Wants=mosquitto.service
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=/opt/hub-sensores/src
+Environment=HUB_CONFIG=/etc/hub/hub.ini
+ExecStart=/usr/bin/python3 -m hub.coletor
+WorkingDirectory=/opt/hub-sensores
+Restart=always
+RestartSec=10s
+User=root
+
+[Install]
+WantedBy=multi-user.target

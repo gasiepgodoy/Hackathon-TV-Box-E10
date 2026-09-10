@@ -1,8 +1,9 @@
 """Agregador: condensa leituras brutas em resumos por janela.
 
-E o resumo que viaja pelo LoRa. Guardamos min/max alem da media porque um
-evento curto (uma geada de 20 minutos) desaparece numa media horaria — e e
-exatamente esse evento que o projeto precisa capturar.
+E o resumo que sobe pelo backhaul no lugar das leituras brutas. Guardamos
+min/max alem da media porque um evento curto (uma geada de 20 minutos)
+desaparece numa media horaria — e e exatamente esse evento que o projeto
+precisa capturar.
 """
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ def agregar(con: sqlite3.Connection, janela_s: int, agora: int | None = None) ->
                MIN(umidade)         AS umid_min,
                MAX(umidade)         AS umid_max,
                AVG(umidade)         AS umid_media,
+               AVG(pressao)         AS press_media,
                MIN(bateria)         AS bateria,
                COUNT(*)             AS amostras
           FROM leituras
@@ -48,23 +50,25 @@ def agregar(con: sqlite3.Connection, janela_s: int, agora: int | None = None) ->
     try:
         for r in linhas:
             # ON CONFLICT com guarda `enviado = 0`: reprocessar uma janela nao
-            # reenfileira o que ja subiu pelo LoRa.
+            # reenfileira o que ja subiu para o servidor.
             con.execute(
                 """
                 INSERT INTO agregados
                     (sensor_id, inicio, temp_min, temp_max, temp_media,
-                     umid_min, umid_max, umid_media, bateria, amostras)
+                     umid_min, umid_max, umid_media, press_media, bateria, amostras)
                 VALUES (:sensor_id, :inicio, :temp_min, :temp_max, :temp_media,
-                        :umid_min, :umid_max, :umid_media, :bateria, :amostras)
+                        :umid_min, :umid_max, :umid_media, :press_media,
+                        :bateria, :amostras)
                 ON CONFLICT(sensor_id, inicio) DO UPDATE SET
-                    temp_min   = excluded.temp_min,
-                    temp_max   = excluded.temp_max,
-                    temp_media = excluded.temp_media,
-                    umid_min   = excluded.umid_min,
-                    umid_max   = excluded.umid_max,
-                    umid_media = excluded.umid_media,
-                    bateria    = excluded.bateria,
-                    amostras   = excluded.amostras
+                    temp_min    = excluded.temp_min,
+                    temp_max    = excluded.temp_max,
+                    temp_media  = excluded.temp_media,
+                    umid_min    = excluded.umid_min,
+                    umid_max    = excluded.umid_max,
+                    umid_media  = excluded.umid_media,
+                    press_media = excluded.press_media,
+                    bateria     = excluded.bateria,
+                    amostras    = excluded.amostras
                 WHERE agregados.enviado = 0
                 """,
                 dict(r),

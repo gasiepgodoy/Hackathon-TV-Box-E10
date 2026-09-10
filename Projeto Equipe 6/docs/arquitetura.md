@@ -16,22 +16,39 @@ concentrados e o caro apenas onde a distância obriga.
 
 ## Topologia escolhida: a box como gateway multiprotocolo
 
-```
-Sensores Zigbee (~100 m)  ──┐
-                             ├──▶  TV Box  ──▶ backhaul ──▶ servidor central
-Nós LoRaWAN (~km)  ─────────┘
+```mermaid
+flowchart LR
+    Z["Sensores Zigbee<br/>~100 m"]
+    L["Nós LoRaWAN<br/>~km"]
+    G["Gateway LoRaWAN<br/>placa Heltec separada"]
+    B["<b>TV Box</b><br/>servidor de rede LoRaWAN<br/>coordenador Zigbee<br/>banco e processamento"]
+    S["Servidor central"]
+
+    Z -->|"rádio 2,4 GHz"| B
+    L -->|"rádio 915 MHz"| G -->|"Wi-Fi · UDP 1700"| B
+    B ==>|"backhaul intermitente"| S
 ```
 
-A TV Box acumula três papéis: coordenador Zigbee, gateway LoRaWAN e computador de
-borda com banco local.
+A TV Box acumula três papéis: coordenador Zigbee, **servidor de rede LoRaWAN**
+(ChirpStack) e computador de borda com banco local.
 
-**Por que o gateway fica na box, e não no servidor remoto.** O isolamento, na
-prática, é geográfico e desigual: a área monitorada não tem infraestrutura, mas o
-ponto onde se instala o hub geralmente tem. Uma propriedade rural tem a sede com
+Vale a distinção, porque confundir os dois é fácil: o *gateway* LoRaWAN — o rádio
+que escuta os nós — é uma placa Heltec separada, ligada à box por Wi-Fi. A box
+hospeda o *servidor de rede*, que é software. Essa separação é o que permite
+trocar o concentrador de canal único por um de 8 canais sem alterar uma linha.
+
+**Por que a rede LoRaWAN fica na borda, e não num servidor remoto.** O isolamento,
+na prática, é geográfico e desigual: a área monitorada não tem infraestrutura, mas
+o ponto onde se instala o hub geralmente tem. Uma propriedade rural tem a sede com
 energia e alguma conectividade — via rádio, 4G ou satélite — enquanto os talhões,
-a mata e os açudes ficam a quilômetros de qualquer coisa. Colocar o gateway junto
-ao hub, na sede, é exatamente como funcionam as implantações comerciais de
+a mata e os açudes ficam a quilômetros de qualquer coisa. Concentrar gateway e
+servidor de rede na sede é exatamente como funcionam as implantações comerciais de
 LoRaWAN em agricultura.
+
+A consequência prática é que o sistema **continua registrando com a internet
+fora**: o nó transmite, o gateway entrega, o ChirpStack decodifica e o coletor
+grava, tudo dentro da propriedade. Só a sincronização com o servidor central
+espera o backhaul voltar.
 
 ## Alternativas descartadas
 
@@ -49,8 +66,8 @@ por isso que o empacotamento binário de 14 bytes por agregado continua no códi
 
 ### Gateway transmitindo dados de aplicação para um cliente
 
-Considerado após a inversão da topologia: se a box tem o gateway, poderia ela
-usar o transmissor do gateway para enviar dados a um cliente remoto?
+Considerado após a inversão da topologia: se a rede LoRaWAN é nossa, poderia o
+transmissor do gateway ser usado para enviar dados a um cliente remoto?
 
 Tecnicamente é possível — na classe A o cliente envia um uplink e o gateway
 responde na janela de recepção seguinte; na classe C o cliente escuta
@@ -66,12 +83,18 @@ continuamente e pode receber a qualquer momento. Descartado por três razões:
 Se a box precisar mesmo empurrar dados por LoRa, o correto é usar um **rádio de
 nó separado**, não o gateway.
 
-### PostgreSQL, TimescaleDB ou InfluxDB
+### PostgreSQL, TimescaleDB ou InfluxDB para os dados dos sensores
 
 Descartados por peso. São projetados para escala e concorrência que este projeto
 não tem, e cobram isso em RAM — o recurso mais escasso numa box de 1,8 GB que
-também roda Zigbee2MQTT. O SQLite roda em processo, sem daemon, e dá conta do
-volume com folga.
+também roda Zigbee2MQTT e ChirpStack. O SQLite roda em processo, sem daemon, e
+dá conta do volume com folga.
+
+Vale registrar a assimetria: **há um PostgreSQL na box**, exigido pelo ChirpStack
+para o estado da rede LoRaWAN (dispositivos, sessões, contadores de quadro). Não
+é escolha nossa — é requisito do ChirpStack v4. O que a decisão acima evita é
+colocar *também* os dados dos sensores lá dentro, que é o volume que cresce sem
+parar. O estado do ChirpStack é pequeno e praticamente estático.
 
 ## A fila de saída
 
@@ -128,8 +151,11 @@ lote**: acumular leituras em memória e gravar a cada 20 registros ou 5 minutos
 reduz as escritas diárias de milhares para centenas. O buffer é descarregado no
 desligamento, então não há perda.
 
-Isso é também um argumento contra rodar o ChirpStack completo na box: o
-PostgreSQL escreve muito mais que o SQLite.
+O ChirpStack roda na box com PostgreSQL e Redis, e o PostgreSQL escreve bem mais
+que o SQLite. Isso é aceitável porque a carga dele é o estado da rede LoRaWAN —
+alguns dispositivos e seus contadores de quadro —, que não cresce com o tempo. O
+que seria inviável é colocar a série temporal dos sensores lá: essa sim cresce
+sem parar, e é o motivo de ela viver no SQLite.
 
 ## Limite do protótipo
 

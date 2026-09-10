@@ -32,13 +32,17 @@ def cmd_status(con, _args) -> int:
     ultima = con.execute(
         "SELECT datetime(MAX(ts),'unixepoch','localtime') FROM leituras").fetchone()[0]
     print(f"ultima leitura       : {ultima or '-'}")
+    print("por origem           :", ", ".join(
+        f"{r['transporte']}={r['n']}" for r in con.execute(
+            "SELECT transporte, COUNT(*) AS n FROM sensores GROUP BY transporte")) or "-")
     return 0
 
 
 def cmd_leituras(con, args) -> int:
     linhas = con.execute(
         "SELECT * FROM v_ultimas_leituras LIMIT ?", (args.n,)).fetchall()
-    print(_tabela(linhas, ["sensor", "quando", "temperatura", "umidade", "bateria"]))
+    print(_tabela(linhas, ["sensor", "origem", "quando", "temperatura", "umidade",
+                           "pressao", "bateria"]))
     return 0
 
 
@@ -76,9 +80,12 @@ def cmd_espiar(con, args) -> int:
     from .coletor import diagnosticar, parse_linha
 
     cfg = Config()
-    cmd = ["mosquitto_sub", "-h", cfg.txt("mqtt", "host"), "-p", cfg.txt("mqtt", "port"),
-           "-t", args.topico, "-F", "%j"]
-    print(f"espiando '{args.topico}' em {cfg.txt('mqtt','host')} — Ctrl+C para sair\n")
+    topicos = args.topico or [cfg.txt("mqtt", "topico"), cfg.txt("mqtt", "topico_lora")]
+    cmd = ["mosquitto_sub", "-h", cfg.txt("mqtt", "host"),
+           "-p", cfg.txt("mqtt", "port"), "-F", "%j"]
+    for t in topicos:
+        cmd += ["-t", t]
+    print(f"espiando {' e '.join(topicos)} em {cfg.txt('mqtt','host')} — Ctrl+C para sair\n")
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, bufsize=1)
     except FileNotFoundError:
@@ -96,7 +103,9 @@ def cmd_espiar(con, args) -> int:
             marca = "ACEITA " if leitura else "ignorada"
             print(f"[{marca}] {topico}\n           {motivo}")
             if leitura:
-                print(f"           -> sensor={leitura[0]} temp={leitura[2]} umid={leitura[3]}")
+                campos = " ".join(f"{k}={v}" for k, v in leitura.items()
+                                  if k not in ("ieee", "ts") and v is not None)
+                print(f"           -> sensor={leitura['ieee']} {campos}")
             vistos += 1
             if args.n and vistos >= args.n:
                 break
@@ -105,8 +114,8 @@ def cmd_espiar(con, args) -> int:
     finally:
         proc.terminate()
     if vistos == 0:
-        print("NENHUMA mensagem recebida — o Zigbee2MQTT esta publicando?"
-              "\n  systemctl status zigbee2mqtt")
+        print("NENHUMA mensagem recebida. Os servicos estao publicando?"
+              "\n  systemctl status zigbee2mqtt chirpstack")
     return 0
 
 
@@ -137,7 +146,8 @@ def main() -> int:
     p.set_defaults(fn=cmd_nomear)
 
     p = sub.add_parser("espiar", help="mostra o que passa no MQTT e se seria aceito")
-    p.add_argument("--topico", default="zigbee2mqtt/#")
+    p.add_argument("--topico", action="append",
+                   help="repita para varios; padrao: as duas origens do hub")
     p.add_argument("-n", type=int, default=0, help="para apos N mensagens (0 = infinito)")
     p.set_defaults(fn=cmd_espiar, sem_banco=True)
 

@@ -1,7 +1,8 @@
 """Deteccao de eventos — o processamento de borda do hub.
 
-Roda localmente, sem depender do servidor. Eventos sao curtos e urgentes:
-sobem pelo LoRa na frente dos agregados.
+Roda localmente, sem depender do servidor. Eventos sao curtos e urgentes, entao
+saem na frente dos agregados em qualquer backhaul — e sao os unicos que valem o
+custo da rota de emergencia por LoRa, quando o enlace principal cai.
 """
 from __future__ import annotations
 

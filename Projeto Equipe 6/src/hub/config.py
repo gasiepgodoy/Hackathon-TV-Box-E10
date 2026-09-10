@@ -13,7 +13,8 @@ PADROES = {
     "mqtt": {
         "host": "localhost",
         "port": "1883",
-        "topico": "zigbee2mqtt/+",
+        "topico": "zigbee2mqtt/+",                        # sensores Zigbee
+        "topico_lora": "application/+/device/+/event/up",  # nos LoRaWAN (ChirpStack)
         "topico_saida": "hub/lora/saida",
     },
     "coletor": {

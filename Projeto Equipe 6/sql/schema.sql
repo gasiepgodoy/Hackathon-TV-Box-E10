@@ -13,23 +13,26 @@ PRAGMA foreign_keys = ON;
 
 -- Metadados dos sensores Zigbee conhecidos.
 CREATE TABLE IF NOT EXISTS sensores (
-    id        INTEGER PRIMARY KEY,
-    ieee      TEXT    NOT NULL UNIQUE,   -- 0xa4c138807355ffff ou nome amigavel do Z2M
-    nome      TEXT,                      -- estufa_norte
-    modelo    TEXT,                      -- TS0201
-    local     TEXT,
-    criado_em INTEGER NOT NULL DEFAULT (unixepoch())
+    id         INTEGER PRIMARY KEY,
+    ieee       TEXT    NOT NULL UNIQUE,  -- nome amigavel do Z2M ou devEUI do LoRaWAN
+    nome       TEXT,                     -- estufa_norte
+    modelo     TEXT,                     -- TS0201, BME280
+    local      TEXT,
+    transporte TEXT    NOT NULL DEFAULT 'zigbee',   -- 'zigbee' ou 'lora'
+    criado_em  INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
--- Serie temporal bruta. Fica so na box; nunca sobe pelo LoRa.
+-- Serie temporal bruta. Fica na box: so sobe se houver banda sobrando, e nunca
+-- pela rota de emergencia por LoRa.
 CREATE TABLE IF NOT EXISTS leituras (
     id          INTEGER PRIMARY KEY,
     sensor_id   INTEGER NOT NULL REFERENCES sensores(id) ON DELETE CASCADE,
     ts          INTEGER NOT NULL,        -- epoch UTC
     temperatura REAL,
     umidade     REAL,
+    pressao     REAL,                    -- hPa; so os nos LoRa com BME280 medem
     bateria     INTEGER,
-    linkquality INTEGER
+    linkquality INTEGER                  -- Zigbee: LQI 0-255; LoRa: RSSI em dBm
 );
 CREATE INDEX IF NOT EXISTS ix_leituras_sensor_ts ON leituras(sensor_id, ts);
 CREATE INDEX IF NOT EXISTS ix_leituras_ts        ON leituras(ts);
@@ -46,6 +49,7 @@ CREATE TABLE IF NOT EXISTS agregados (
     umid_min   REAL,
     umid_max   REAL,
     umid_media REAL,
+    press_media REAL,                    -- so preenchido para sensores com BME280
     bateria    INTEGER,
     amostras   INTEGER NOT NULL,
     enviado    INTEGER NOT NULL DEFAULT 0,
@@ -79,11 +83,15 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 
 -- Visao de conveniencia para inspecao manual.
-CREATE VIEW IF NOT EXISTS v_ultimas_leituras AS
+-- DROP antes de CREATE: com "IF NOT EXISTS" um banco ja existente manteria a
+-- definicao antiga, sem as colunas novas, e a CLI quebraria.
+DROP VIEW IF EXISTS v_ultimas_leituras;
+CREATE VIEW v_ultimas_leituras AS
 SELECT s.ieee,
        COALESCE(s.nome, s.ieee) AS sensor,
+       s.transporte AS origem,
        datetime(l.ts, 'unixepoch', 'localtime') AS quando,
-       l.temperatura, l.umidade, l.bateria, l.linkquality
+       l.temperatura, l.umidade, l.pressao, l.bateria, l.linkquality
 FROM leituras l
 JOIN sensores s ON s.id = l.sensor_id
 ORDER BY l.ts DESC;

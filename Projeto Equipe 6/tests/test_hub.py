@@ -1,6 +1,8 @@
 """Testes do hub. Rodar: python3 tests/test_hub.py"""
 from __future__ import annotations
 
+import base64
+import json
 import sys
 import tempfile
 import time
@@ -10,14 +12,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from hub.agregador import agregar                                    # noqa: E402
-from hub.coletor import extrair, parse_linha                   # noqa: E402
+from hub.coletor import diagnosticar, extrair, parse_linha     # noqa: E402
 from hub.config import Config                                        # noqa: E402
-from hub.db import conectar, gravar_leituras, inicializar, purgar    # noqa: E402
+from hub.db import (conectar, gravar_leituras, inicializar,     # noqa: E402
+                    migrar, purgar)
 from hub.enviador import (TransporteIndisponivel, TransporteLog,     # noqa: E402
                           empacotar_agregado, enviar_pendentes)
 from hub.eventos import detectar                                     # noqa: E402
 
 HORA = 3600
+
+
+def _l(ieee, ts, temp, umid=50.0, bateria=90, lqi=100, **extra):
+    """Atalho para montar o dict de uma leitura nos testes."""
+    return {"ieee": ieee, "ts": ts, "temperatura": temp, "umidade": umid,
+            "bateria": bateria, "linkquality": lqi, **extra}
 
 
 class BaseHub(unittest.TestCase):
@@ -36,8 +45,9 @@ class TestColetor(BaseHub):
     def test_extrai_leitura_valida(self):
         r = extrair("zigbee2mqtt/estufa", '{"temperature":21.5,"humidity":60,"battery":90,"linkquality":150}')
         self.assertIsNotNone(r)
-        self.assertEqual(r[0], "estufa")
-        self.assertEqual(r[2], 21.5)
+        self.assertEqual(r["ieee"], "estufa")
+        self.assertEqual(r["temperatura"], 21.5)
+        self.assertEqual(r["transporte"], "zigbee")
 
     def test_ignora_topicos_da_bridge(self):
         self.assertIsNone(extrair("zigbee2mqtt/bridge/state", '{"state":"online"}'))
@@ -58,8 +68,8 @@ class TestColetor(BaseHub):
         self.assertEqual(topico, "zigbee2mqtt/Sensor Temperatura")
         leitura = extrair(topico, payload)
         self.assertIsNotNone(leitura)
-        self.assertEqual(leitura[0], "Sensor Temperatura")
-        self.assertEqual(leitura[2], 24.5)
+        self.assertEqual(leitura["ieee"], "Sensor Temperatura")
+        self.assertEqual(leitura["temperatura"], 24.5)
 
     def test_parse_ignora_linha_invalida(self):
         self.assertIsNone(parse_linha(""))
@@ -67,17 +77,104 @@ class TestColetor(BaseHub):
 
     def test_grava_em_lote_e_cadastra_sensor(self):
         ts = int(time.time())
-        n = gravar_leituras(self.con, [("s1", ts, 20.0, 50.0, 90, 100),
-                                       ("s2", ts, 21.0, 55.0, 80, 120)])
+        n = gravar_leituras(self.con, [_l("s1", ts, 20.0), _l("s2", ts, 21.0)])
         self.assertEqual(n, 2)
         self.assertEqual(self.con.execute("SELECT COUNT(*) FROM sensores").fetchone()[0], 2)
+
+
+class TestColetorLoRa(BaseHub):
+    """Uplinks do ChirpStack — a segunda origem do hub."""
+
+    TOPICO = "application/7f3a/device/62afdeb4e62c19e2/event/up"
+
+    def _uplink(self, corpo: dict = None, data_b64: str = None, rssi=-97):
+        m = {
+            "deviceInfo": {"deviceName": "pomar_lora",
+                           "devEui": "62afdeb4e62c19e2"},
+            "devAddr": "00e8cdfb", "fCnt": 3, "fPort": 1,
+            "rxInfo": [{"gatewayId": "3c71bfffff6b8270", "rssi": rssi, "snr": 9.0}],
+        }
+        if corpo is not None:
+            m["object"] = corpo
+        if data_b64 is not None:
+            m["data"] = data_b64
+        return json.dumps(m)
+
+    def test_uplink_com_codec_configurado(self):
+        r = extrair(self.TOPICO, self._uplink(
+            corpo={"temperature": 23.4, "humidity": 61.0, "pressure": 1013.2}))
+        self.assertIsNotNone(r)
+        self.assertEqual(r["ieee"], "pomar_lora")
+        self.assertEqual(r["temperatura"], 23.4)
+        self.assertEqual(r["pressao"], 1013.2)
+        self.assertEqual(r["transporte"], "lora")
+        self.assertEqual(r["linkquality"], -97)      # RSSI no lugar do LQI
+
+    def test_uplink_sem_codec_decodifica_base64(self):
+        """Sem codec no ChirpStack, o payload chega em base64 — e o nó manda JSON."""
+        bruto = base64.b64encode(
+            b'{"temperature":19.8,"humidity":72,"pressure":1009.5}').decode()
+        r = extrair(self.TOPICO, self._uplink(data_b64=bruto))
+        self.assertIsNotNone(r)
+        self.assertEqual(r["temperatura"], 19.8)
+        self.assertEqual(r["pressao"], 1009.5)
+
+    def test_payload_binario_pede_codec(self):
+        bruto = base64.b64encode(bytes([0x01, 0x02, 0x03])).decode()
+        leitura, motivo = diagnosticar(self.TOPICO, self._uplink(data_b64=bruto))
+        self.assertIsNone(leitura)
+        self.assertIn("codec", motivo)
+
+    def test_ignora_eventos_que_nao_sao_uplink(self):
+        topico = "application/7f3a/device/62afdeb4e62c19e2/event/join"
+        self.assertIsNone(extrair(topico, "{}"))
+
+    def test_grava_lora_e_zigbee_no_mesmo_banco(self):
+        ts = int(time.time())
+        gravar_leituras(self.con, [
+            _l("estufa", ts, 20.0),
+            _l("pomar_lora", ts, 21.0, pressao=1012.0, transporte="lora"),
+        ])
+        origens = dict(self.con.execute(
+            "SELECT ieee, transporte FROM sensores").fetchall())
+        self.assertEqual(origens["estufa"], "zigbee")
+        self.assertEqual(origens["pomar_lora"], "lora")
+        press = self.con.execute(
+            "SELECT pressao FROM leituras WHERE pressao IS NOT NULL").fetchone()[0]
+        self.assertEqual(press, 1012.0)
+
+
+class TestMigracao(unittest.TestCase):
+    def test_adiciona_colunas_em_banco_antigo(self):
+        """Bancos ja em producao na box precisam ganhar as colunas novas."""
+        import sqlite3
+        with tempfile.TemporaryDirectory() as tmp:
+            caminho = Path(tmp) / "antigo.db"
+            velho = sqlite3.connect(caminho)
+            velho.executescript("""
+                CREATE TABLE sensores (id INTEGER PRIMARY KEY, ieee TEXT UNIQUE);
+                CREATE TABLE leituras (id INTEGER PRIMARY KEY, sensor_id INTEGER,
+                                       ts INTEGER, temperatura REAL);
+                CREATE TABLE agregados (id INTEGER PRIMARY KEY, sensor_id INTEGER,
+                                        inicio INTEGER);
+            """)
+            velho.commit(); velho.close()
+
+            con = conectar(caminho)
+            aplicadas = migrar(con)
+            self.assertIn("leituras.pressao", aplicadas)
+            self.assertIn("sensores.transporte", aplicadas)
+            self.assertIn("agregados.press_media", aplicadas)
+            # rodar de novo nao deve mudar nada
+            self.assertEqual(migrar(con), [])
+            con.close()
 
 
 class TestAgregador(BaseHub):
     def _povoar(self, base: int):
         # Uma geada curta no meio da hora: some na media, sobrevive no minimo.
         temps = [10.0] * 10 + [1.0] * 3 + [10.0] * 10
-        linhas = [("s1", base + i * 60, t, 50.0, 90, 100) for i, t in enumerate(temps)]
+        linhas = [_l("s1", base + i * 60, t) for i, t in enumerate(temps)]
         gravar_leituras(self.con, linhas)
 
     def test_agrega_janela_fechada_preservando_min_max(self):
@@ -92,7 +189,7 @@ class TestAgregador(BaseHub):
 
     def test_nao_agrega_janela_em_aberto(self):
         agora = int(time.time())
-        gravar_leituras(self.con, [("s1", agora, 20.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", agora, 20.0)])
         self.assertEqual(agregar(self.con, HORA), 0)
 
     def test_reprocessar_nao_reenfileira_o_que_ja_subiu(self):
@@ -109,27 +206,27 @@ class TestAgregador(BaseHub):
 
 class TestEventos(BaseHub):
     def test_detecta_geada(self):
-        gravar_leituras(self.con, [("s1", int(time.time()), 1.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", int(time.time()), 1.0)])
         detectar(self.con, self.cfg)
         tipos = [r["tipo"] for r in self.con.execute("SELECT tipo FROM eventos")]
         self.assertIn("geada", tipos)
 
     def test_detecta_sensor_mudo(self):
         antigo = int(time.time()) - 4 * HORA
-        gravar_leituras(self.con, [("s1", antigo, 20.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", antigo, 20.0)])
         detectar(self.con, self.cfg)
         tipos = [r["tipo"] for r in self.con.execute("SELECT tipo FROM eventos")]
         self.assertIn("sensor_mudo", tipos)
 
     def test_nao_repete_evento_identico(self):
-        gravar_leituras(self.con, [("s1", int(time.time()), 1.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", int(time.time()), 1.0)])
         detectar(self.con, self.cfg)
         detectar(self.con, self.cfg)
         n = self.con.execute("SELECT COUNT(*) FROM eventos WHERE tipo='geada'").fetchone()[0]
         self.assertEqual(n, 1)
 
     def test_bateria_baixa(self):
-        gravar_leituras(self.con, [("s1", int(time.time()), 20.0, 50.0, 5, 100)])
+        gravar_leituras(self.con, [_l("s1", int(time.time()), 20.0, bateria=5)])
         detectar(self.con, self.cfg)
         tipos = [r["tipo"] for r in self.con.execute("SELECT tipo FROM eventos")]
         self.assertIn("bateria_baixa", tipos)
@@ -141,7 +238,7 @@ class TestEnviador(BaseHub):
         linhas = []
         for j in range(n_janelas):
             for i in range(5):
-                linhas.append(("s1", base + j * HORA + i * 60, 20.0 + i, 50.0, 90, 100))
+                linhas.append(_l("s1", base + j * HORA + i * 60, 20.0 + i))
         gravar_leituras(self.con, linhas)
         agregar(self.con, HORA)
 
@@ -172,7 +269,7 @@ class TestEnviador(BaseHub):
 
     def test_eventos_saem_antes_dos_agregados(self):
         self._preparar()
-        gravar_leituras(self.con, [("s1", int(time.time()), 1.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", int(time.time()), 1.0)])
         detectar(self.con, self.cfg)
 
         ordem = []
@@ -203,7 +300,7 @@ class TestEnviador(BaseHub):
 class TestRetencao(BaseHub):
     def test_purga_preserva_agregados(self):
         antigo = int(time.time()) - 100 * 86400
-        gravar_leituras(self.con, [("s1", antigo, 20.0, 50.0, 90, 100)])
+        gravar_leituras(self.con, [_l("s1", antigo, 20.0)])
         agregar(self.con, HORA)
         self.assertEqual(purgar(self.con, 90), 1)
         self.assertEqual(self.con.execute("SELECT COUNT(*) FROM leituras").fetchone()[0], 0)
