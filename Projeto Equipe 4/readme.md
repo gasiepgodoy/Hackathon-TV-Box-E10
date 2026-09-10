@@ -65,7 +65,6 @@ dados sintéticos.
 - **Uso** — [Dashboard](#dashboard) · [Seleção de período](#seleção-de-período-na-análise)
 - **Referência técnica** — [Organização no InfluxDB](#como-os-dados-ficam-organizados-no-influxdb) · [Adicionando um protocolo](#adicionando-um-novo-protocolo)
 - **Análise** — [Estatística e saúde](#análise-estatística-e-saúde-dos-sensores) · [Previsão ARIMA](#previsão-com-banda-de-confiança-arima)
-- [Validação com hardware real](#validação-com-hardware-real-esp32)
 
 ---
 
