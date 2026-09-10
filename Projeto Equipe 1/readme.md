@@ -1,15 +1,26 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gasiepgodoy/Hackathon-TV-Box-E10/main/Projeto%20Equipe%201/imagens/logo.png" alt="MultiForge Banner" width="100%" />
+  <img src="imagens/logo.png" alt="MultiForge Banner" width="100%" />
 </p>
 
-# MultiForge: Ecossistema Modular e Sistema Operacional para TV Box BTV E10
+<p align="center">
+  <img src="https://img.shields.io/badge/BTV_E10-S905X2-blue" alt="BTV E10" />
+  <img src="https://img.shields.io/badge/offline_first-100%25-green" alt="offline" />
+  <img src="https://img.shields.io/badge/1_TV_Box-sem_hardware_extra-orange" alt="1 box" />
+  <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT" />
+</p>
 
-> 1º Hackathon TV Box Unesp Sorocaba  
-> Transformando hardware apreendido em infraestrutura educacional, totens inteligentes de IA e servidores de alta eficiencia.
+# MultiForge – Plataforma de Descaracterização e Reaproveitamento de TV Boxes Apreendidas
+
+> 1º Hackathon TV Box Unesp Sorocaba — Equipe 1
+
+**Resumo oficial:** O MultiForge é uma plataforma open-source que automatiza a descaracterização da TV Box BTV E10 apreendida, transformando-a em equipamento educacional seguro. O objetivo é evitar a destruição e viabilizar doação para prefeituras e escolas. Ele cataloga hardware em ForgeDB, grava Linux otimizado via ForgeImager, provisiona Wi-Fi sem internet por portal cativo e kiosk HDMI com rollback automático, e executa módulos de borda. Sua aplicação principal é o totem educacional com IA offline Mina e coletor acadêmico, sem exigir hardware externo.
+
+**Repo principal (código completo):** https://github.com/multi-forge/multi-forge
 
 ---
 
 ## Membros da Equipe 1
+
 * Brenda Biral
 * Adriel Henrique Souza
 * Isaac Andrade
@@ -19,134 +30,97 @@
 
 ---
 
-## Visao Geral do Projeto
+## Por que com 1 TV Box só nós levamos vantagem
 
-O MultiForge e uma solucao completa de engenharia de software e firmware desenvolvida especificamente para descaracterizar, otimizar e reaproveitar aparelhos BTV Express E10 (Amlogic S905X2) apreendidos em operacoes da Receita Federal e ANATEL.
+O edital entrega **1 BTV E10 por equipe, sem periféricos**. Projetos que exigem ESP32, dongle Zigbee/LoRa, webcam USB ou servidor externo não escalam para doação em prefeituras.
 
-Em vez de criar uma aplicacao isolada, a Equipe 1 desenvolveu um ecossistema em 4 camadas composto por:
-1. ForgeOS: Uma distribuicao Linux Armbian customizada e enxuta, com DTB Enterprise compilada sob medida (resolvendo o clock de 25MHz e 64MB CMA do Wi-Fi RTL8189FTV), interface de pareamento HDMI Framebuffer 1080p sem dependencia de X11 e Portal Cativo de provisionamento responsivo.
-2. ForgeDB: O catalogo central e schema de validacao que define as capacidades de hardware e registra os manifestos de ciclo de vida dos modulos.
-3. ForgeModules: Modulos funcionais desacoplados prontos para uso:
-   - Mina — Assistente Virtual Academica: Quiosque inteligente de voz operando 100% offline na borda com ONNX, deteccao de intencoes e sintese de voz para atendimento no ICT Unesp.
-   - Coletor Academico e Agente RAG: Pipeline assincrono de coleta e indexacao de dados universitarios com FastAPI, LangChain e SQLite.
-4. ForgeImager: Aplicativo desktop multiplataforma moderno (construido em Rust + Tauri + React) para gravacao automatizada da ISO no MicroSD/eMMC com verificacao criptografica SHA-256.
+O MultiForge roda com **só TV + celular**:
 
----
+1. Grava o cartão SD no PC (ForgeImager ou Raspberry Pi Imager)
+2. Liga a box no HDMI — aparece QR do Wi-Fi na TV
+3. Celular lê o QR, abre `http://192.168.4.1:8080`, escolhe o Wi-Fi
+4. Se errar a senha, watchdog restaura o AP sozinho (rollback 75s)
+5. Sem internet, sem cabo USB-USB, sem sensor externo
 
-## Arquitetura do Sistema
+## Demo em 3 minutos (roteiro da final 18/09)
+
+1. **0:00** — Box liga, TV mostra QR (`imagens/07_ForgeOS_HDMI_Dual_QR_Framebuffer_1080p.png`)
+2. **0:30** — Celular conecta no AP, abre portal, faz scan real
+3. **1:30** — Provisiona eduroam/WPA2, TV muda para telemetria (temp/RAM/IP)
+4. **2:00** — Mostra Cockpit `:8080` + logs RFC 5424 + módulos Mina/RAG
+5. **2:30** — Erra a senha de propósito, mostra FAILED → AP restaurado
+
+## Arquitetura
 
 ```mermaid
 flowchart TB
-    subgraph Desktop["Camada de Provisionamento Desktop"]
-        FI["ForgeImager (Rust + Tauri)<br/>Gravador de Imagens Oficial"]
+    subgraph Desktop["Provisionamento Desktop"]
+        FI["ForgeImager (Rust + Tauri)<br/>Gravador oficial + SHA-256"]
     end
-
-    subgraph Hardware["Borda — BTV Express E10 (Amlogic S905X2)"]
-        subgraph OS["ForgeOS — Sistema Operacional Borda"]
-            DTB["DTB Enterprise<br/>25MHz SDIO + 64MB CMA"]
-            DISP["Forge Display Engine<br/>Framebuffer /dev/fb0 1080p (Dual QR)"]
-            NET["Stack de Conectividade<br/>AP Isolado 192.168.4.1 + eduroam Enterprise"]
-            PORTAL["ForgeOS Cockpit Web (:8080)<br/>Telemetria Termica + Logs RFC 5424"]
-            WATCH["Watchdog de Contingencia<br/>75s Auto-Rollback"]
+    subgraph Hardware["Borda — BTV E10 (S905X2)"]
+        subgraph OS["ForgeOS"]
+            DTB["DTB Enterprise<br/>SDIO 25MHz + CMA 64MB"]
+            DISP["Display /dev/fb0 1080p<br/>Dual QR + anti-burn-in"]
+            NET["AP 192.168.4.1 + eduroam<br/>wpa_supplicant mode=2"]
+            PORTAL["Cockpit :8080<br/>Telemetria + Logs"]
+            WATCH["Watchdog 75s<br/>Auto-rollback"]
         end
-
-        subgraph Hub["ForgeModules (Catalogo ForgeDB)"]
-            MOD1["Mina (Assistente de Voz IA)<br/>Sherpa-ONNX + Vosk + Piper TTS"]
-            MOD2["Coletor e RAG Academico<br/>FastAPI + SQLite + Vector Store"]
+        subgraph Hub["ForgeModules"]
+            MOD1["Mina IA voz offline<br/>Sherpa-ONNX + Piper TTS"]
+            MOD2["Coletor + RAG<br/>FastAPI + SQLite"]
         end
     end
-
-    subgraph Users["Usuarios e Administradores"]
-        CEL["Smartphone / Camera<br/>Leitura de QR Code"]
-        BROWSER["Navegador Web<br/>Cockpit de Gerenciamento"]
-        SSH_CLIENT["Terminal SSH<br/>Acesso Remoto Seguro (root:forge)"]
-    end
-
-    FI -->|Gravacao MicroSD/eMMC| OS
-    DISP -->|Orientacao Visual 10-Foot UI| CEL
-    CEL -->|Wi-Fi Captive Portal| NET
-    BROWSER -->|HTTP :8080| PORTAL
-    SSH_CLIENT -->|Porta 22| OS
-    PORTAL -->|Gerenciamento de Ciclo de Vida| Hub
+    FI -->|MicroSD| OS
+    DISP -->|QR| CEL["Celular"]
+    CEL -->|Portal| NET
 ```
 
----
+## Telas reais (sem mock)
 
-## Capturas de Tela do Sistema em Producao Real
-
-| 1. Painel HDMI Framebuffer 1080p (/dev/fb0) | 2. Cockpit Web (Telemetria Termica e Recursos) |
+| HDMI Framebuffer /dev/fb0 | Cockpit Web |
 | :---: | :---: |
-| ![HDMI Framebuffer 1080p](imagens/07_ForgeOS_HDMI_Dual_QR_Framebuffer_1080p.png) | ![Cockpit Web Overview](imagens/01_ForgeOS_Audit_Overview.png) |
+| ![HDMI](imagens/07_ForgeOS_HDMI_Dual_QR_Framebuffer_1080p.png) | ![Cockpit](imagens/01_ForgeOS_Audit_Overview.png) |
 
-| 3. Visualizador de Logs RFC 5424 em Tempo Real | 4. Responsividade Mobile do Portal Cativo |
+| Rede | Serviços |
 | :---: | :---: |
-| ![Logs RFC 5424](imagens/05_ForgeOS_Audit_Logs_RFC5424.png) | ![Mobile Cockpit](imagens/mobile_overview.png) |
+| ![Rede](imagens/02_ForgeOS_Audit_Networking.png) | ![Servicos](imagens/03_ForgeOS_Audit_Services.png) |
 
----
+| Módulos | Logs RFC 5424 | Mobile |
+| :---: | :---: | :---: |
+| ![Modulos](imagens/04_ForgeOS_Audit_Modules_Hub.png) | ![Logs](imagens/05_ForgeOS_Audit_Logs_RFC5424.png) | ![Mobile](imagens/mobile_overview.png) |
 
-## Estrutura de Diretorios da Equipe 1
+## Como reproduzir
+
+### 1. Binários
+* Imagem + gravador: https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
+
+### 2. Passo a passo
+1. Grave o `.img.xz` no MicroSD via ForgeImager
+2. Insira na BTV E10, ligue HDMI + energia
+3. No celular, leia o QR da TV, conecte no AP
+4. Abra `http://192.168.4.1:8080`, escolha o Wi-Fi
+5. SSH (opcional): `ssh root@192.168.4.1`
+
+## Estrutura
 
 ```
 Projeto Equipe 1/
-├── README.md               # Documentacao principal do projeto
-├── ForgeOS/                # Stack do Sistema Operacional
-│   ├── bin/                # Scripts de ciclo de vida (start-ap, wifi-connect, reset)
-│   ├── display/            # Motor grafico do display HDMI (/dev/fb0) e fontes
-│   ├── distro/             # Pipeline de compilacao da imagem ISO e GCP Spot VM Launcher
-│   ├── network/            # Gestores de rede WPA2 Personal e WPA-Enterprise (eduroam)
-│   ├── systemd/            # Servicos da stack (portal, ap, display, watchdog)
-│   ├── tests/              # Suites de testes unitarios e de integracao
-│   └── web/                # Portal Web Cockpit (HTML5/CSS3/JS puro com tabulacao e SVG)
-├── ForgeModules/           # Modulos Funcionais Prontos
-│   ├── totem/              # Modulo Mina: Assistente Virtual de Voz Academica
-│   └── sub-modulos/        # Modulo Coletor Academico e RAG Agent
-├── ForgeDB/                # Catalogo de Hardware e Schemas de Modulos
-│   ├── devices/btv/e10/    # DTS/DTB Enterprise e especificacoes de hardware
-│   ├── modules/            # Manifestos YAML dos modulos
-│   └── schemas/            # Schemas JSON para validacao
-├── ForgeImager/            # Gravador Desktop Multiplataforma (Tauri + Rust)
-│   ├── src/                # Interface React / TypeScript
-│   ├── src-tauri/          # Motor nativo em Rust para gravacao de disco
-│   └── crates/             # Utilitarios de baixo nivel (forge-write-conf)
-├── docs/                   # Diagramas, relatorios de auditoria e arquitetura
-└── imagens/                # Capturas de tela oficiais em alta definicao
+├── README.md
+├── ForgeOS/       # AP + portal :8080 + display fb0 + systemd + tests
+├── ForgeDB/       # devices/btv/e10 + schemas + modules catalog
+├── ForgeModules/  # totem (Mina) + sub-modulos (coletor RAG)
+├── ForgeImager/   # Tauri + Rust + React + forge-write-conf
+├── docs/          # auditorias e arquitetura
+└── imagens/       # prints reais + logo.png (banner)
 ```
 
----
+## Evidências técnicas
 
-## Destaques de Engenharia e Inovacao
+* DTB `meson-g12a-btv-e10-enterprise.dts`: SDIO 25MHz (RTL8189FTV), CMA 64MB, watchdog on
+* Portal 13KB, zero dependência externa, EAP completo (PEAP/TTLS/PWD/TLS)
+* ForgeDB validado em CI (JSON Schema Draft 2020-12) + CDN jsDelivr + fallback offline
+* 34 testes Provisioner (units + integração + E2E Playwright)
 
-1. Correcao Definitiva do Driver Wi-Fi RTL8189FTV:  
-   Em placas BTV E10, o driver padrao do Armbian falha ou apresenta instabilidade devido ao clock incorreto de 50MHz no barramento SDIO. Desenvolvemos o DTB Enterprise (meson-g12a-btv-e10-enterprise.dts) calibrando o clock para 25MHz e alocando 64MB de CMA, garantindo estabilidade ininterrupta em modo Ponto de Acesso e Cliente.
-2. Interface 10-Foot UI para HDMI Framebuffer:  
-   Renderizador em Python puro com PIL escrevendo diretamente em /dev/fb0 a 1920x1080 @ 60Hz sem necessidade de X11, Wayland ou overhead de memoria. Inclui Dual QR Code (Wi-Fi ZXing + URL Direta) e protecao anti-burn-in por pixel-shift ciclico.
-3. Maquina de Estados de Pareamento:  
-   Assim que o usuario conclui a configuracao da rede, o display HDMI oculta automaticamente as credenciais do AP temporario e passa a exibir a telemetria do appliance (temperatura da CPU S905X2, uso de RAM, uptime e novo IP na rede local).
-4. Portal Cativo com Suporte a WPA-Enterprise / eduroam:  
-   Compatibilidade com autenticacao corporativa/universitaria (PEAP/MSCHAPv2) e redes domesticas WPA2-Personal com varredura dinamica via wpa_supplicant.
-5. Watchdog de Contingencia (75s Auto-Rollback):  
-   Se uma nova configuracao de Wi-Fi falhar ou ficar sem resposta por mais de 75 segundos, o sistema restaura automaticamente o Ponto de Acesso de emergencia.
+## Licença
 
----
-
-## Como Baixar e Instalar
-
-### 1. Download dos Binarios Oficiais
-* Imagem do Sistema Operacional (ISO/IMG):  
-  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
-* Gravador Desktop:  
-  https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
-
-### 2. Passo a Passo de Execucao
-1. Grave o arquivo .img.xz no MicroSD utilizando o ForgeImager ou Raspberry Pi Imager.
-2. Insira o cartao na TV Box BTV E10 e ligue o cabo de energia e o cabo HDMI.
-3. Aponte a camera do seu celular para o QR Code da tela da TV para conectar ao Wi-Fi RTL8189FTV_AP (senha: tvbox12345).
-4. Abra o navegador em http://192.168.4.1:8080 e selecione a sua rede Wi-Fi.
-5. Para acesso administrativo via terminal:  
-   ssh root@192.168.4.1 (Senha padrao: forge).
-
----
-
-## Licenca e Propriedade Intelectual
-
-Desenvolvido para o 1º Hackathon TV Box Unesp Sorocaba (2026) sob licenca de codigo aberto MIT.
+MIT — 1º Hackathon TV Box Unesp Sorocaba (2026).
