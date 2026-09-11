@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img src="assets/logo.svg" alt="EdgeVision — sensores em áreas isoladas" width="340">
+    <img src="assets/logo.svg" alt="EdgeVision — sensores em áreas isoladas" width="600">
   </picture>
 </p>
 
