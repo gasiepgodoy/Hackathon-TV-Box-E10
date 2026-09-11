@@ -11,8 +11,9 @@
 
 ## Resumo
 
-Monitorar clima e eventos em áreas sem infraestrutura de rede, com custo baixo por
-ponto de medição: uma TV Box reaproveitada vira gateway multiprotocolo de borda,
+O EdgeVision monitora clima e eventos em áreas sem infraestrutura de rede, com
+custo baixo por ponto de medição: uma TV Box reaproveitada vira gateway
+multiprotocolo de borda,
 recebe sensores próximos por Zigbee e distantes por LoRaWAN, grava tudo num banco
 local, calcula médias, mínimas e máximas, detecta eventos críticos e sincroniza
 com um servidor central quando há conectividade — sem internet, continua
