@@ -1,11 +1,26 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" alt="EdgeVision — sensores em áreas isoladas" width="340">
+  </picture>
+</p>
+
 # Equipe 6 — EdgeVision: Hub de sensores para áreas isoladas
 
-Transforma uma TV Box descaracterizada em um **gateway multiprotocolo de borda**:
-concentra sensores próximos por Zigbee e sensores distantes por LoRaWAN, guarda
-tudo num banco local, processa na própria borda e sincroniza com um servidor
-central quando houver conectividade.
-
 **Equipe:** Guilherme Lobo Teixeira, Julia Machado de Mello
+
+## Resumo
+
+**Objetivo.** Levar monitoramento ambiental a áreas sem infraestrutura de rede,
+com custo baixo por ponto de medição.
+
+**Função.** Uma TV Box reaproveitada vira gateway multiprotocolo de borda: recebe
+sensores próximos por Zigbee e distantes por LoRaWAN, grava tudo num banco local,
+calcula médias, mínimas e máximas, detecta eventos críticos e sincroniza com um
+servidor central quando há conectividade. Sem internet, continua registrando.
+
+**Aplicação.** Agricultura — alerta de geada em pomares e estufas, onde uma queda
+de temperatura de vinte minutos decide a safra e a rede de campo é intermitente.
 
 ## Estrutura
 
@@ -15,6 +30,7 @@ central quando houver conectividade.
 - [`config/`](config/) — arquivo de configuração de exemplo
 - [`tests/`](tests/) — 25 testes, sem dependências externas
 - [`docs/arquitetura.md`](docs/arquitetura.md) — decisões e alternativas descartadas
+- [`assets/`](assets/) — logotipo (versões clara, escura e só o símbolo)
 
 ## Arquitetura
 
