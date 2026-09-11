@@ -11,16 +11,14 @@
 
 ## Resumo
 
-**Objetivo.** Levar monitoramento ambiental a áreas sem infraestrutura de rede,
-com custo baixo por ponto de medição.
-
-**Função.** Uma TV Box reaproveitada vira gateway multiprotocolo de borda: recebe
-sensores próximos por Zigbee e distantes por LoRaWAN, grava tudo num banco local,
-calcula médias, mínimas e máximas, detecta eventos críticos e sincroniza com um
-servidor central quando há conectividade. Sem internet, continua registrando.
-
-**Aplicação.** Agricultura — alerta de geada em pomares e estufas, onde uma queda
-de temperatura de vinte minutos decide a safra e a rede de campo é intermitente.
+Monitorar clima e eventos em áreas sem infraestrutura de rede, com custo baixo por
+ponto de medição: uma TV Box reaproveitada vira gateway multiprotocolo de borda,
+recebe sensores próximos por Zigbee e distantes por LoRaWAN, grava tudo num banco
+local, calcula médias, mínimas e máximas, detecta eventos críticos e sincroniza
+com um servidor central quando há conectividade — sem internet, continua
+registrando. A aplicação principal é agrícola: alerta de geada em pomares e
+estufas, onde vinte minutos de frio decidem a safra. A mesma base serve ao
+monitoramento ambiental: microclima de mata, nascentes e áreas de preservação.
 
 ## Estrutura
 
