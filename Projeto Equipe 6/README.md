@@ -1,4 +1,4 @@
-# Equipe 6 — EdgeVision Hub de sensores para áreas isoladas
+# Equipe 6 — EdgeVision: Hub de sensores para áreas isoladas
 
 Transforma uma TV Box descaracterizada em um **gateway multiprotocolo de borda**:
 concentra sensores próximos por Zigbee e sensores distantes por LoRaWAN, guarda
