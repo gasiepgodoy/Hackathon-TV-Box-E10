@@ -1,3 +1,5 @@
+<p align="center">
+  <img width="640" height="640" alt="WhatsApp Image 2026-09-11 at 23 09 02" src="https://github.com/user-attachments/assets/e7199092-46df-4ea4-bce5-074b4caa9f33" width="100%" />
 
 <img width="640" height="640" alt="WhatsApp Image 2026-09-11 at 23 09 02" src="https://github.com/user-attachments/assets/e7199092-46df-4ea4-bce5-074b4caa9f33" />
 
