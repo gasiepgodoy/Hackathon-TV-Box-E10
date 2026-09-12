@@ -4,16 +4,16 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/BTV_E10-S905X2-blue" alt="BTV E10" />
-  <img src="https://img.shields.io/badge/offline_first-100%25-green" alt="offline" />
+  <img src="https://img.shields.io/badge/offline--first-green" alt="offline first" />
   <img src="https://img.shields.io/badge/1_TV_Box-sem_hardware_extra-orange" alt="1 box" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT" />
 </p>
 
-# MultiForge – Plataforma de Descaracterização e Reaproveitamento de TV Boxes Apreendidas
+# M.A.B.I by Multi-Forge – Assistente Acadêmica com Inteligência Artificial em TV Box Reaproveitada
 
 > 1º Hackathon TV Box Unesp Sorocaba — Equipe 1
 
-**Resumo oficial:** O MultiForge é uma plataforma open-source que automatiza a descaracterização da TV Box BTV E10 apreendida, transformando-a em equipamento educacional seguro. O objetivo é evitar a destruição e viabilizar doação para prefeituras e escolas. Ele cataloga hardware em ForgeDB, grava Linux otimizado via ForgeImager, provisiona Wi-Fi sem internet por portal cativo e kiosk HDMI com rollback automático, e executa módulos de borda. Sua aplicação principal é o totem educacional com IA offline Mina e coletor acadêmico, sem exigir hardware externo.
+**Resumo oficial:** A M.A.B.I é uma assistente acadêmica com inteligência artificial desenvolvida para transformar a TV Box BTV E10 reaproveitada em um totem interativo de acesso a informações universitárias. Para viabilizar sua operação nesse hardware, a equipe desenvolveu a Multi-Forge, plataforma de preparação e configuração do equipamento com Linux adaptado, conexão Wi-Fi pelo celular e recuperação automática de falhas de conexão. A M.A.B.I é a aplicação principal dessa infraestrutura e combina consultas a dados locais com recursos de IA conectados a serviços externos. O projeto busca facilitar o acesso à informação acadêmica, promover a inclusão digital e ampliar a vida útil de equipamentos apreendidos.
 
 **Repo principal (código completo):** https://github.com/multi-forge/multi-forge
 
@@ -30,9 +30,9 @@
 
 ---
 
-## Por que com 1 TV Box só nós levamos vantagem
+## Fluxo de preparação com uma TV Box
 
-O edital entrega **1 BTV E10 por equipe, sem periféricos**. Projetos que exigem ESP32, dongle Zigbee/LoRa, webcam USB ou servidor externo não escalam para doação em prefeituras.
+O fluxo de preparação da Multi-Forge funciona com a TV Box, uma TV e um celular. Periféricos ou serviços externos podem ser usados pelos módulos de aplicação quando necessários.
 
 O MultiForge roda com **só TV + celular**:
 
@@ -40,7 +40,7 @@ O MultiForge roda com **só TV + celular**:
 2. Liga a box no HDMI — aparece QR do Wi-Fi na TV
 3. Celular lê o QR, abre `http://192.168.4.1:8080`, escolhe o Wi-Fi
 4. Se errar a senha, watchdog restaura o AP sozinho (rollback 75s)
-5. Sem internet, sem cabo USB-USB, sem sensor externo
+5. O provisionamento permanece disponível na rede local, mesmo sem internet
 
 ## Demo em 3 minutos (roteiro da final 18/09)
 
@@ -66,7 +66,7 @@ flowchart TB
             WATCH["Watchdog 75s<br/>Auto-rollback"]
         end
         subgraph Hub["ForgeModules"]
-            MOD1["Mina IA voz offline<br/>Sherpa-ONNX + Piper TTS"]
+            MOD1["M.A.B.I<br/>Dados locais + recursos de IA"]
             MOD2["Coletor + RAG<br/>FastAPI + SQLite"]
         end
     end
@@ -92,7 +92,7 @@ flowchart TB
 ## Como reproduzir
 
 ### 1. Binários
-* Imagem + gravador: https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.1.0
+* Imagem + gravador: https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.2.0
 
 ### 2. Passo a passo
 1. Grave o `.img.xz` no MicroSD via ForgeImager
