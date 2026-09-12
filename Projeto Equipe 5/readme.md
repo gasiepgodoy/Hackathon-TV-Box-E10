@@ -1,5 +1,16 @@
-Pasta para uso da Equipe 5 parta criação do seu repositório do seu projeto.
+Título oficial: SmartFlow Box
+Bordão: Monitoramento de Filas e Fluxo de Atendimento via Visão Computacional
 
-Membros da equipe: Guilherme Henrique Pinheiro, Vinicius Gabriel Barros, Bryan Xavier Kufta, Gabriella Aparecida Catto Cezar, Julia Nogueira, Paulo de Tarso de Moraes Lobo
+Resumo: qual sua solução? Qual o objetivo?
+Pra que serve/qual sua função?
+Qual sua aplicação (principal?)
+Conteúdo limitado a 100 palavras
+Solução: O SmartFlow Box é um sistema embarcado de visão computacional que monitora e analisa o fluxo de pessoas em tempo real.
 
-Líder da equipe deve contatar a [organização do evento](eduardo.godoy@unesp.br) para cadastro de colaborador da pasta para edição.
+Objetivo: Calcular e exibir o tempo estimado de espera combinando a contagem de pessoas na fila com o ritmo dos atendentes em serviço.
+
+Função: Detectar a presença de usuários e funcionários em áreas delimitadas (ROI), automatizando as métricas de tempo e vazão.
+
+Aplicação: Gestão inteligente de filas de atendimento, validada e aplicada no Restaurante Universitário (RU) para otimizar o tempo dos estudantes e mitigar congestionamentos nos horários de pico.
+
+Logo: <img width="1024" height="1024" alt="WhatsApp Image 2026-09-11 at 23 09 02" src="https://github.com/user-attachments/assets/e7199092-46df-4ea4-bce5-074b4caa9f33" />
