@@ -21,12 +21,12 @@
 
 ## Membros da Equipe 1
 
-* Brenda Biral
-* Adriel Henrique Souza
-* Isaac Andrade
+* [Brenda Biral](https://github.com/BrendaBiral) ([@BrendaBiral](https://github.com/BrendaBiral))
+* [Adriel Henrique Souza](https://github.com/AdrielH024) ([@AdrielH024](https://github.com/AdrielH024))
+* [Marcos Oliveira E Silva](https://github.com/marquinho20-bot) ([@marquinho20-bot](https://github.com/marquinho20-bot))
+* [Isaac Andrade](https://github.com/alguemaiYT) ([@alguemaiYT](https://github.com/alguemaiYT))
+* [Rafael de Sa Mascarenhas](https://github.com/Sanchezezes) ([@Sanchezezes](https://github.com/Sanchezezes))
 * Luiz Antonio
-* Marcos Oliveira E Silva
-* Rafael de Sa Mascarenhas
 
 ---
 
