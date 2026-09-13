@@ -25,7 +25,7 @@
 * [Adriel Henrique Souza](https://github.com/AdrielH024) ([@AdrielH024](https://github.com/AdrielH024))
 * [Marcos Oliveira E Silva](https://github.com/marquinho20-bot) ([@marquinho20-bot](https://github.com/marquinho20-bot))
 * [Isaac Andrade](https://github.com/alguemaiYT) ([@alguemaiYT](https://github.com/alguemaiYT))
-* [Rafael de Sa Mascarenhas](https://github.com/Sanchezezes) ([@Sanchezezes](https://github.com/Sanchezezes))
+* [Rafael de Sa Mascarenhas](https://github.com/rafaeldesamascarenhas) ([@rafaeldesamascarenhas](https://github.com/rafaeldesamascarenhas))
 * Luiz Antonio
 
 ---
