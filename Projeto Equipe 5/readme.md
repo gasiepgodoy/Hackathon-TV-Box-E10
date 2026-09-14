@@ -4,6 +4,12 @@
 SmartFlow Box
 
 Monitoramento de Filas e Fluxo de Atendimento via Visão Computacional
+Membros da Equipe:
+
+Bryan Xavier Kufta
+Guilherme Henrique Pinheiro
+Vinicius Gabriel Barros
+
 Resumo
 
 A solução: O SmartFlow Box é um sistema embarcado de visão computacional que monitora e analisa o fluxo de pessoas em tempo real.
