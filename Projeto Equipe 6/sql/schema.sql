@@ -1,8 +1,10 @@
 -- Esquema do hub de sensores.
--- Ideia central: o backhaul e intermitente (Wi-Fi/4G em campo, ou LoRa como
--- rota de emergencia), entao o banco decide o que sobe, em que ordem, e o que
--- fica. As flags `enviado` sao a fila de saida; enquanto a comunicacao estiver
--- fora do ar os registros se acumulam sem perda.
+-- Ideia central: o dado nasce e fica na box. Nao ha servidor central em campo,
+-- entao este banco e a fonte da verdade — quem quiser os dados puxa pela pagina
+-- de exportacao, servida no AP da propria box (ver src/hub/exportador.py).
+-- As flags `enviado` sao a fila de um backhaul OPCIONAL (ver enviador.py): se um
+-- dia existir servidor, os registros ja estao enfileirados em ordem e sem perda.
+-- Exportar nao mexe nessas flags.
 --
 -- As leituras chegam de duas origens que convergem no MQTT: sensores Zigbee
 -- (via Zigbee2MQTT) e nos LoRaWAN (via gateway local). O esquema e o mesmo para
@@ -22,8 +24,8 @@ CREATE TABLE IF NOT EXISTS sensores (
     criado_em  INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
--- Serie temporal bruta. Fica na box: so sobe se houver banda sobrando, e nunca
--- pela rota de emergencia por LoRa.
+-- Serie temporal bruta. Fica na box e e purgada apos 90 dias. Sai inteira na
+-- exportacao; num backhaul, so subiria se houvesse banda sobrando.
 CREATE TABLE IF NOT EXISTS leituras (
     id          INTEGER PRIMARY KEY,
     sensor_id   INTEGER NOT NULL REFERENCES sensores(id) ON DELETE CASCADE,
@@ -37,7 +39,7 @@ CREATE TABLE IF NOT EXISTS leituras (
 CREATE INDEX IF NOT EXISTS ix_leituras_sensor_ts ON leituras(sensor_id, ts);
 CREATE INDEX IF NOT EXISTS ix_leituras_ts        ON leituras(ts);
 
--- Resumos por janela (padrao: 1 hora). E ISTO que o LoRa transporta.
+-- Resumos por janela (padrao: 1 hora). E ISTO que quase todo mundo exporta.
 -- Guardar min/max e essencial: uma geada de 20 min some numa media horaria.
 CREATE TABLE IF NOT EXISTS agregados (
     id         INTEGER PRIMARY KEY,

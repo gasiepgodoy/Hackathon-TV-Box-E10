@@ -1,16 +1,22 @@
-"""Enviador: consome a fila pendente e entrega pelo backhaul.
+"""Enviador: consome a fila pendente e entrega a um servidor central.
+
+Caminho OPCIONAL, e hoje nao usado. Em campo nao existe servidor nem internet: os
+dados saem da box puxados pela pagina de exportacao, no AP local (exportador.py).
+Este modulo existe para quando houver um servidor do outro lado — a fila, a ordem
+de prioridade e as flags `enviado` ja estao prontas e cobertas por testes.
 
 O transporte e plugavel de proposito. Hoje ele apenas registra em log ou publica
-em MQTT; para o backhaul real (Wi-Fi/4G) implemente `TransporteHTTP`, e para a
-rota de emergencia por LoRa um `TransporteSerial` — nenhuma outra parte do
-sistema muda.
+em MQTT; para um backhaul IP (Wi-Fi/4G) implemente `TransporteHTTP` — nenhuma
+outra parte do sistema muda.
 
 Ordem de saida: eventos primeiro (raros e urgentes), agregados depois. Dados
 brutos so quando houver banda sobrando.
 
-O empacotamento binario abaixo dimensiona as mensagens para a rota de
-emergencia por LoRa, onde cada byte conta. Num backhaul IP ele e desnecessario,
-mas inofensivo.
+O empacotamento binario abaixo e heranca do desenho original, em que o proprio
+LoRa seria o backhaul: ele espreme um agregado em 14 bytes para caber no DR0 do
+AU915. Sobre um enlace IP isso e perda gratuita de dados — nao o reaproveite num
+`TransporteHTTP`. Continua aqui porque e o que `enviar_pendentes` usa com os
+transportes atuais (log e MQTT) e porque documenta o limite de payload.
 """
 from __future__ import annotations
 

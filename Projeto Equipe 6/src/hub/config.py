@@ -38,6 +38,14 @@ PADROES = {
     "retencao": {
         "dias_leituras": "90",   # agregados sao mantidos para sempre
     },
+    "exportador": {
+        # IP da box no AP `hub-campo`. NAO trocar por 0.0.0.0: a box tambem tem
+        # IP publico da universidade, e escutar em todas as interfaces publica o
+        # banco inteiro, sem senha, na internet. Funciona igual no AP — por isso
+        # o erro passa despercebido.
+        "endereco": "192.168.4.1",
+        "porta": "8000",         # 8080 e do ChirpStack, 1880 do Node-RED
+    },
 }
 
 

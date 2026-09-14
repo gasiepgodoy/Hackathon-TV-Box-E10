@@ -1,6 +1,6 @@
 """Agregador: condensa leituras brutas em resumos por janela.
 
-E o resumo que sobe pelo backhaul no lugar das leituras brutas. Guardamos
+E o resumo que se exporta no lugar das leituras brutas. Guardamos
 min/max alem da media porque um evento curto (uma geada de 20 minutos)
 desaparece numa media horaria — e e exatamente esse evento que o projeto
 precisa capturar.

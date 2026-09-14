@@ -1,5 +1,5 @@
 [Unit]
-Description=Hub de sensores - agrega, detecta eventos e envia pelo LoRa
+Description=Hub de sensores - agrega janelas e detecta eventos
 
 [Service]
 Type=oneshot

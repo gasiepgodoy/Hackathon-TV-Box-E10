@@ -1,0 +1,20 @@
+[Unit]
+Description=Hub de sensores - pagina de exportacao de dados (AP)
+# O endereco de escuta e o IP da box no AP. Se o AP ainda nao subiu, o bind
+# falha — e e assim que deve ser: melhor o systemd reiniciar ate o AP existir
+# do que o servidor cair em 0.0.0.0 e expor o banco na rede da universidade.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=/opt/hub-sensores/src
+Environment=HUB_CONFIG=/etc/hub/hub.ini
+ExecStart=/usr/bin/python3 -m hub.exportador
+WorkingDirectory=/opt/hub-sensores
+Restart=always
+RestartSec=10s
+User=root
+
+[Install]
+WantedBy=multi-user.target

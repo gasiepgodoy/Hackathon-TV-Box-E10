@@ -21,12 +21,12 @@ flowchart LR
     Z["Sensores Zigbee<br/>~100 m"]
     L["Nós LoRaWAN<br/>~km"]
     G["Gateway LoRaWAN<br/>placa Heltec separada"]
-    B["<b>TV Box</b><br/>servidor de rede LoRaWAN<br/>coordenador Zigbee<br/>banco e processamento"]
-    S["Servidor central"]
+    B["<b>TV Box</b><br/>servidor de rede LoRaWAN<br/>coordenador Zigbee<br/>banco e processamento<br/>ponto de acesso Wi-Fi"]
+    N["notebook · celular<br/>no AP hub-campo"]
 
     Z -->|"rádio 2,4 GHz"| B
     L -->|"rádio 915 MHz"| G -->|"Wi-Fi · UDP 1700"| B
-    B ==>|"backhaul intermitente"| S
+    B ==>|"HTTP local · download"| N
 ```
 
 A TV Box acumula três papéis: coordenador Zigbee, **servidor de rede LoRaWAN**
@@ -45,24 +45,58 @@ a mata e os açudes ficam a quilômetros de qualquer coisa. Concentrar gateway e
 servidor de rede na sede é exatamente como funcionam as implantações comerciais de
 LoRaWAN em agricultura.
 
-A consequência prática é que o sistema **continua registrando com a internet
-fora**: o nó transmite, o gateway entrega, o ChirpStack decodifica e o coletor
-grava, tudo dentro da propriedade. Só a sincronização com o servidor central
-espera o backhaul voltar.
+A consequência prática é que o sistema **não depende de internet em momento
+algum**: o nó transmite, o gateway entrega, o ChirpStack decodifica, o coletor
+grava e o exportador entrega a quem for buscar — tudo dentro da propriedade, numa
+rede que a própria box publica.
+
+## Como o dado sai da box: puxar, não empurrar
+
+A pergunta parecia resolvida — a box sincroniza com um servidor central quando há
+conectividade. Ela não estava: **em campo não há servidor central, e não há
+conectividade.** Empurrar exige três coisas que a situação não oferece: um
+servidor no ar, um endereço estável para alcançá-lo e um link para chegar lá.
+
+A inversão é o que torna o sistema utilizável sem nenhuma das três. A box publica
+um ponto de acesso Wi-Fi (`hub-campo`) e serve uma página HTTP nele; quem for ao
+local conecta e baixa. O dado não precisa viajar até alguém — a pessoa já está ao
+lado do dado.
+
+As implicações que importam:
+
+- **Não há cliente para instalar.** Um aplicativo, um script Python ou um cliente
+  MQTT do outro lado seriam três oportunidades de a demonstração falhar no dia. O
+  navegador já está em todo celular e notebook.
+- **Não há credencial para distribuir.** A rede fechada é o controle de acesso.
+  É um controle fraco, e isso está registrado como limitação no README — mas é
+  proporcional: quem está fisicamente ao lado do equipamento já podia levar o
+  cartão SD embora.
+- **A página não referencia nada externo.** Nenhuma fonte, CSS ou ícone de CDN.
+  Offline, um `<link>` para fora não deixa a página feia — deixa a página
+  pendurada esperando um DNS que não responde.
+- **Exportar é leitura pura.** Não toca nas flags `enviado`. Se baixar um CSV
+  marcasse registros como enviados, a primeira pessoa a clicar esvaziaria a fila
+  de um backhaul futuro.
+
+Empurrar continua fazendo sentido num cenário: vários hubs reportando a um painel
+único, com link disponível. Por isso `enviador.py` permanece pronto — fila, ordem
+de prioridade e confirmação por transporte. É uma extensão, não uma dependência.
 
 ## Alternativas descartadas
 
 ### LoRa como backhaul (box transmitindo para um gateway distante)
 
-Foi o desenho inicial. Descartado como caminho principal por vazão: o LoRa
-transporta dezenas de bytes por mensagem, com limites de tempo de ar. Para
-escoar dados concentrados de vários sensores, é pouco — enquanto 4G ou Wi-Fi
-resolvem o mesmo com ordens de grandeza mais banda e custo menor.
+Foi o desenho inicial, e foi **abandonado**. O motivo é vazão: o LoRa transporta
+dezenas de bytes por mensagem, com limites de tempo de ar. Para escoar dados
+concentrados de vários sensores, é pouco — e não há como contornar isso
+comprimindo mais, porque o limite é regulatório, não de formato.
 
-**Mas não foi abandonado.** Permanece como **rota de emergência**: se o backhaul
-principal cair, os eventos de prioridade alta (geada, sensor mudo) ainda saem por
-um uplink LoRa curto. Poucos bytes, raros — exatamente o que o LoRa faz bem. É
-por isso que o empacotamento binário de 14 bytes por agregado continua no código.
+O que restou dele no código é o empacotamento binário de 14 bytes por agregado,
+em `enviador.py`. Ele continua lá porque é o que os transportes atuais usam e
+porque documenta o limite de 51 bytes do DR0, mas **não deve ser reaproveitado**
+num transporte IP: ele descarta campos de propósito. O comentário no módulo diz
+isso explicitamente, para que ninguém o adote por engano achando que é o formato
+canônico do projeto.
 
 ### Gateway transmitindo dados de aplicação para um cliente
 
@@ -108,9 +142,12 @@ A ordem de saída é deliberada:
 2. **Agregados** — resumos por janela, após o fechamento.
 3. **Leituras brutas** — só se houver banda sobrando.
 
-O desenho original mirava o gargalo do LoRa. Com backhaul IP a restrição de
-tamanho relaxa, mas a fila continua igualmente necessária: conectividade
-intermitente é a regra em campo, não a exceção.
+O desenho original mirava o gargalo do LoRa, quando o plano era empurrar os dados
+para fora. Hoje a fila **não é usada**: os dados saem pela exportação local, e
+exportar não a consome. Ela permanece porque é barata (uma coluna e um índice
+parcial) e porque é exatamente o que um servidor central exigiria no dia em que
+existir — sem ela, seria preciso reprocessar tudo para descobrir o que já foi
+entregue.
 
 ## Por que guardar mínimo e máximo
 
@@ -122,7 +159,13 @@ não a média.
 
 ## Heterogeneidade dos sensores
 
-Os dois tipos têm características opostas, e o sistema precisa acomodar ambos:
+Os dois modelos abaixo são os que **usamos nos testes**, não os que o sistema
+exige: o hub fala MQTT, então qualquer sensor aceito pelo Zigbee2MQTT ou qualquer
+nó registrado no ChirpStack entra sem alteração de código. O que importa aqui não
+são estes dois modelos, e sim que eles são opostos o bastante para provar que o
+desenho aguenta a variação — foi por isso que os escolhemos.
+
+Os dois têm características opostas, e o sistema precisa acomodar ambos:
 
 | | Tuya TS0201 (Zigbee) | Heltec + BME280 (LoRa) |
 |---|---|---|

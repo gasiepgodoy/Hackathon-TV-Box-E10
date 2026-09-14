@@ -2,11 +2,17 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
+import sqlite3
 import sys
 import tempfile
+import threading
 import time
 import unittest
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -19,6 +25,8 @@ from hub.db import (conectar, gravar_leituras, inicializar,     # noqa: E402
 from hub.enviador import (TransporteIndisponivel, TransporteLog,     # noqa: E402
                           empacotar_agregado, enviar_pendentes)
 from hub.eventos import detectar                                     # noqa: E402
+from hub.exportador import (_ha_quanto, csv_bytes, montar_zip,       # noqa: E402
+                            pagina, resumo, servir, snapshot)
 
 HORA = 3600
 
@@ -305,6 +313,178 @@ class TestRetencao(BaseHub):
         self.assertEqual(purgar(self.con, 90), 1)
         self.assertEqual(self.con.execute("SELECT COUNT(*) FROM leituras").fetchone()[0], 0)
         self.assertEqual(self.con.execute("SELECT COUNT(*) FROM agregados").fetchone()[0], 1)
+
+
+class TestExportador(BaseHub):
+    def _povoar(self):
+        base = (int(time.time()) // HORA) * HORA - HORA
+        gravar_leituras(self.con, [
+            _l("s1", base + 60, 21.5, umid=73.4),
+            _l("s1", base + 120, 1.0, umid=90.0),
+            _l("s2", base + 60, 25.0, umid=55.0, pressao=1013.2),
+        ])
+        agregar(self.con, HORA)
+        detectar(self.con, self.cfg)
+
+    def _csv(self, nome: str) -> str:
+        return b"".join(csv_bytes(self.con, nome)).decode("utf-8")
+
+    def test_csv_no_dialeto_do_excel_ptbr(self):
+        self._povoar()
+        texto = self._csv("leituras")
+        self.assertTrue(texto.startswith("﻿"), "falta o BOM: Excel estraga acento")
+        cabecalho = texto.splitlines()[0].lstrip("﻿")
+        self.assertIn(";", cabecalho)
+        self.assertNotIn(",", cabecalho)          # virgula so aparece em decimal
+        self.assertIn("21,5", texto)              # virgula decimal, nao ponto
+        self.assertNotIn("21.5", texto)
+
+    def test_csv_traz_tempo_legivel_e_epoch(self):
+        self._povoar()
+        colunas = self._csv("agregados").splitlines()[0].lstrip("﻿").split(";")
+        self.assertIn("inicio_epoch", colunas)
+        self.assertIn("inicio", colunas)
+        self.assertIn("sensor", colunas)          # ieee, nao o id local
+        self.assertIn("amostras", colunas)        # campo que o LoRa descartava
+
+    def test_nulo_vira_celula_vazia(self):
+        self._povoar()
+        # s1 nao tem pressao; a celula deve ficar vazia, nao "None".
+        self.assertNotIn("None", self._csv("leituras"))
+
+    def test_exportar_nao_consome_a_fila_do_backhaul(self):
+        self._povoar()
+        antes = self.con.execute(
+            "SELECT COUNT(*) FROM agregados WHERE enviado=0").fetchone()[0]
+        self.assertGreater(antes, 0)
+        b"".join(csv_bytes(self.con, "agregados"))
+        with tempfile.TemporaryDirectory() as tmp:
+            montar_zip(self.con, "tudo", Path(tmp) / "e.zip")
+        depois = self.con.execute(
+            "SELECT COUNT(*) FROM agregados WHERE enviado=0").fetchone()[0]
+        self.assertEqual(antes, depois)
+
+    def test_zip_tem_um_csv_por_tabela(self):
+        self._povoar()
+        with tempfile.TemporaryDirectory() as tmp:
+            alvo = montar_zip(self.con, "tudo", Path(tmp) / "e.zip")
+            with zipfile.ZipFile(alvo) as z:
+                self.assertEqual(
+                    {"leituras.csv", "agregados.csv", "eventos.csv",
+                     "sensores.csv", "LEIA-ME.txt"}, set(z.namelist()))
+                self.assertIn("EdgeVision", z.read("LEIA-ME.txt").decode("utf-8"))
+
+    def test_escopo_agregados_nao_leva_serie_bruta(self):
+        self._povoar()
+        with tempfile.TemporaryDirectory() as tmp:
+            alvo = montar_zip(self.con, "agregados", Path(tmp) / "e.zip")
+            with zipfile.ZipFile(alvo) as z:
+                self.assertNotIn("leituras.csv", z.namelist())
+
+    def test_snapshot_pega_escrita_ainda_no_wal(self):
+        """O -wal e o risco: copiar so o .db perderia as ultimas leituras."""
+        self._povoar()
+        n = self.con.execute("SELECT COUNT(*) FROM leituras").fetchone()[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            alvo = snapshot(self.con, Path(tmp) / "copia.db")
+            copia = sqlite3.connect(str(alvo))
+            try:
+                self.assertEqual(
+                    copia.execute("SELECT COUNT(*) FROM leituras").fetchone()[0], n)
+            finally:
+                copia.close()
+
+    def test_resumo_conta_e_datas(self):
+        self._povoar()
+        r = resumo(self.con)
+        self.assertEqual(r["sensores"], 2)
+        self.assertEqual(r["leituras"], 3)
+        self.assertEqual(r["origens"], {"zigbee": 2})
+        self.assertIsNotNone(r["ultima"])
+
+    def test_pagina_e_autocontida(self):
+        self._povoar()
+        html = pagina(resumo(self.con))
+        # Offline nao ha DNS: qualquer recurso externo trava o carregamento.
+        for proibido in ("http://", "https://", "//cdn", "<script"):
+            self.assertNotIn(proibido, html)
+        self.assertIn("agregados.csv", html)
+        self.assertIn("tudo.zip", html)
+
+    def test_pagina_avisa_quando_banco_vazio(self):
+        html = pagina(resumo(self.con))
+        self.assertIn("Nenhuma leitura", html)
+        self.assertNotIn("tudo.zip", html)     # nao oferece download inutil
+
+    def test_ha_quanto_tempo(self):
+        agora = 1_000_000
+        self.assertEqual(_ha_quanto(None), "nunca")
+        self.assertEqual(_ha_quanto(agora - 30, agora), "há 30 s")
+        self.assertEqual(_ha_quanto(agora - 600, agora), "há 10 min")
+        self.assertEqual(_ha_quanto(agora - 7200, agora), "há 2 h")
+
+
+class TestExportadorHTTP(BaseHub):
+    """Sobe o servidor de verdade e baixa por HTTP."""
+
+    def setUp(self):
+        super().setUp()
+        # Janela fechada: o agregador so resume horas ja encerradas, entao uma
+        # leitura de agora nao produziria nenhum agregado para baixar.
+        base = (int(time.time()) // HORA) * HORA - HORA
+        gravar_leituras(self.con, [_l("estufa_norte", base + 60, 21.5)])
+        agregar(self.con, HORA)
+        # Porta 0: o SO escolhe uma livre, entao o teste nao briga com um
+        # exportador que ja esteja rodando na maquina.
+        self.srv = servir("127.0.0.1", 0, str(Path(self.tmp.name) / "t.db"))
+        self.porta = self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+        super().tearDown()
+
+    def _get(self, rota: str):
+        with urllib.request.urlopen(
+                f"http://127.0.0.1:{self.porta}{rota}", timeout=10) as r:
+            return r.status, dict(r.headers), r.read()
+
+    def test_pagina_inicial(self):
+        status, cab, corpo = self._get("/")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", cab["Content-Type"])
+        self.assertIn("EdgeVision", corpo.decode("utf-8"))
+
+    def test_download_csv_vem_como_anexo(self):
+        status, cab, corpo = self._get("/agregados.csv")
+        self.assertEqual(status, 200)
+        self.assertIn("attachment", cab["Content-Disposition"])
+        self.assertIn(".csv", cab["Content-Disposition"])
+        self.assertIn("estufa_norte", corpo.decode("utf-8"))
+
+    def test_download_zip_abre(self):
+        _, _, corpo = self._get("/tudo.zip")
+        with zipfile.ZipFile(io.BytesIO(corpo)) as z:
+            self.assertIsNone(z.testzip())
+            self.assertIn("agregados.csv", z.namelist())
+
+    def test_download_banco_e_sqlite_valido(self):
+        _, _, corpo = self._get("/dados.db")
+        self.assertTrue(corpo.startswith(b"SQLite format 3\x00"))
+        destino = Path(self.tmp.name) / "baixado.db"
+        destino.write_bytes(corpo)
+        con = sqlite3.connect(str(destino))
+        try:
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM leituras").fetchone()[0], 1)
+        finally:
+            con.close()
+
+    def test_rota_desconhecida_nao_serve_arquivo(self):
+        with self.assertRaises(urllib.error.HTTPError) as e:
+            self._get("/etc/passwd")
+        self.assertEqual(e.exception.code, 404)
 
 
 if __name__ == "__main__":

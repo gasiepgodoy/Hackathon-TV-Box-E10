@@ -13,21 +13,24 @@
 
 O EdgeVision monitora clima e eventos em áreas sem infraestrutura de rede, com
 custo baixo por ponto de medição: uma TV Box reaproveitada vira gateway
-multiprotocolo de borda,
-recebe sensores próximos por Zigbee e distantes por LoRaWAN, grava tudo num banco
-local, calcula médias, mínimas e máximas, detecta eventos críticos e sincroniza
-com um servidor central quando há conectividade — sem internet, continua
-registrando. A aplicação principal é agrícola: alerta de geada em pomares e
-estufas, onde vinte minutos de frio decidem a safra. A mesma base serve ao
-monitoramento ambiental: microclima de mata, nascentes e áreas de preservação.
+multiprotocolo de borda, recebe sensores próximos por Zigbee e distantes por
+LoRaWAN, grava tudo num banco local, calcula médias, mínimas e máximas e detecta
+eventos críticos — **tudo dentro da própria box, sem nuvem e sem internet**. Para
+levar os dados embora, a box publica a própria rede Wi-Fi e serve uma página de
+download: qualquer notebook ou celular conectado nela baixa os dados pelo
+navegador, no meio do mato, sem instalar nada. A aplicação principal é agrícola:
+alerta de geada em pomares e estufas, onde vinte minutos de frio decidem a safra.
+A mesma base serve ao monitoramento ambiental: microclima de mata, nascentes e
+áreas de preservação.
 
 ## Estrutura
 
-- [`src/hub/`](src/hub/) — módulos do hub: coletor, agregador, eventos, enviador, CLI
+- [`src/hub/`](src/hub/) — módulos do hub: coletor, agregador, eventos, enviador, exportador, CLI
 - [`sql/schema.sql`](sql/schema.sql) — esquema do banco, índices e a view de inspeção
-- [`systemd/`](systemd/) — serviço do coletor e timers do ciclo e da purga
+- [`systemd/`](systemd/) — serviços do coletor e do exportador, timers do ciclo e da purga
 - [`config/`](config/) — arquivo de configuração de exemplo
-- [`tests/`](tests/) — 25 testes, sem dependências externas
+- [`node-red/`](node-red/) — dashboard de visualização e teste, com [instruções próprias](node-red/README.md)
+- [`tests/`](tests/) — 41 testes, sem dependências externas
 - [`docs/arquitetura.md`](docs/arquitetura.md) — decisões e alternativas descartadas
 - [`assets/`](assets/) — logotipo (versões clara, escura e só o símbolo)
 
@@ -48,23 +51,33 @@ flowchart TB
         MQ(["Mosquitto · MQTT"])
         COL["<b>hub-coletor</b><br/>normaliza as duas origens"]
         DB[("SQLite<br/>dados.db")]
-        CIC["<b>hub-ciclo</b><br/>agrega · detecta · envia"]
+        CIC["<b>hub-ciclo</b><br/>agrega · detecta eventos"]
+        AP["<b>ponto de acesso</b><br/>Wi-Fi hub-campo"]
+        EXP["<b>hub-exportador</b><br/>página de download"]
     end
 
-    SRV["Servidor central"]
+    NB["notebook · celular<br/>de quem for ao campo"]
+    SRV["Servidor central<br/><i>opcional · não usado em campo</i>"]
 
     TS -->|"2,4 GHz"| DG --> Z2M -->|"zigbee2mqtt/+"| MQ
     NO -->|"LoRa 915 MHz"| GW -->|"UDP 1700 · Wi-Fi"| BR
     BR -->|"MQTT: eventos do gateway"| CS
     CS -->|"application/+/device/+/event/up"| MQ
     MQ --> COL --> DB --> CIC
-    CIC ==>|"backhaul intermitente<br/>Wi-Fi · 4G · cabo"| SRV
-    CIC -.->|"rota de emergência por LoRa<br/>só eventos críticos · previsto"| SRV
+    DB --> EXP --> AP
+    AP ==>|"HTTP · 192.168.4.1:8000<br/>CSV · ZIP · SQLite"| NB
+    CIC -.->|"se um dia houver rede<br/>Wi-Fi · 4G · cabo"| SRV
 ```
 
-O traço cheio até o servidor é o caminho principal; o pontilhado é a rota de
-emergência, ainda **prevista e não implementada** — o empacotamento binário
-existe e é testado, o rádio de saída não.
+O traço grosso é como os dados saem **hoje**: puxados pelo navegador, na rede
+Wi-Fi que a própria box publica. Não há servidor central em campo e nem se espera
+um — o banco da box é a fonte da verdade, e o dado chega a quem precisa dele numa
+rede que não sai do terreno.
+
+O pontilhado é o caminho inverso, de **empurrar** para um servidor. Está
+preparado no código (fila, ordem de prioridade, flags `enviado`, tudo testado),
+mas sem transporte final implementado. É uma extensão, não uma dependência: nada
+no sistema para de funcionar por ele não existir.
 
 O gateway LoRaWAN é uma **segunda placa Heltec, fora da box**: ela recebe o rádio
 dos nós e repassa os pacotes por Wi-Fi (UDP 1700), conectada ao ponto de acesso
@@ -76,6 +89,28 @@ carregam rádio de longo alcance, e cobrem bem uma área concentrada. Onde a
 distância inviabiliza o Zigbee, entram nós LoRaWAN — mais caros por unidade, mas
 poucos e cobrindo quilômetros. A TV Box concentra os dois.
 
+### Onde a coleta roda
+
+Toda a coleta e todo o processamento acontecem **dentro da TV Box**, como
+serviços do systemd. Não há nuvem, VPS, container remoto nem serviço de terceiro
+no caminho: a box liga, os serviços sobem sozinhos e o sistema volta a registrar
+sem ninguém intervir — inclusive depois de uma queda de energia, que em campo é
+o normal, não a exceção.
+
+| Serviço | O que faz | Quando roda |
+|---|---|---|
+| `hub-coletor` | assina o MQTT, normaliza Zigbee e LoRa, grava no SQLite | contínuo |
+| `hub-ciclo` | fecha janelas, calcula agregados, detecta eventos | a cada 5 min |
+| `hub-purga` | apaga leituras brutas com mais de 90 dias | diário |
+| `hub-exportador` | serve a página de download no AP | contínuo |
+
+Na mesma box, dando suporte: Mosquitto (o MQTT onde as duas origens se
+encontram), Zigbee2MQTT (com o dongle CC2652) e ChirpStack (servidor de rede
+LoRaWAN). Fora da box ficam só os rádios — os sensores Zigbee, os nós LoRa e o
+gateway LoRaWAN. Nenhum deles processa nada: apenas transmitem.
+
+O banco fica em `/var/lib/hub/dados.db` e a configuração em `/etc/hub/hub.ini`.
+
 ### O caminho de um dado
 
 ```mermaid
@@ -83,20 +118,27 @@ flowchart LR
     L["<b>leitura</b><br/>uma medida<br/>de um sensor"]
     A["<b>agregado</b><br/>resumo da janela<br/>mín · média · máx"]
     E["<b>evento</b><br/>geada · sensor mudo<br/>bateria baixa"]
-    F(["<b>fila de saída</b><br/>flag enviado = 0"])
-    S["servidor<br/>central"]
-    X["fica na box<br/>purgada após 90 dias"]
+    B[("<b>banco local</b><br/>tudo fica na box")]
+    D["<b>download no AP</b><br/>CSV · ZIP · SQLite"]
+    F(["fila de saída · enviado = 0<br/><i>backhaul opcional</i>"])
+    X["leituras brutas:<br/>purgadas após 90 dias"]
 
-    L --> A --> F
-    L --> E --> F
-    L --> X
-    F ==>|"1º eventos, por prioridade"| S
-    F -->|"2º agregados"| S
+    L --> A --> B
+    L --> E --> B
+    L --> B --> X
+    B ==>|"quando alguém pede"| D
+    B -.->|"1º eventos, 2º agregados"| F
 ```
 
-Leituras brutas não sobem por padrão: são muitas e pouco informativas depois de
-resumidas. O que viaja é o agregado — e, na frente dele, o evento, que é raro,
-pequeno e urgente.
+Nada é descartado por não ter para onde ir: leitura, agregado e evento vão todos
+para o mesmo banco, e ficam lá até alguém buscar. A diferença entre eles aparece
+na **hora de exportar** — o agregado é o que quase todo mundo quer, porque as
+leituras brutas são muitas e pouco informativas depois de resumidas, e o evento é
+o que se olha primeiro, porque é raro, pequeno e urgente.
+
+Essa ordem de prioridade também é a da fila de saída, para o dia em que existir
+um servidor central. Hoje ela só acumula — e é de propósito: exportar não a
+consome, então ela permanece íntegra.
 
 **Por que o gateway fica na box.** Em campo, a área monitorada costuma ser
 isolada, mas o ponto onde se instala o hub geralmente não é — uma propriedade
@@ -107,46 +149,65 @@ implantações comerciais de agricultura. Detalhes e alternativas descartadas em
 
 ## Hardware
 
-| Papel | Equipamento |
+Esta é a lista do que **usamos nos testes** — não é uma lista de requisitos:
+
+| Papel | Equipamento usado |
 |---|---|
 | Hub de borda | TV Box BTV E10 (Amlogic S905X2, 1,8 GB RAM), Debian 13 arm64 |
 | Coordenador Zigbee | Dongle USB CC2652 (Z-Stack 3.x.0), conversor CH340 |
 | Sensores Zigbee | Tuya TS0201 — temperatura e umidade, a pilha |
+| Gateway LoRaWAN | Heltec WiFi LoRa 32 V2, canal único, 916,8 MHz |
 | Nós LoRa | Heltec WiFi LoRa 32 V2 (915 MHz) + BME280 |
+
+**O sistema não conhece nenhuma dessas peças.** O hub conversa com sensores pelo
+MQTT, não com hardware: o que ele entende são tópicos e JSON. Na prática isso
+significa que
+
+- **qualquer sensor que o Zigbee2MQTT reconheça** entra sem tocar no código — são
+  milhares de modelos de dezenas de fabricantes. Escolhemos o TS0201 por ser
+  barato e funcionar a pilha, não por alguma afinidade do software com ele;
+- **qualquer nó LoRaWAN registrado no ChirpStack** que envie JSON é aceito, com o
+  sensor que for: um DHT22, um sensor de umidade de solo, um pluviômetro. O
+  BME280 aparece no código apenas como a origem do campo `pressao`, que é opcional;
+- **a TV Box pode ser outra coisa.** É Python 3 da biblioteca padrão sobre Debian
+  arm64 — roda igual num Raspberry Pi, num mini-PC x86 ou noutra box. A escolha
+  da BTV E10 é o ponto do projeto: reaproveitar hardware ocioso e barato;
+- **o gateway de canal único pode virar um de 8 canais** (SX1302, tipo RAK2287)
+  sem alterar uma linha. É o que uma implantação real usaria.
+
+Trocar qualquer item acima muda o custo e o alcance, não a arquitetura. O que
+definimos foi o formato dos dados e o caminho que eles percorrem — a peça que
+entrega a medida é substituível por natureza.
 
 ## Por que SQLite
 
 Roda dentro do próprio processo, sem daemon consumindo a RAM escassa da box, e o
-banco inteiro é um arquivo — backup é copiar. O volume é pequeno: mesmo com
-dezenas de sensores em intervalos curtos, fica na casa de poucas centenas de MB
-por ano, algo trivial para o SQLite.
+banco inteiro é um arquivo — o que torna viável oferecer o banco completo como
+download (com a ressalva do WAL, explicada em *Levar os dados embora*). O volume
+é pequeno: mesmo com dezenas de sensores em intervalos curtos, fica na casa de
+poucas centenas de MB por ano, algo trivial para o SQLite.
 
-## O que sobe pelo backhaul
+## O que a box guarda
 
-| O quê | Quando sobe |
-|---|---|
-| Eventos (geada, sensor mudo, bateria) | Imediatamente, por prioridade |
-| Agregados por janela | Após o fechamento da janela |
-| Leituras brutas | Só se houver banda sobrando |
+| O quê | Por quanto tempo | Por quê |
+|---|---|---|
+| Leituras brutas | 90 dias, depois purgadas | crescem sem parar e ocupam o cartão |
+| Agregados por janela | para sempre | 24 linhas por sensor por dia: cabem |
+| Eventos (geada, sensor mudo, bateria) | para sempre | são raros e é o que se quer revisitar |
 
-Com backhaul IP (Wi-Fi/4G) não há limite rígido de payload, mas a agregação
-continua valendo: em link 4G tarifado ela reduz custo, e se o backhaul cair por
-dias a fila não explode. O empacotamento binário de 14 bytes por agregado
-permanece implementado para a **rota de emergência por LoRa** — prevista para
-quando o backhaul principal está fora e só os alertas críticos precisam sair.
-
-Uma ressalva honesta: o *empacotamento* está pronto e testado, mas o **transporte
-final ainda não**. Hoje o enviador entrega em log ou publica num tópico MQTT; o
-`TransporteHTTP` para o servidor central e o `TransporteSerial` para o rádio de
-emergência são pontos de extensão, não código em produção. Veja
-[Integração do transporte](#integração-do-transporte).
+Tudo isso fica disponível para download enquanto estiver no banco. A agregação
+aqui **não existe para economizar link** — não há link. Ela existe para responder
+à pergunta que interessa sem obrigar ninguém a abrir milhares de linhas no Excel:
+qual foi a mínima da madrugada.
 
 Os agregados guardam **mínimo e máximo**, não só a média: uma geada de 20 minutos
 desaparece numa média horária, e é exatamente o evento que o projeto quer captar.
 
 ## Sobre a frequência dos sensores
 
-Os dois tipos de sensor têm características opostas, e isso afeta a configuração:
+O que segue vale para os **dois modelos que testamos**; com outro hardware os
+números mudam, mas o raciocínio é o mesmo. Eles têm características opostas, e
+isso afeta a configuração:
 
 **Tuya TS0201 (Zigbee) — intervalo fixo, não configurável.** A definição no
 Zigbee2MQTT tem `toZigbee: []` e um `configure` que só envia o *magic packet*,
@@ -181,8 +242,8 @@ FROM leituras WHERE sensor_id = 1 ORDER BY ts DESC LIMIT 20;
 ```
 
 Ajuste `janela_s` para que cada janela contenha ao menos 6 amostras. Se um sensor
-reportar mais devagar que isso, agregá-lo não traz ganho — envie as leituras
-direto.
+reportar mais devagar que isso, agregá-lo não traz ganho — use as leituras brutas
+direto, que a exportação também entrega.
 
 ## Instalação
 
@@ -195,11 +256,16 @@ sudo cp config/hub.example.ini /etc/hub/hub.ini
 sudo cp systemd/* /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now hub-coletor.service hub-ciclo.timer hub-purga.timer
+sudo systemctl enable --now hub-exportador.service
 ```
 
 Para a origem LoRa é preciso também o ChirpStack e o Gateway Bridge na box; para
 a origem Zigbee, o Zigbee2MQTT. O hub em si não depende de nenhum dos dois — ele
 só assina os tópicos que existirem.
+
+O dashboard de visualização é **opcional** e tem instalação própria, porque pesa
+uns 100–150 MB de RAM e nem sempre compensa deixá-lo ligado: veja
+[node-red/README.md](node-red/README.md).
 
 ⚠️ A TV Box vem **sem swap**. Antes de subir a pilha do ChirpStack (que traz
 PostgreSQL e Redis junto), crie uma área de troca — sem ela, qualquer pico de
@@ -219,13 +285,60 @@ export PYTHONPATH=/opt/hub-sensores/src HUB_CONFIG=/etc/hub/hub.ini
 
 python3 -m hub.cli status          # visão geral, com a quebra por origem
 python3 -m hub.cli leituras -n 20  # últimas leituras
-python3 -m hub.cli pendentes       # fila aguardando sincronização
+python3 -m hub.cli pendentes       # fila do backhaul opcional (ver Integração do transporte)
 python3 -m hub.cli espiar          # diagnóstico: o que passa no MQTT e por que é aceito
 python3 -m hub.cli nomear sensor_01 "Estufa Norte" --local "Setor A"
 ```
 
 O `espiar` é a ferramenta de depuração principal: mostra cada mensagem que chega
 ao broker — das duas origens — e, quando descartada, **o motivo exato**.
+
+## Levar os dados embora
+
+**Toda a transmissão é local.** Nada sai do terreno: nenhum dado vai para a
+internet, para nuvem ou para servidor de terceiro — nem precisa, porque em campo
+não há conectividade para isso. A própria box publica uma rede Wi-Fi
+(`hub-campo`) e serve os dados nela. Quem for até lá conecta o celular ou o
+notebook nessa rede, como se conectaria em qualquer Wi-Fi, e abre no navegador:
+
+```
+http://192.168.4.1:8000
+```
+
+A consequência prática é que **funciona com a box desligada do mundo**: sem chip,
+sem operadora, sem depender de sinal. E a transferência é rápida porque é Wi-Fi
+local — baixar meses de leituras leva segundos, não o que levaria por 4G rural.
+
+Sem instalar nada, sem SSH, sem pen drive. A página mostra quantos sensores,
+quantas leituras e há quanto tempo foi a última — antes de baixar, já dá para
+ver se a box estava mesmo coletando — e oferece três escolhas:
+
+| Download | O que vem | Para quem |
+|---|---|---|
+| **Somente agregados** (`.csv`) | mín, máx e média por janela | é o que quase todo mundo quer |
+| **Todos os dados** (`.zip`) | um CSV por tabela: leituras, agregados, eventos, sensores | análise completa |
+| **Banco completo** (`.db`) | cópia consistente do SQLite | quem quer consultar com SQL |
+
+Os CSV saem em UTF-8 **com BOM**, separador `;` e vírgula decimal: o dialeto que
+o Excel em português abre sem perguntar nada. Com vírgula como separador, o
+arquivo abriria com todas as colunas empilhadas na primeira — e sem BOM os
+acentos viram `AnÃ¡lise`. Cada tabela traz o tempo em duas colunas, o epoch para
+processar e a data local para ler.
+
+O download do banco inteiro **não** é uma cópia do arquivo: o schema usa
+`journal_mode = WAL`, então as transações mais recentes vivem no `-wal`, fora do
+`.db`. Copiar o `.db` sozinho entregaria um banco sem as últimas leituras —
+justamente as que interessam numa demonstração. O exportador usa a API de backup
+online do SQLite, que tira um snapshot coerente sem parar o coletor.
+
+Exportar é leitura pura: não mexe nas flags `enviado`. Baixar um CSV não consome
+a fila do backhaul.
+
+⚠️ O serviço escuta **só no IP do AP** (`192.168.4.1`), e isso é deliberado. A
+box também tem IP público da universidade; com `0.0.0.0` o banco de sensores
+ficaria exposto na internet, sem autenticação. O detalhe é traiçoeiro porque no
+AP as duas configurações funcionam igual — o teste passa nos dois casos. Mesmo
+assim, no AP não há senha: quem estiver conectado ao `hub-campo` baixa tudo.
 
 ## As duas origens de dados
 
@@ -261,6 +374,9 @@ python3 -m hub.simular --horas 2
 python3 -m hub.ciclo --transporte offline   # nada sobe, nada se perde
 python3 -m hub.cli pendentes
 python3 -m hub.ciclo --max 100              # enlace volta: a fila esvazia
+
+# A página de exportação, sem precisar da box:
+python3 -m hub.exportador --endereco 127.0.0.1 --porta 8000
 ```
 
 ## Testes
@@ -289,10 +405,26 @@ tempo. A série temporal dos sensores, essa sim sem fim, é o que fica no SQLite
 
 ## Integração do transporte
 
-O envio é plugável. Hoje existem `TransporteLog`, `TransporteMQTT` e
-`TransporteIndisponivel` (que simula queda, para a demonstração). Para o backhaul
-real, implemente `TransporteHTTP` ou `TransporteSerial` em `enviador.py` — o
-resto do sistema não muda.
+Há dois caminhos para o dado sair da box, e eles resolvem problemas diferentes.
+
+**Puxar** é o que está em uso: o exportador serve a página no AP e quem quiser
+baixa (ver *Levar os dados embora*). Não precisa de servidor do outro lado, nem
+de internet, nem de endereço fixo — e é por isso que é a rota que funciona em
+campo.
+
+**Empurrar** é o que `enviador.py` prepara, para quando existir um servidor
+central: as flags `enviado` são a fila, os eventos saem na frente dos agregados,
+e nada é marcado como entregue sem confirmação do transporte. Hoje existem
+`TransporteLog`, `TransporteMQTT` e `TransporteIndisponivel` (que simula queda,
+para a demonstração); falta um `TransporteHTTP`.
+
+Uma ressalva para quem for escrever esse transporte: **não reaproveite
+`empacotar_agregado`**. Aquele empacotamento binário é herança do desenho
+original, em que o próprio LoRa seria o backhaul — foi dimensionado para os 51
+bytes do DR0 e é lesivo de propósito: umidade cai para `uint8`, o timestamp perde
+o segundo, o `sensor_id` é truncado em 1 byte, e `umid_min`, `umid_max`,
+`press_media` e `amostras` sequer entram. Sobre um enlace IP isso é dano
+gratuito; serialize as linhas direto.
 
 ## Limitações conhecidas
 
@@ -300,9 +432,13 @@ resto do sistema não muda.
   ficar fixos em um canal e usar ABP em vez de OTAA, e os downlinks são pouco
   confiáveis. Uma implantação real usaria um concentrador de 8 canais (SX1302).
   A troca é de hardware; a arquitetura de software não muda.
-- **`enviado` marca transmissão, não recepção.** Sem downlink confiável não há
-  ACK fim a fim. Com backhaul IP isso deixa de ser problema.
 - **Intervalo dos TS0201 não é ajustável** (ver seção acima).
-- **O transporte para o servidor central não está implementado.** A fila, a
-  ordem de prioridade e o empacotamento estão prontos e cobertos por testes; o
-  que falta é o `TransporteHTTP`. É a próxima peça, não um problema de desenho.
+- **A página de exportação não tem autenticação.** Quem estiver conectado ao
+  `hub-campo` baixa tudo. A rede fechada é o controle de acesso; num ambiente com
+  gente estranha por perto, troque a senha do AP ou desligue o serviço fora da
+  coleta.
+- **O transporte para um servidor central não está implementado.** A fila, a
+  ordem de prioridade e as flags estão prontas e cobertas por testes; o que falta
+  é o `TransporteHTTP`. Não é uma pendência do sistema em campo — lá os dados
+  saem pela exportação local —, e sim o que habilitaria vários hubs reportando a
+  um painel único.

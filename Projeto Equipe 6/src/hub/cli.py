@@ -137,7 +137,9 @@ def main() -> int:
     p.add_argument("-n", type=int, default=20)
     p.set_defaults(fn=cmd_leituras)
 
-    sub.add_parser("pendentes", help="fila aguardando o LoRa").set_defaults(fn=cmd_pendentes)
+    sub.add_parser("pendentes",
+                   help="fila do backhaul opcional (nao afeta a exportacao)"
+                   ).set_defaults(fn=cmd_pendentes)
 
     p = sub.add_parser("nomear", help="da nome amigavel a um sensor")
     p.add_argument("ieee")
