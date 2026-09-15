@@ -26,7 +26,7 @@ repassa para a TV Box.
 | Pasta | O que é |
 |---|---|
 | [`no-lora/`](no-lora/) | firmware do nó sensor (Heltec V2 + BME280) e o codec do ChirpStack |
-| [`gateway-1ch/`](gateway-1ch/) | **só documentação** — o código é de terceiros, veja abaixo |
+| [`gateway-1ch/`](gateway-1ch/) | os arquivos que alteramos no gateway, mais o diff contra o projeto original |
 
 ## Créditos
 
@@ -45,7 +45,9 @@ O que a Equipe 6 acrescentou:
 - amostragem em **modo forçado** com filtro IIR desligado, porque o modo
   contínuo auto-aquece o sensor em ~1 °C — inaceitável para detectar geada.
 
-O gateway é um fork de projeto de terceiros; os créditos estão em
+O gateway é de terceiros — [things4u/ESP-1ch-Gateway](https://github.com/things4u/ESP-1ch-Gateway),
+de Maarten Westenberg, licença MIT. Publicamos só os quatro arquivos que
+alteramos, com os créditos e o diff em
 [`gateway-1ch/README.md`](gateway-1ch/README.md).
 
 ## ⚠️ As chaves foram removidas

@@ -1,0 +1,191 @@
+# Alteracoes da Equipe 6 sobre o ESP-1ch-Gateway
+#
+# Base: https://github.com/things4u/ESP-1ch-Gateway  (commit 3b02352, v6.2.8)
+# Sao 4 arquivos; os mesmos estao inteiros em ESP-sc-gway/, ja alterados.
+#
+# A linha do wpa[] em configNode.h esta REDIGIDA: o original traz o SSID e a
+# senha do Wi-Fi em texto puro. Preencha com os seus antes de compilar.
+#
+# Para aplicar sobre uma copia limpa do upstream:
+#     git clone https://github.com/things4u/ESP-1ch-Gateway
+#     cd ESP-1ch-Gateway && cp -r src ESP-sc-gway && cd ESP-sc-gway
+#     git apply -p1 /caminho/alteracoes.patch
+#
+# Ou, mais simples: copie os quatro arquivos de ESP-sc-gway/ por cima.
+
+--- a/configGway.h
++++ b/configGway.h
+@@ -32,6 +32,24 @@
+ // how to set these #defines
+ //
+ // ========================================================================================
++//
++// GATEWAY EUI — nao existe #define para ele.
++//
++// O EUI e montado em runtime a partir do MAC da placa, inserindo DOIS BYTES
++// no meio (ver _udpSemtech.ino, sendPullData() e sendstat()):
++//
++//     MAC 3c:71:bf:6b:8d:c4  ->  EUI  3c71bf FFFF 6b8dc4
++//
++// ATENCAO: este fork usa 0xFF 0xFF como enchimento. A convencao mais comum na
++// literatura LoRaWAN e 0xFF 0xFE — se registrar 3c71bfFFFE6b8dc4 no ChirpStack,
++// o gateway conecta, manda pacote, e o servidor descarta tudo em silencio por
++// EUI desconhecido. Nao aparece erro na placa: o protocolo Semtech UDP nao tem
++// resposta negativa para gateway nao cadastrado.
++//
++// Para conferir o EUI da placa que esta na mesa, abra o Monitor Serial a 115200
++// no boot — a linha "Gateway ID: ..." e impressa em ESP-sc-gway.ino.
++//
++// ========================================================================================
+ 
+ 
+ // Define whether we should do a formatting of SPIFFS when starting the gateway
+@@ -87,7 +105,10 @@
+ // AS923		(Not Used)
+ // You can find the definitions in "loraModem.h" and frequencies in
+ // See https://www.thethingsnetwork.org/docs/lorawan/frequency-plans.html
+-#define EU863_870 1
++// Brasil usa LA915, derivado do AU915. A tabela de frequencias em loraModem.h
++// para AU925_928 comeca em 916.8 MHz, que no plano AU915 e o canal 8 — ou seja,
++// SUB-BANDA 2. Por isso o ChirpStack precisa estar na regiao "au915_1".
++#define AU925_928 1
+  
+ 
+ // Define the CLASS mode of the gateway
+@@ -116,8 +137,10 @@
+ // This parameters contains the default value of SF, the actual version can be set with
+ // the webserver and it will be stored in SPIFF
+ // NOTE: The frequency is set in the loraModem.h file and is default 868100000 Hz.
++// SF7 para casar com o no (_SF_TRABALHO = DR_SF7 no firmware do sensor).
++// Gateway de canal unico so recebe se frequencia E spreading factor baterem.
+ #if !defined _SPREADING
+-#	define _SPREADING SF9
++#	define _SPREADING SF7
+ #endif
+ 
+ // Channel Activity Detection
+@@ -167,7 +190,7 @@
+ //	4: ESP32, Heltec and TTGO pin out (should work for Heltec, 433 and Oled too).
+ //	5: Other, define your own in loraModem.h (does not include GPS Code)
+ #if !defined _PIN_OUT
+-#	define _PIN_OUT 1
++#	define _PIN_OUT 4			// 4 = Heltec/TTGO ESP32 (nossa Heltec WiFi LoRa 32 V2)
+ #endif
+ 
+ 
+@@ -263,9 +286,13 @@
+ 
+ 
+ // ntp
+-// Please add daylight saving time to NTP_TIMEZONES when desired
+-#define NTP_TIMESERVER "nl.pool.ntp.org"	// Country and region specific
+-#define NTP_TIMEZONES	2					// How far is our Timezone from UTC (excl daylight saving/summer time)
++// Em area isolada nao ha internet: o servidor de horario e a propria TV Box
++// (chrony servindo a rede local). Usamos o mesmo host do servidor LoRaWAN,
++// entao basta trocar o IP em um lugar so (_TTNSERVER, mais abaixo).
++// IMPORTANTE: mantenha igual ao _TTNSERVER (linha ~386). Se trocar de rede
++// (ex.: para o AP da box, 192.168.4.1), altere nos DOIS lugares.
++#define NTP_TIMESERVER "192.168.4.1"		// era "nl.pool.ntp.org"
++#define NTP_TIMEZONES	-3					// Brasil (UTC-3); o valor 2 original era da Holanda
+ #define SECS_IN_HOUR	3600
+ #define _NTP_INTR 0							// Do NTP processing with interrupts or in loop();
+ 
+@@ -372,10 +399,14 @@
+ // and need no changing. When _REPEATER function is selected, we do not
+ // use the backend function to send message to server over MQTT.
+ #if _REPEATER==0
+-// TTN Version 2:
+-//#	define _TTNSERVER "router.eu.thethings.network"
+-//
+-// TTN Version 3:
+-#	define _TTNSERVER "eu1.cloud.thethings.network"	
+-#	define _TTNPORT 1700							// Standard port for TTN
++// Servidor primario: o ChirpStack Gateway Bridge rodando na TV Box.
++// O protocolo aqui e o Semtech UDP (packet forwarder), nao MQTT — quem publica
++// no MQTT e o Gateway Bridge, ja dentro da box.
++// IP fixo da box no modo AP; ajuste se usar outra rede.
++#	define _TTNSERVER "192.168.4.1"
++#	define _TTNPORT 1700							// porta UDP do Gateway Bridge
++
++// Servidores originais do TTN, mantidos como referencia:
++//#	define _TTNSERVER "router.eu.thethings.network"		// TTN v2
++//#	define _TTNSERVER "eu1.cloud.thethings.network"		// TTN v3
+ #endif
+--- a/configNode.h
++++ b/configNode.h
+@@ -98,6 +98,7 @@
+ // below. This is needed to get the gateway working
+ //
+ wpas wpa[] = {
++	{ "SEU-SSID",          "SUA-SENHA" },     // REDIGIDO: ver README
+ };
+ 
+ 
+@@ -119,12 +120,20 @@
+ 
+ 
+ // Gateway Ident definitions. Where is the gateway located?
+-#define _DESCRIPTION "ESP Gateway"			// Name of the gateway
+-#define _EMAIL "mw12554@hotmail.com"		// Owner
+-#define _PLATFORM "ESP8266"
+-#define _LAT 52.237367
+-#define _LON 5.978654
+-#define _ALT 14								// Altitude
++// Estes campos sobem no pacote de status (PUSH_DATA) e aparecem na ficha do
++// gateway no ChirpStack. Estavam com os valores do autor original do projeto
++// (Maarten Westenberg, Holanda) — trocados pelos nossos.
++//
++// O Gateway EUI nao se define aqui: e montado em runtime a partir do MAC da
++// placa, em _udpSemtech.ino. Ver comentario no topo de configGway.h.
++#define _DESCRIPTION "EdgeVision GW1"		// Name of the gateway
++#define _EMAIL "guilobo3101@gmail.com"		// Owner
++#define _PLATFORM "ESP32"					// Heltec WiFi LoRa 32 V2
++// Aproximado (Sorocaba/SP). Ajustar para o ponto real de instalacao — so afeta
++// o pino no mapa do ChirpStack, nao o funcionamento do radio.
++#define _LAT -23.50
++#define _LON -47.45
++#define _ALT 600							// Altitude
+ 
+ 
+ // For asserting and testing the following defines are used.
+@@ -133,4 +142,4 @@
+ #define ASSERT(cond) if(!(cond)) gway_failed(__FILE__, __LINE__)
+ #else
+ #define ASSERT(cond) /**/
+-#endif
+\ No newline at end of file
++#endif
+--- a/ESP-sc-gway.ino
++++ b/ESP-sc-gway.ino
+@@ -79,7 +79,13 @@
+ #	include <WiFi.h>
+ #	include <ESPmDNS.h>
+ #	include <SPIFFS.h>
+-#	include <WiFiManager.h>									// Standard lib for ESP WiFi config through an AP
++	// O include precisa respeitar _WIFIMANAGER. Sem a guarda a biblioteca era
++	// compilada mesmo desligada, e quebra no core ESP32 2.x (a assinatura de
++	// WiFi.onEvent mudou). Com as credenciais fixas em wpa[], o portal de
++	// configuracao e desnecessario.
++#	if _WIFIMANAGER==1
++#		include <WiFiManager.h>								// Standard lib for ESP WiFi config through an AP
++#	endif
+ 
+ #	define ESP_getChipId()   ((uint32_t)ESP.getEfuseMac())
+ 
+--- a/_txRx.ino
++++ b/_txRx.ino
+@@ -654,7 +654,13 @@
+ #else 
+ // _JSONENCODE undefined, this is default
+ // ---------------------------------------
+-	ftoa((double)freqs[gwayConfig.ch].upFreq / 1000000, cfreq, 6);		// XXX This can be done better
++	// Formatacao exata por aritmetica inteira, sem passar por ponto flutuante.
++	// O ftoa() recebe float de 32 bits, que nao representa 916.8 com precisao
++	// suficiente: o valor virava "916.799987" e o servidor de rede rejeitava o
++	// uplink com "No channel found for frequency: 916799987".
++	snprintf(cfreq, sizeof(cfreq), "%lu.%06lu",
++	         (unsigned long)(freqs[gwayConfig.ch].upFreq / 1000000),
++	         (unsigned long)(freqs[gwayConfig.ch].upFreq % 1000000));
+ 	if ((LoraUp->sf<6) || (LoraUp->sf>12)) { 							// Lora datarate & bandwidth SF6-SF12, 16-19 useful chars */
+ 		LoraUp->sf=7;
+ 	}			
