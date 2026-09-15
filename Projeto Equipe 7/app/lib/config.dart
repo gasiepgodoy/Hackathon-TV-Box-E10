@@ -20,7 +20,11 @@ const String mediaUser = 'app';
 class CamInfo {
   final String name;
   final String path;
-  const CamInfo(this.name, this.path);
+  // Taxa de bits da câmera, usada para estimar o tamanho de um download antes
+  // de começá-lo — meia hora de vídeo passa de 200 MB, e no celular isso
+  // merece aviso.
+  final int kbps;
+  const CamInfo(this.name, this.path, {this.kbps = 0});
 }
 
 const List<CamInfo> cameras = [

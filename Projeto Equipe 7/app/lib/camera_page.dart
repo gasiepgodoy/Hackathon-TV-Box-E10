@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'config.dart';
@@ -99,7 +102,8 @@ class _CameraPageState extends State<CameraPage> {
       final list = (data['cameras'] as List).map((e) {
         final m = e as Map<String, dynamic>;
         return CamInfo(m['name']?.toString() ?? 'Câmera',
-            m['path']?.toString() ?? 'cam');
+            m['path']?.toString() ?? 'cam',
+            kbps: (m['kbps'] as num?)?.toInt() ?? 0);
       }).toList();
       if (mounted) {
         setState(() {
@@ -453,10 +457,89 @@ class _CameraPageState extends State<CameraPage> {
     await _seekTo(t); // já trata "sem gravação neste horário"
   }
 
-  // Data e hora até o minuto. Os limites do calendário são o período de fato
-  // guardado, então não dá para escolher um dia que não existe na gravação.
+  // Ir para uma data e hora escolhidas.
   Future<void> _escolherMomento() async {
-    final base = _live ? _rangeEnd : _centerTime;
+    final t = await _pedirMomento(_live ? _rangeEnd : _centerTime);
+    if (t == null || !mounted) return;
+    await _irPara(t);
+  }
+
+  // Escolhe um trecho e baixa. A duração é fixa em opções porque a box tem
+  // teto de 30 min por pedido: deixar digitar convidaria a pedir duas horas e
+  // receber meia sem explicação.
+  Future<void> _baixarTrecho() async {
+    var inicio = _live ? _rangeEnd.subtract(const Duration(minutes: 5)) : _centerTime;
+    var minutos = 5;
+
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Baixar trecho'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.schedule),
+              title: const Text('Começa em'),
+              subtitle: Text(_fmtDT(inicio)),
+              trailing: const Icon(Icons.edit, size: 18),
+              onTap: () async {
+                final t = await _pedirMomento(inicio);
+                if (t != null) setLocal(() => inicio = t);
+              },
+            ),
+            const SizedBox(height: 8),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Duração', style: TextStyle(fontSize: 13)),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final m in const [1, 5, 15, 30])
+                  ChoiceChip(
+                    label: Text('$m min'),
+                    selected: minutos == m,
+                    onSelected: (_) => setLocal(() => minutos = m),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+                'Termina em ${_fmtDT(inicio.add(Duration(minutes: minutos)))}'
+                '${_tamanhoEstimado(minutos)}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Baixar')),
+          ],
+        ),
+      ),
+    );
+    if (confirmou != true || !mounted) return;
+    await _executarDownload(inicio, minutos * 60);
+  }
+
+  // Aviso de tamanho antes de baixar. Vazio quando a taxa da câmera não veio,
+  // porque um número inventado seria pior que nenhum.
+  String _tamanhoEstimado(int minutos) {
+    final kbps = _cam.kbps;
+    if (kbps <= 0) return '';
+    final mb = kbps * 1000 / 8 * 60 * minutos / 1048576;
+    return mb >= 1024
+        ? '  ·  ~${(mb / 1024).toStringAsFixed(1)} GB'
+        : '  ·  ~${mb.round()} MB';
+  }
+
+  // Data e hora até o minuto, dentro do período guardado. Usado pelo download
+  // e pelo botão de ir para uma data.
+  Future<DateTime?> _pedirMomento(DateTime base) async {
     final inicial = base.isBefore(_rangeStart)
         ? _rangeStart
         : (base.isAfter(_rangeEnd) ? _rangeEnd : base);
@@ -465,17 +548,75 @@ class _CameraPageState extends State<CameraPage> {
       initialDate: inicial,
       firstDate: _rangeStart,
       lastDate: _rangeEnd,
-      helpText: 'Ir para a data',
+      helpText: 'Escolha o dia',
     );
-    if (dia == null || !mounted) return;
+    if (dia == null || !mounted) return null;
     final hora = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(inicial),
-      helpText: 'Ir para o horário',
+      helpText: 'Escolha o horário',
     );
-    if (hora == null || !mounted) return;
-    await _irPara(
-        DateTime(dia.year, dia.month, dia.day, hora.hour, hora.minute));
+    if (hora == null) return null;
+    return DateTime(dia.year, dia.month, dia.day, hora.hour, hora.minute);
+  }
+
+  Future<void> _executarDownload(DateTime inicio, int segundos) async {
+    final notificador = ValueNotifier<String>('preparando...');
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(children: [
+          const CircularProgressIndicator(),
+          const SizedBox(width: 16),
+          Expanded(
+            child: ValueListenableBuilder<String>(
+              valueListenable: notificador,
+              builder: (contexto, txt, _) => Text(txt),
+            ),
+          ),
+        ]),
+      ),
+    );
+
+    String two(int n) => n.toString().padLeft(2, '0');
+    final l = inicio.toLocal();
+    final nome = 'secbox_${_cam.path}_${l.year}${two(l.month)}${two(l.day)}'
+        '_${two(l.hour)}${two(l.minute)}.mp4';
+    final dir = await getTemporaryDirectory();
+    final destino = '${dir.path}/$nome';
+
+    final ok = await ApiService.baixarClipe(
+      path: _cam.path,
+      inicio: inicio,
+      segundos: segundos,
+      destino: destino,
+      token: _mediaTok,
+      progresso: (recebidos, total) {
+        final mb = (recebidos / 1048576).toStringAsFixed(1);
+        notificador.value = total != null && total > 0
+            ? 'baixando $mb MB de ${(total / 1048576).toStringAsFixed(1)} MB'
+            : 'baixando $mb MB';
+      },
+    );
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // fecha o progresso
+    notificador.dispose();
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Não foi possível baixar esse trecho.')));
+      return;
+    }
+    // Vai para a pasta temporária e sai daqui pelo compartilhamento: é o que
+    // deixa o usuário escolher onde guardar sem o app precisar de permissão
+    // de armazenamento.
+    final tam = await File(destino).length();
+    await SharePlus.instance.share(ShareParams(
+      files: [XFile(destino, mimeType: 'video/mp4')],
+      text: '${widget.name} — ${_fmtDT(inicio)} '
+          '(${(tam / 1048576).toStringAsFixed(1)} MB)',
+    ));
   }
 
   // Dia por extenso para a etiqueta da régua. Com zoom dentro de um mesmo dia
@@ -567,6 +708,29 @@ class _CameraPageState extends State<CameraPage> {
                           if (_video?.value.isBuffering ?? false)
                             const CircularProgressIndicator(
                                 color: Colors.white70),
+                          // Relógio do trecho em exibição. Só existe na
+                          // gravação: ao vivo ele mostraria a hora do celular,
+                          // que continuaria correndo mesmo com a imagem
+                          // congelada — indicador que mente é pior que nenhum.
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: IgnorePointer(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.55),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _fmtDT(_shown ?? _chunkStart ?? _centerTime),
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ),
                         ])
                       : Center(
                           child: Text(
@@ -626,6 +790,12 @@ class _CameraPageState extends State<CameraPage> {
               const Text(' offline',
                   style: TextStyle(color: Colors.white54, fontSize: 11)),
               const Spacer(),
+              IconButton(
+                tooltip: 'Baixar um trecho',
+                onPressed: _loadingList ? null : _baixarTrecho,
+                icon: const Icon(Icons.download, color: Colors.white70),
+                visualDensity: VisualDensity.compact,
+              ),
               IconButton(
                 tooltip: 'Ir para data e hora',
                 onPressed: _loadingList ? null : _escolherMomento,

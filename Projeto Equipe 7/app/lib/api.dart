@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'config.dart';
 
@@ -144,6 +145,56 @@ class ApiService {
   }
 
   // Cabeçalho de acesso aos serviços da box. O token vem de deviceToken().
+  // Baixa um trecho gravado como MP4, em fluxo, informando o progresso.
+  //
+  // O token vai no CABEÇALHO, e não na query como o player faz: aqui o arquivo
+  // acaba compartilhado com outra pessoa ou aplicativo, e uma URL com token
+  // dentro sobreviveria em histórico e lista de recentes.
+  //
+  // Sem timeout curto de propósito: a box remuxa o trecho antes de mandar o
+  // primeiro byte, e meia hora de vídeo leva um tempo nisso.
+  static Future<bool> baixarClipe({
+    required String path,
+    required DateTime inicio,
+    required int segundos,
+    required String destino,
+    String? token,
+    void Function(int recebidos, int? total)? progresso,
+  }) async {
+    final uri = Uri.parse('$clipBase/clip').replace(queryParameters: {
+      'path': path,
+      'start': inicio.toUtc().toIso8601String(),
+      'duration': segundos.toString(),
+    });
+    final cliente = http.Client();
+    IOSink? saida;
+    try {
+      final req = http.Request('GET', uri)..headers.addAll(_midia(token));
+      final resp = await cliente.send(req);
+      if (resp.statusCode != 200) return false;
+      final arq = File(destino);
+      saida = arq.openWrite();
+      var recebidos = 0;
+      await for (final pedaco in resp.stream) {
+        saida.add(pedaco);
+        recebidos += pedaco.length;
+        progresso?.call(recebidos, resp.contentLength);
+      }
+      await saida.flush();
+      await saida.close();
+      saida = null;
+      // Arquivo vazio é falha silenciosa do remux; não vale entregar.
+      return await arq.length() > 0;
+    } catch (_) {
+      try {
+        await saida?.close();
+      } catch (_) {}
+      return false;
+    } finally {
+      cliente.close();
+    }
+  }
+
   static Map<String, String> _midia(String? token) =>
       token == null ? {} : {'Authorization': 'Bearer $token'};
 
