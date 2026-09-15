@@ -202,11 +202,35 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       itemCount: events.length,
                       itemBuilder: (_, i) {
                         final e = events[i] as Map<String, dynamic>;
+                        final tipo = e['type']?.toString() ?? '';
+                        final quando = DateTime.tryParse(
+                            e['created_at']?.toString() ?? '');
+                        // Só movimento leva à régua: é o único evento que
+                        // corresponde a um trecho que vale assistir.
+                        final temVideo = tipo == 'movimento' && quando != null;
                         return ListTile(
                           dense: true,
-                          leading: const Icon(Icons.bolt, size: 18),
-                          title: Text('${e['module']}: ${e['type']}'),
+                          leading: Icon(
+                              temVideo ? Icons.directions_run : Icons.bolt,
+                              size: 18),
+                          title: Text('${e['module']}: $tipo'),
                           subtitle: Text('${e['created_at']}'),
+                          trailing: temVideo
+                              ? const Icon(Icons.play_circle_outline, size: 20)
+                              : null,
+                          onTap: temVideo
+                              ? () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CameraPage(
+                                        name: widget.name,
+                                        token: widget.token,
+                                        deviceId: widget.deviceId,
+                                        irPara: quando.toLocal(),
+                                      ),
+                                    ),
+                                  )
+                              : null,
                         );
                       },
                     ),

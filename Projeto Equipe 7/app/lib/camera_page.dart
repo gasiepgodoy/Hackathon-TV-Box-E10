@@ -18,11 +18,15 @@ class CameraPage extends StatefulWidget {
   final String name;
   final String token;
   final String deviceId;
+  // Abre direto num instante em vez de ao vivo. Usado ao tocar num evento de
+  // movimento na lista: leva a régua e o vídeo para a hora do disparo.
+  final DateTime? irPara;
   const CameraPage({
     super.key,
     required this.name,
     required this.token,
     required this.deviceId,
+    this.irPara,
   });
   @override
   State<CameraPage> createState() => _CameraPageState();
@@ -64,6 +68,7 @@ class _CameraPageState extends State<CameraPage> {
   // reporta posição e puxaria a régua de volta para o horário anterior.
   bool _seeking = false;
   DateTime? _shown; // último horário exibido, para filtrar recuos espúrios
+  DateTime? _alvoInicial; // destino pedido ao abrir a tela, se houver
 
   // Token de mídia da box, buscado no servidor com a sessão do usuário.
   String? _mediaTok;
@@ -71,6 +76,7 @@ class _CameraPageState extends State<CameraPage> {
   @override
   void initState() {
     super.initState();
+    _alvoInicial = widget.irPara;
     _iniciar();
     _eventTimer =
         Timer.periodic(const Duration(seconds: 30), (_) => _loadEvents());
@@ -113,9 +119,12 @@ class _CameraPageState extends State<CameraPage> {
     final marks = <DateTime>[];
     for (final e in evs) {
       final m = e as Map<String, dynamic>;
-      if (m['module'] == 'alarme') {
+      // Só movimento. Câmera caindo e voltando, sirene e recuperação de rede
+      // também chegam como evento, e marcá-los aqui enchia a régua de traços
+      // que não correspondem a nada para assistir.
+      if (m['type'] == 'movimento') {
         final t = DateTime.tryParse(m['created_at']?.toString() ?? '');
-        if (t != null) marks.add(t);
+        if (t != null) marks.add(t.toLocal());
       }
     }
     if (mounted) setState(() => _motionMarks = marks);
@@ -143,7 +152,14 @@ class _CameraPageState extends State<CameraPage> {
         _loadingList = false;
       });
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        if (!_scroll.hasClients) return;
+        final alvo = _alvoInicial;
+        if (alvo != null) {
+          _alvoInicial = null;   // só na primeira carga; depois manda o usuário
+          _irPara(alvo);
+        } else {
+          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        }
       });
     }
   }
@@ -419,6 +435,59 @@ class _CameraPageState extends State<CameraPage> {
     _loadList();
   }
 
+  // Leva régua e vídeo a um instante. É o primitivo por trás das duas formas
+  // de chegar num horário: tocar num evento e digitar a data.
+  Future<void> _irPara(DateTime alvo) async {
+    final t = alvo.toLocal();
+    if (t.isBefore(_rangeStart) || t.isAfter(_rangeEnd)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${_fmtDT(t)} está fora do período guardado')));
+      }
+      return;
+    }
+    if (_scroll.hasClients) {
+      _scroll.jumpTo(
+          _timeToOffset(t).clamp(0.0, _scroll.position.maxScrollExtent));
+    }
+    await _seekTo(t); // já trata "sem gravação neste horário"
+  }
+
+  // Data e hora até o minuto. Os limites do calendário são o período de fato
+  // guardado, então não dá para escolher um dia que não existe na gravação.
+  Future<void> _escolherMomento() async {
+    final base = _live ? _rangeEnd : _centerTime;
+    final inicial = base.isBefore(_rangeStart)
+        ? _rangeStart
+        : (base.isAfter(_rangeEnd) ? _rangeEnd : base);
+    final dia = await showDatePicker(
+      context: context,
+      initialDate: inicial,
+      firstDate: _rangeStart,
+      lastDate: _rangeEnd,
+      helpText: 'Ir para a data',
+    );
+    if (dia == null || !mounted) return;
+    final hora = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(inicial),
+      helpText: 'Ir para o horário',
+    );
+    if (hora == null || !mounted) return;
+    await _irPara(
+        DateTime(dia.year, dia.month, dia.day, hora.hour, hora.minute));
+  }
+
+  // Dia por extenso para a etiqueta da régua. Com zoom dentro de um mesmo dia
+  // a régua só mostra horas, e sem isto não há como saber que dia se está
+  // vendo.
+  String _fmtDia(DateTime t) {
+    const semana = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+    final l = t.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${semana[l.weekday - 1]}, ${two(l.day)}/${two(l.month)}';
+  }
+
   String _fmtDT(DateTime t) {
     final l = t.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');
@@ -558,6 +627,12 @@ class _CameraPageState extends State<CameraPage> {
                   style: TextStyle(color: Colors.white54, fontSize: 11)),
               const Spacer(),
               IconButton(
+                tooltip: 'Ir para data e hora',
+                onPressed: _loadingList ? null : _escolherMomento,
+                icon: const Icon(Icons.event, color: Colors.white70),
+                visualDensity: VisualDensity.compact,
+              ),
+              IconButton(
                 onPressed: () => _zoom(0.5),
                 icon: const Icon(Icons.zoom_out, color: Colors.white70),
                 visualDensity: VisualDensity.compact,
@@ -606,6 +681,26 @@ class _CameraPageState extends State<CameraPage> {
                         IgnorePointer(
                           child: Container(
                               width: 2, height: 74, color: Colors.redAccent),
+                        ),
+                        // O dia que está sob a agulha. A régua sozinha mostra
+                        // só horas, e com zoom num dia só não haveria como
+                        // saber de que dia se trata.
+                        Positioned(
+                          left: 8,
+                          top: 4,
+                          child: IgnorePointer(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(_fmtDia(_centerTime),
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 11)),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -673,14 +768,26 @@ class _RulerPainter extends CustomPainter {
       final x = (e - startEpoch) * pxPerSec;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height * 0.35), tick);
       final t = DateTime.fromMillisecondsSinceEpoch(e * 1000).toLocal();
+      final ant =
+          DateTime.fromMillisecondsSinceEpoch((e - step) * 1000).toLocal();
       String two(int n) => n.toString().padLeft(2, '0');
-      final label = step >= 86400
+      // Virada de dia ganha traço inteiro e a data no lugar da hora: rolando a
+      // régua, é onde se percebe que se mudou de dia.
+      final virada = t.day != ant.day;
+      if (virada) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height * 0.85),
+            Paint()..color = Colors.white30);
+      }
+      final label = (step >= 86400 || virada)
           ? '${two(t.day)}/${two(t.month)}'
           : '${two(t.hour)}:${two(t.minute)}';
       final tp = TextPainter(
         text: TextSpan(
             text: label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10)),
+            style: TextStyle(
+                color: virada ? Colors.white : Colors.white54,
+                fontSize: 10,
+                fontWeight: virada ? FontWeight.bold : FontWeight.normal)),
         textDirection: TextDirection.ltr,
       )..layout();
       tp.paint(canvas, Offset(x + 2, size.height * 0.36));

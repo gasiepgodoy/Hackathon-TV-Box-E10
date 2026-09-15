@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'session.dart';
 import 'login_page.dart';
 import 'devices_page.dart';
@@ -18,6 +19,16 @@ class SecBoxApp extends StatelessWidget {
       title: 'SecBox',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      // O app é todo em português, mas os seletores de data e hora são widgets
+      // do sistema: sem declarar o idioma eles saem em inglês, e o de hora vem
+      // em AM/PM. Como pt_BR é o único suportado, qualquer idioma do aparelho
+      // resolve para ele.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('pt', 'BR')],
       home: const RootPage(),
     );
   }
