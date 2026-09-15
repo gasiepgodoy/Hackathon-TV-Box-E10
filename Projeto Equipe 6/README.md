@@ -30,6 +30,7 @@ A mesma base serve ao monitoramento ambiental: microclima de mata, nascentes e
 - [`systemd/`](systemd/) — serviços do coletor e do exportador, timers do ciclo e da purga
 - [`config/`](config/) — arquivo de configuração de exemplo
 - [`node-red/`](node-red/) — dashboard de visualização e teste, com [instruções próprias](node-red/README.md)
+- [`firmware/`](firmware/) — código das placas Heltec usadas nos testes (nó e gateway)
 - [`tests/`](tests/) — 41 testes, sem dependências externas
 - [`docs/arquitetura.md`](docs/arquitetura.md) — decisões e alternativas descartadas
 - [`assets/`](assets/) — logotipo (versões clara, escura e só o símbolo)
@@ -173,11 +174,17 @@ significa que
   arm64 — roda igual num Raspberry Pi, num mini-PC x86 ou noutra box. A escolha
   da BTV E10 é o ponto do projeto: reaproveitar hardware ocioso e barato;
 - **o gateway de canal único pode virar um de 8 canais** (SX1302, tipo RAK2287)
-  sem alterar uma linha. É o que uma implantação real usaria.
+  sem alterar uma linha. É o que uma implantação real usaria — e com ele somem
+  as restrições que o canal único impõe: o nó deixa de precisar de canal fixo, o
+  OTAA volta a funcionar e os downlinks ficam confiáveis.
 
 Trocar qualquer item acima muda o custo e o alcance, não a arquitetura. O que
 definimos foi o formato dos dados e o caminho que eles percorrem — a peça que
 entrega a medida é substituível por natureza.
+
+O código que rodou nas placas Heltec está em [`firmware/`](firmware/), com os
+créditos e a ressalva de que serve para **os testes**: o hub na TV Box funciona
+igual com um gateway LoRaWAN de verdade no lugar dele.
 
 ## Por que SQLite
 
@@ -217,7 +224,8 @@ em eventos rápidos, mas produz poucas amostras em ambiente estável.
 
 **BME280 (LoRa) — intervalo configurável no firmware do nó.** Aqui você decide a
 cadência, equilibrando resolução contra autonomia de bateria e tempo de ar. O
-valor está na constante `TX_INTERVAL` do sketch do nó, hoje 60 s.
+valor está na constante `TX_INTERVAL` do
+[sketch do nó](firmware/no-lora/no-lora-bme280.ino), hoje 60 s.
 
 O nó envia JSON com chaves de uma letra, por exemplo:
 
@@ -351,9 +359,10 @@ O coletor assina dois padrões de tópico e normaliza tudo para o mesmo formato:
 
 Nos uplinks LoRaWAN, o coletor usa o campo `object` quando há um **codec**
 configurado no Device Profile do ChirpStack. Sem codec, ele decodifica o `data`
-em base64 e tenta interpretá-lo como JSON — que é o formato que o firmware do nó
-envia hoje. Se o payload for binário, o `espiar` avisa que falta configurar o
-codec.
+em base64 e tenta interpretá-lo como JSON — que é o formato que o
+[firmware do nó](firmware/no-lora/no-lora-bme280.ino) envia hoje. Se o payload
+for binário, o `espiar` avisa que falta configurar o codec (há um pronto em
+[`firmware/no-lora/codec-chirpstack.js`](firmware/no-lora/codec-chirpstack.js)).
 
 A coluna `sensores.transporte` registra a origem (`zigbee` ou `lora`), o que
 permite calibrar limiares por tipo — os dois têm cadências muito diferentes.
