@@ -112,13 +112,6 @@ def heartbeat(client):
                        json.dumps({"ts": int(time.time())}), qos=0)
         time.sleep(30)
 
-def notify_enabled(key):
-    try:
-        s = json.load(open(f"{BASE}/camera-settings.json"))
-        return bool(s.get("notify", {}).get(key, True))
-    except Exception:
-        return True
-
 def camera_watch(client):
     # Avisa quando uma câmera some ou volta. A referência é o cameras.json, que
     # o gen-cameras.py reescreve a cada 30s com o que está de fato conectado.
@@ -131,7 +124,11 @@ def camera_watch(client):
         except Exception:
             time.sleep(15)
             continue
-        if known is not None and cur != known and notify_enabled("camera_offline"):
+        # Publica sempre. Quem quer ou nao quer ser avisado e escolha de cada
+        # celular, e mora no servidor (push_tokens.notify) -- aqui nao ha como
+        # saber de quem e o telefone. O evento tambem alimenta o historico, que
+        # deve ser completo independentemente de quem pediu push.
+        if known is not None and cur != known:
             for cid, name in known.items():
                 if cid not in cur:
                     publish_event(client, "camera", "camera_offline",

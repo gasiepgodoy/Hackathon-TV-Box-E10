@@ -26,6 +26,17 @@ class PushService {
         .listen((t) => ApiService.registerPush(sessionToken, t));
   }
 
+  // Identidade DESTE celular para as preferências de notificação: é o mesmo
+  // token que o servidor já guarda como chave em push_tokens, então não foi
+  // preciso inventar um id de aparelho.
+  static Future<String?> currentToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Chamado ao sair da conta, antes de descartar a sessão: o servidor precisa
   // do token de sessão para saber de quem é o aparelho.
   static Future<void> unregister(String sessionToken) async {

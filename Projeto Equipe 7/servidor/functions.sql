@@ -85,6 +85,41 @@ BEGIN
     RETURN 'ok';
 END; $$ LANGUAGE plpgsql;
 
+-- Preferências de notificação DESTE celular. A identidade do aparelho é o
+-- próprio token FCM, que já é a chave primária de push_tokens -- não foi
+-- preciso inventar um id de celular.
+--
+-- A sessão precisa ser dona do token: sem isso, quem soubesse o token FCM de
+-- outra pessoa silenciaria as notificações dela.
+CREATE OR REPLACE FUNCTION set_push_notify(p_session TEXT, p_fcm TEXT, p_notify JSONB)
+RETURNS TEXT AS $$
+DECLARE v_user BIGINT;
+BEGIN
+    v_user := user_from_token(p_session);
+    IF v_user IS NULL THEN RETURN 'unauthorized'; END IF;
+    UPDATE push_tokens SET notify = coalesce(p_notify, '{}'::jsonb)
+        WHERE fcm_token = p_fcm AND user_id = v_user;
+    IF NOT FOUND THEN RETURN 'not_registered'; END IF;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;
+
+-- Devolve um objeto com status junto para o flow distinguir "sessão inválida"
+-- de "este celular ainda não registrou preferência" -- que são 401 e 200 com
+-- os padrões, e não a mesma coisa.
+CREATE OR REPLACE FUNCTION push_notify(p_session TEXT, p_fcm TEXT)
+RETURNS JSONB AS $$
+DECLARE v_user BIGINT; v_notify JSONB; v_achou BOOLEAN;
+BEGIN
+    v_user := user_from_token(p_session);
+    IF v_user IS NULL THEN RETURN jsonb_build_object('status', 'unauthorized'); END IF;
+    SELECT notify INTO v_notify FROM push_tokens
+        WHERE fcm_token = p_fcm AND user_id = v_user;
+    v_achou := FOUND;
+    RETURN jsonb_build_object('status', 'ok',
+                              'registered', v_achou,
+                              'notify', coalesce(v_notify, '{}'::jsonb));
+END; $$ LANGUAGE plpgsql;
+
 -- claim_device: valida o token de pareamento E o segredo de fábrica, e vincula
 -- o aparelho ao dono.
 --

@@ -94,6 +94,42 @@ class ApiService {
   }
 
   // Ao sair da conta: sem isto o aparelho continuaria recebendo os alertas.
+  // Preferencias de notificacao DESTE celular. Nao vao para a TV box: la o
+  // arquivo e unico para todos os aparelhos, e silenciar o aviso num telefone
+  // silenciava em todos. A identidade do celular e o proprio token FCM.
+  static Future<Map<String, dynamic>?> pushNotify(
+      String token, String fcmToken) async {
+    try {
+      final r = await http.get(
+        Uri.parse('$apiBase/push-notify')
+            .replace(queryParameters: {'fcm_token': fcmToken}),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(_timeout);
+      if (r.statusCode != 200) return null;
+      final d = jsonDecode(r.body);
+      return d is Map<String, dynamic> ? d : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<bool> setPushNotify(
+      String token, String fcmToken, Map<String, bool> notify) async {
+    try {
+      final r = await http.post(
+        Uri.parse('$apiBase/push-notify'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'fcm_token': fcmToken, 'notify': notify}),
+      ).timeout(_timeout);
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> unregisterPush(String token, String fcmToken) async {
     try {
       await http.post(

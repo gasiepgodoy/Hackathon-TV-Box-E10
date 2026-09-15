@@ -61,6 +61,18 @@ CREATE TABLE push_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Preferências de notificação POR CELULAR, e não por aparelho vigiado.
+--
+-- Antes elas moravam no camera-settings.json da TV box, que é um arquivo só
+-- para todos: silenciar movimento num celular silenciava em todos os outros.
+-- Qualidade e fps continuam lá — são propriedades da câmera e devem mesmo ser
+-- compartilhadas. Já "quero ser avisado" é de quem segura o telefone.
+--
+-- JSONB para novos tipos de aviso não exigirem migração. Chave ausente
+-- significa "quer receber": celular antigo, que nunca escreveu preferência,
+-- continua recebendo tudo.
+ALTER TABLE push_tokens ADD COLUMN IF NOT EXISTS notify JSONB NOT NULL DEFAULT '{}'::jsonb;
+
 -- Marca se o dono provou controlar a caixa de e-mail. Contas antigas ficam
 -- como não verificadas; o app avisa, mas o login continua funcionando.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;

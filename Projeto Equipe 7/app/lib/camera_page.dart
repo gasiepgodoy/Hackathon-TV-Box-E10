@@ -456,7 +456,9 @@ class _CameraPageState extends State<CameraPage> {
               await Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => CameraSettingsPage(token: _mediaTok)));
+                      builder: (_) => CameraSettingsPage(
+                          token: _mediaTok,
+                          sessionToken: widget.token)));
               _loadCameras(); // a qualidade pode ter mudado
             },
           ),

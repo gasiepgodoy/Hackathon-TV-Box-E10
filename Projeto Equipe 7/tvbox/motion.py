@@ -89,15 +89,6 @@ def anotar(path, tipo, quando=None):
             print("registro de movimento falhou:", e, flush=True)
 
 
-def notificar_movimento():
-    """Se o aviso ao celular está ligado.
-
-    Lido no disparo, e não na criação do detector, para o usuário mudar isso
-    no app sem precisar que o detector reinicie.
-    """
-    return load_settings()["notify"].get("motion", True)
-
-
 def detect(path, name, thresh, stop):
     cmd = ["ffmpeg", "-loglevel", "quiet", "-rtsp_transport", "tcp",
            "-i", f"{RTSP_BASE}/{path}",
@@ -129,14 +120,13 @@ def detect(path, name, thresh, stop):
                     except OSError as e:
                         print("gatilho falhou:", e, flush=True)
                     anotar(path, "m", now)
-                    # O gatilho da sirene (acima) e o registro para o descarte
-                    # de gravação acontecem SEMPRE que há detecção. Só o aviso
-                    # ao celular obedece a notify.motion: silenciar o push não
-                    # pode desligar o alarme nem a gravação por movimento.
-                    if notificar_movimento():
-                        client.publish(TOPIC, json.dumps(
-                            {"type": "movimento", "camera": path, "name": name,
-                             "score": round(score, 1)}), qos=1)
+                    # Publica sempre. Quem quer ser avisado e escolha de cada
+                    # celular, e mora no servidor (push_tokens.notify): aqui a
+                    # box nao sabe de quem e o telefone, e a preferencia global
+                    # que morava neste arquivo silenciava todo mundo de uma vez.
+                    client.publish(TOPIC, json.dumps(
+                        {"type": "movimento", "camera": path, "name": name,
+                         "score": round(score, 1)}), qos=1)
                     print("Movimento em %s (score %.1f)" % (name, score),
                           flush=True)
             prev = buf

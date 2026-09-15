@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'api.dart';
+import 'push_service.dart';
 
 // Configuração das câmeras: qualidade e por quanto tempo guardar a gravação.
 // A cada ajuste mostra quanto espaço a escolha exige e se cabe no cartão.
 class CameraSettingsPage extends StatefulWidget {
   // Token de mídia da box; sem ele a 9997 responde 401.
   final String? token;
-  const CameraSettingsPage({super.key, this.token});
+  // Token de sessão: as preferências de notificação são por celular e moram no
+  // servidor, não na box. Câmera e armazenamento continuam vindo da box, que é
+  // onde devem ficar — são propriedades do equipamento, compartilhadas por
+  // todos os celulares.
+  final String? sessionToken;
+  const CameraSettingsPage({super.key, this.token, this.sessionToken});
 
   @override
   State<CameraSettingsPage> createState() => _CameraSettingsPageState();
@@ -31,6 +37,8 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   final Map<String, Map<String, dynamic>> _orig = {};
   Map<String, bool> _notify = {};
   Map<String, bool> _origNotify = {};
+  String? _fcm;            // identidade deste celular
+  bool _pushIndisponivel = false;  // sem token FCM ou sem contato com o servidor
   List<String> _sensitivities = ['baixa', 'media', 'alta'];
   List<int> _fpsOptions = [3, 5, 10, 15];
   List<String> _recordModes = ['continuo', 'movimento'];
@@ -83,7 +91,26 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
       _edit[id] = Map.of(v);
       _orig[id] = Map.of(v);
     }
-    final n = (c['notify'] as Map?) ?? {};
+    // As preferências de notificação vêm do SERVIDOR, indexadas pelo token FCM
+    // deste celular. Antes vinham da box, que tem um arquivo só para todos os
+    // aparelhos — era por isso que silenciar num telefone silenciava em todos.
+    _fcm ??= await PushService.currentToken();
+    var prefs = {'motion': true, 'camera_offline': true};
+    var semPush = true;
+    if (_fcm != null && widget.sessionToken != null) {
+      final r = await ApiService.pushNotify(widget.sessionToken!, _fcm!);
+      if (r != null) {
+        semPush = false;
+        final n = (r['notify'] as Map?) ?? {};
+        // Chave ausente = quer receber. O servidor só guarda o que foi
+        // explicitamente desligado.
+        prefs = {
+          'motion': n['motion'] as bool? ?? true,
+          'camera_offline': n['camera_offline'] as bool? ?? true,
+        };
+      }
+    }
+    if (!mounted) return;
     setState(() {
       _cams = cams;
       _presets = (c['presets'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -98,11 +125,9 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
           .map((e) => e.toString())
           .toList();
       _prune = (s['prune'] as Map?)?.cast<String, dynamic>() ?? {};
-      _notify = {
-        'motion': n['motion'] as bool? ?? true,
-        'camera_offline': n['camera_offline'] as bool? ?? true,
-      };
-      _origNotify = Map.of(_notify);
+      _notify = prefs;
+      _origNotify = Map.of(prefs);
+      _pushIndisponivel = semPush;
       _storage = s;
       _loading = false;
     });
@@ -212,17 +237,42 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    final ok =
-        await ApiService.saveSettings(
-            {'cameras': _edit, 'notify': _notify}, widget.token);
+    // Dois destinos, porque são duas naturezas: o que descreve a câmera vai
+    // para a box e vale para todos os celulares; o que descreve quem quer ser
+    // avisado vai para o servidor e vale só para este aparelho.
+    final camerasMudaram =
+        _edit.keys.any((id) => _edit[id].toString() != _orig[id].toString());
+    final notifMudou = _notify.toString() != _origNotify.toString();
+
+    var okCam = true;
+    if (camerasMudaram) {
+      okCam = await ApiService.saveSettings({'cameras': _edit}, widget.token);
+    }
+    var okNotif = true;
+    if (notifMudou) {
+      okNotif = _fcm != null &&
+          widget.sessionToken != null &&
+          await ApiService.setPushNotify(
+              widget.sessionToken!, _fcm!, _notify);
+    }
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok
+
+    final String msg;
+    if (okCam && okNotif) {
+      msg = camerasMudaram
           ? 'Configuração aplicada (a captura reiniciou).'
-          : 'Não foi possível aplicar a configuração.'),
-    ));
-    if (ok) await _load();
+          : 'Preferências deste celular salvas.';
+    } else if (!okCam && !okNotif) {
+      msg = 'Não foi possível salvar.';
+    } else if (!okCam) {
+      msg = 'As notificações foram salvas, mas a câmera não respondeu.';
+    } else {
+      msg = 'A câmera foi configurada, mas as notificações não foram salvas.';
+    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+    if (okCam && okNotif) await _load();
   }
 
   @override
@@ -346,25 +396,51 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Notificações',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Row(children: [
+              const Text('Notificações',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text('só neste celular',
+                    style: TextStyle(fontSize: 11)),
+              ),
+            ]),
             const Text(
-                'Silencia o aviso no celular. A câmera continua detectando: a '
-                'sirene e a gravação por movimento seguem funcionando.',
+                'Valem apenas para este aparelho — os outros celulares '
+                'continuam recebendo normalmente. A câmera segue detectando: '
+                'a sirene e a gravação por movimento não param.',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
+            if (_pushIndisponivel)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                    'Sem contato com o servidor de notificações — o que você '
+                    'mudar aqui não será salvo.',
+                    style: TextStyle(color: Colors.orange, fontSize: 12)),
+              ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Movimento'),
               subtitle: const Text('Avisar no celular quando detectar movimento'),
               value: _notify['motion'] ?? true,
-              onChanged: (v) => setState(() => _notify['motion'] = v),
+              onChanged: _pushIndisponivel
+                  ? null
+                  : (v) => setState(() => _notify['motion'] = v),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Câmera desconectada'),
               subtitle: const Text('Quando uma câmera cai ou volta'),
               value: _notify['camera_offline'] ?? true,
-              onChanged: (v) => setState(() => _notify['camera_offline'] = v),
+              onChanged: _pushIndisponivel
+                  ? null
+                  : (v) => setState(() => _notify['camera_offline'] = v),
             ),
           ]),
         ),
@@ -413,6 +489,9 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
           Text(cam['label']?.toString() ?? '',
               style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 12),
+          const Text('Estas configurações valem para todos os celulares',
+              style: TextStyle(color: Colors.grey, fontSize: 11)),
+          const SizedBox(height: 10),
           const Text('Qualidade', style: TextStyle(fontSize: 13)),
           const SizedBox(height: 6),
           Wrap(
