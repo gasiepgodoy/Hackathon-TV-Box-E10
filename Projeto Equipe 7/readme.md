@@ -118,7 +118,7 @@ flowchart LR
 - **Borda:** Linux (ARM), MediaMTX, Python (paho-mqtt, libgpiod), ffmpeg, zbar (QR), NetworkManager.
 - **Servidor:** Mosquitto, PostgreSQL (+ pgcrypto), Node-RED, Node.js (firebase-admin).
 - **App:** Flutter/Dart — `flutter_webrtc`, `video_player`+`chewie`, `firebase_messaging`, `qr_flutter`, `wifi_scan`, `http`.
-- **Conectividade:** **Cloudflare Tunnel** publica a API e os serviços de mídia por HTTPS, sem porta aberta nem IP público. Tailscale segue para administração e para a ligação servidor↔borda.
+- **Conectividade:** **Cloudflare Tunnel** publica a API e os serviços de mídia por HTTPS, sem porta aberta nem IP público — e também carrega o MQTT entre a TV box e o servidor: a box fala com `127.0.0.1:1883` e um `cloudflared access tcp` leva até `mqtt.` do domínio. A **Tailscale ficou só para administração** (SSH e o coletor de monitoramento); nenhum serviço do produto depende dela.
 
 ---
 
@@ -165,7 +165,7 @@ Antes de rodar, configure o ambiente:
 **Próximos passos:**
 - **TURN** para o WebRTC fechar quando os dois lados estiverem atrás de NAT.
 - **Disparo do alarme por movimento**, com estado armado/desarmado.
-- **TLS e ACL por dispositivo** no broker, para a ligação servidor↔borda sair da VPN.
+- **TLS e ACL por dispositivo** no broker: hoje todas as TV box usam a mesma credencial, e dentro do túnel o MQTT trafega em texto claro.
 - Hardware: **hub USB com fonte** para as câmeras (estabilidade 24/7).
 
 ---
