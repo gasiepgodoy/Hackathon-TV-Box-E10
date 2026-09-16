@@ -479,3 +479,6 @@ de "vagar aleatório" é estatisticamente difícil por natureza. Tendência
 real em série estacionária é detectada de forma confiável (100% nos
 testes); drift somado a um passeio é detectado com menos frequência. Isso
 é uma propriedade do problema, não da implementação.
+
+## Membros da Equipe 4:
+Guilherme Fontes Bertola - (UNESP-Sorocaba)
