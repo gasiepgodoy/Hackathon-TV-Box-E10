@@ -54,7 +54,8 @@ def scan_qr():
     subprocess.run(["ffmpeg","-y","-i",RTSP_URL,"-frames:v","1","/tmp/scan.jpg"],
                    timeout=15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        out = subprocess.run(["zbarimg","-q","--raw","/tmp/scan.jpg"],
+        out = subprocess.run(["zbarimg","-q","--raw","-Sdisable","-Sqrcode.enable",
+                              "/tmp/scan.jpg"],
                              capture_output=True, text=True, timeout=10)
         return out.stdout.strip() or None
     except Exception:
@@ -132,26 +133,48 @@ def provisioning_loop(client):
         _pareando.clear()
 
 
+def _interpretar_qr(data):
+    """Devolve (token, ssid, senha) ou None se o QR não for o do app."""
+    try:
+        info = json.loads(data)
+    except Exception:
+        info = {"token": data}
+    # Um código de barras qualquer vira número ou lista: não é o nosso QR.
+    if not isinstance(info, dict) or not info.get("token"):
+        return None
+    return str(info["token"]), info.get("ssid") or "", info.get("pass") or ""
+
+
 def _ler_qr_ate_parear(client):
+    ultimo = None          # último QR já processado: o celular continua mostrando
+    ultimo_claim = 0.0     # o mesmo QR por minutos, e cada releitura derrubava o Wi-Fi
     while not os.path.exists(CLAIMED_FLAG):
-        data = scan_qr()
-        if data:
-            try: info = json.loads(data)
-            except Exception: info = {"token": data}
-            # Nunca o conteúdo cru: ele carrega a senha do Wi-Fi.
-            print("QR lido: token=%s wifi=%s" % (bool(info.get("token")),
-                                                 info.get("ssid") or "-"), flush=True)
-            token = info.get("token")
-            ssid = info.get("ssid")
-            if ssid:
-                connect_wifi(ssid, info.get("pass",""))
-                for _ in range(30):
-                    if client.is_connected(): break
-                    time.sleep(1)
-            if token:
+        try:
+            data = scan_qr()
+            qr = _interpretar_qr(data) if data else None
+            if qr and qr != ultimo:
+                token, ssid, senha = qr
+                # Nunca o conteúdo cru: ele carrega a senha do Wi-Fi.
+                print("QR lido: token=%s wifi=%s" % (bool(token), ssid or "-"), flush=True)
+                if ssid:
+                    connect_wifi(ssid, senha)
+                    for _ in range(30):
+                        if client.is_connected(): break
+                        time.sleep(1)
                 client.publish(CLAIM_TOPIC, json.dumps(
                     {"deviceId": DEVICE_ID, "secret": SECRET, "token": token}), qos=1)
-                print("Claim enviado, token:", token)
+                print("Claim enviado, token:", token, flush=True)
+                ultimo, ultimo_claim = qr, time.time()
+            elif qr and time.time() - ultimo_claim > 60:
+                # Mesmo QR, mas sem confirmação há um minuto: reenvia só o claim,
+                # sem mexer no Wi-Fi (o publish fica na fila até o broker voltar).
+                client.publish(CLAIM_TOPIC, json.dumps(
+                    {"deviceId": DEVICE_ID, "secret": SECRET, "token": ultimo[0]}), qos=1)
+                print("Claim reenviado", flush=True)
+                ultimo_claim = time.time()
+        except Exception as e:
+            # A thread não pode morrer: sem ela a box fica sem Wi-Fi e sem leitor.
+            print("pareamento: erro ignorado:", repr(e), flush=True)
         time.sleep(2)
     print("Pareado, saindo do modo pareamento.", flush=True)
 
@@ -276,6 +299,7 @@ client.will_set(STATUS_TOPIC,
     json.dumps({"online": False, "device_id": DEVICE_ID}), qos=1, retain=True)
 client.on_connect = on_connect
 client.on_message = on_message
+client.reconnect_delay_set(min_delay=1, max_delay=5)  # padrão ia até 120 s
 client.connect_async(cfg["broker_host"], int(cfg["broker_port"]), keepalive=60)
 threading.Thread(target=heartbeat, args=(client,), daemon=True).start()
 threading.Thread(target=camera_watch, args=(client,), daemon=True).start()
