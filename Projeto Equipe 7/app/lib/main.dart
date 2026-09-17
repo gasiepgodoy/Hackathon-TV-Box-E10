@@ -8,17 +8,26 @@ import 'push_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await PushService.initApp();
-  runApp(const SecBoxApp());
+  runApp(const GuardianHubApp());
 }
 
-class SecBoxApp extends StatelessWidget {
-  const SecBoxApp({super.key});
+class GuardianHubApp extends StatelessWidget {
+  const GuardianHubApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SecBox',
+      title: 'Guardian Hub',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      // Identidade Guardian Co.: navy do logo como cor-semente e barra
+      // superior navy com texto branco em todas as telas.
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF0B1A3C),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0B1A3C),
+          foregroundColor: Colors.white,
+        ),
+      ),
       // O app é todo em português, mas os seletores de data e hora são widgets
       // do sistema: sem declarar o idioma eles saem em inglês, e o de hora vem
       // em AM/PM. Como pt_BR é o único suportado, qualquer idioma do aparelho

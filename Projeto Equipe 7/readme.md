@@ -1,10 +1,28 @@
-# Equipe 7 — SecBox: Sistema de Segurança com TV Box + App
+<p align="center">
+  <img src="app/assets/guardian-co.png" alt="Guardian Co." width="380">
+</p>
 
-Projeto do **Hackathon TV Box E10**. Uma **TV Box** (com Linux) faz o papel do equipamento de câmera/alarme e um **aplicativo Android** gerencia os dispositivos remotamente: vídeo ao vivo, gravações, detecção de movimento, notificações e pareamento por QR Code.
+# GuardianBox
+
+**Guardian Co.** — Hackathon TV Box E10, Equipe 7
+
+Desenvolvemos um sistema embarcado que converte uma TV Box em uma central de monitoramento IP. O sistema possui controle de acesso com criação de conta e senha para cadastro e gerenciamento seguro de múltiplas câmeras. Inclui detecção de movimento, alarme, gravação personalizada e player integrado, com status operacional da central indicado pelos LEDs originais da TV Box. Entrega recursos de centrais de monitoramento profissionais reaproveitando hardware de baixo custo.
+
+**Autores:**
+
+- Gustavo Henrique Bacci
+- Rafael Sanchez Nakamura da Silva
+- Enzo Kawan Da Rocha Vasconcelos
+- Fernando Toledo de Souza
+- Leonardo da Silva Paschoal
+
+| Nome | O que é |
+|---|---|
+| **Guardian Co.** | a empresa |
+| **GuardianBox** | a central de monitoramento — a TV Box com Linux |
+| **Guardian Hub** | o aplicativo Android que gerencia as centrais |
 
 > Piloto funcional, validado de ponta a ponta no mundo real.
-
-**Equipe:** Gustavo Henrique Bacci, Rafael Sanchez Nakamura da Silva, Enzo Kawan Da Rocha Vasconcelos, Fernando Toledo de Souza, Leonardo da Silva Paschoal, Victor Thiago Nogueira Ferreira.
 
 ## Estrutura do repositório
 
@@ -124,7 +142,7 @@ flowchart LR
 
 ## Baixar o aplicativo
 
-<img src="app/baixar-apk.png" alt="QR code para baixar o SecBox" width="200" align="right">
+<img src="app/baixar-apk.png" alt="QR code para baixar o Guardian Hub" width="200" align="right">
 
 Aponte a câmera para o QR, ou abra no celular:
 

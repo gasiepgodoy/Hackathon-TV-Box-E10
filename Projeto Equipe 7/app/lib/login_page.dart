@@ -51,7 +51,21 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.shield, size: 64, color: Colors.indigo),
+            // Marca Guardian Co. sobre um disco navy, para ler bem no fundo
+            // claro da tela.
+            Container(
+              width: 96,
+              height: 96,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0B1A3C),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(10),
+              child: Image.asset('assets/marca.png'),
+            ),
+            const SizedBox(height: 8),
+            const Text('Guardian Hub',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
             const SizedBox(height: 24),
             TextField(
               controller: _email,
