@@ -1,0 +1,4695 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="10">
+    <title>EdgeBox FL - Nó de Borda</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 28px;
+            background: #0f172a;
+            color: #e5e7eb;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 42px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #cbd5e1;
+            margin-top: 8px;
+            margin-bottom: 24px;
+        }
+
+        .status {
+            max-width: 900px;
+            margin: 0 auto 24px auto;
+            padding: 20px;
+            border-radius: 18px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stable { background: #14532d; }
+        .attention { background: #854d0e; }
+        .alert { background: #9a3412; }
+        .critical { background: #7f1d1d; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+            margin-bottom: 26px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #93c5fd;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .small {
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .section {
+            background: #111827;
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 26px;
+        }
+
+        .section h2 {
+            margin-top: 0;
+        }
+
+        .chart {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .chart h3 {
+            margin-top: 0;
+            color: #bfdbfe;
+        }
+
+        svg {
+            width: 100%;
+            height: 160px;
+            background: #020617;
+            border-radius: 10px;
+        }
+
+        polyline {
+            fill: none;
+            stroke: #38bdf8;
+            stroke-width: 4;
+        }
+
+        code {
+            color: #86efac;
+        }
+
+        .footer {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 28px;
+        }
+    </style>
+</head>
+<body>
+    <h1>EdgeBox FL</h1>
+    <p class="subtitle">
+        Validação de TV Box reaproveitada como nó de coleta, processamento local e inteligência de borda
+    </p>
+
+    <div class="status stable">
+        Status do nó: ESTÁVEL | Risco operacional: 0.17
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Nó</h2>
+            <div class="value">tvbox</div>
+            <p class="small">Função: edge node</p>
+        </div>
+
+        <div class="card">
+            <h2>CPU</h2>
+            <div class="value">1.0%</div>
+            <p class="small">Uso instantâneo do processador</p>
+        </div>
+
+        <div class="card">
+            <h2>Memória RAM</h2>
+            <div class="value">26.7%</div>
+            <p class="small">486 MB / 1823 MB</p>
+        </div>
+
+        <div class="card">
+            <h2>Temperatura</h2>
+            <div class="value">41.1 °C</div>
+            <p class="small">Leitura interna do SoC</p>
+        </div>
+
+        <div class="card">
+            <h2>Disco</h2>
+            <div class="value">33.2%</div>
+            <p class="small">9.37 GB / 28.21 GB</p>
+        </div>
+
+        <div class="card">
+            <h2>Latência</h2>
+            <div class="value">11.7 ms</div>
+            <p class="small">Teste ICMP para 8.8.8.8</p>
+        </div>
+
+        <div class="card">
+            <h2>Rede</h2>
+            <div class="value">21.9 kbps</div>
+            <p class="small">RX atual | TX: 198.6 kbps</p>
+        </div>
+
+        <div class="card">
+            <h2>Uptime</h2>
+            <div class="value">2d 18h 38min</div>
+            <p class="small">Tempo ligado sem reiniciar</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Pipeline validado</h2>
+        <p>
+            Este nó coleta dados internos da TV Box, salva histórico local, processa os dados,
+            roda um modelo leve de inferência e gera uma atualização de modelo que pode ser enviada
+            a um servidor agregador federado.
+        </p>
+        <p>
+            <b>Coleta → armazenamento → modelo local → inferência → atualização federada → dashboard</b>
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Modelo local</h2>
+        <p>
+            Modelo: <b>regressão linear leve</b> treinada localmente com os dados do próprio nó.
+        </p>
+        <p>
+            Amostras locais utilizadas: <b>300</b>
+        </p>
+        <p>
+            Pesos locais exportados em: <code>edgebox_model_update.json</code>
+        </p>
+        <p>
+            Pesos atuais: <code>[0.0807, 0.2831, 0.0564, 0.0959, 0.0268, 0.0879, 0.109]</code>
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Histórico recente</h2>
+        <div class="history-controls" style="display:flex;gap:10px;margin-bottom:16px;">
+            <button type="button" class="history-period active" data-period="live">Ao vivo</button>
+            <button type="button" class="history-period" data-period="today">Hoje</button>
+            <button type="button" class="history-period" data-period="week">7 dias</button>
+        </div>
+        
+    <div class="chart live-chart" data-key="cpu_percent" data-min="0" data-max="100" data-unit="%">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px;">
+            <div>
+                <h3>Histórico de CPU</h3>
+                <p class="small">Uso da CPU. Quanto menor, melhor.</p>
+                <p class="small">Escala Y: 0.00% a 100.00%</p>
+            </div>
+
+            <div style="text-align:right;min-width:150px;">
+                <div class="live-current" style="font-size:28px;font-weight:bold;">1.00%</div>
+                <div class="live-level" style="font-weight:bold;">NORMAL</div>
+            </div>
+        </div>
+
+        <svg viewBox="0 0 900 260" preserveAspectRatio="none" style="width:100%;height:280px;background:#020617;border-radius:12px;">
+            <style>
+                .grid-line {
+                    stroke: #334155;
+                    stroke-width: 1;
+                }
+
+                .ref-line {
+                    stroke-width: 2;
+                    stroke-dasharray: 7 7;
+                }
+
+                .attention-line {
+                    stroke: #facc15;
+                }
+
+                .alert-line {
+                    stroke: #fb7185;
+                }
+
+                .ref-label {
+                    fill: #cbd5e1;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+
+                .axis-label {
+                    fill: #cbd5e1;
+                    font-size: 15px;
+                }
+
+                .metric-line {
+                    fill: none;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+
+                .data-point {
+                    fill: #0f172a;
+                    stroke: #38bdf8;
+                    stroke-width: 4;
+                    cursor: pointer;
+                }
+
+                .data-point:hover {
+                    fill: #ffffff;
+                    stroke: #ffffff;
+                }
+
+                .last-point {
+                    fill: #ffffff;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                }
+
+                .last-label {
+                    fill: #ffffff;
+                    font-size: 17px;
+                    font-weight: bold;
+                }
+            </style>
+
+            
+            <line x1="70" y1="212.0" x2="870" y2="212.0" class="grid-line" />
+        
+            <line x1="70" y1="164.5" x2="870" y2="164.5" class="grid-line" />
+        
+            <line x1="70" y1="117.0" x2="870" y2="117.0" class="grid-line" />
+        
+            <line x1="70" y1="69.5" x2="870" y2="69.5" class="grid-line" />
+        
+            <line x1="70" y1="22.0" x2="870" y2="22.0" class="grid-line" />
+        
+            
+            <text x="60" y="216.0" class="axis-label" text-anchor="end">0.0%</text>
+        
+            <text x="60" y="168.5" class="axis-label" text-anchor="end">25.0%</text>
+        
+            <text x="60" y="121.0" class="axis-label" text-anchor="end">50.0%</text>
+        
+            <text x="60" y="73.5" class="axis-label" text-anchor="end">75.0%</text>
+        
+            <text x="60" y="26.0" class="axis-label" text-anchor="end">100.0%</text>
+        
+            
+        <line x1="70" y1="117.0" x2="870" y2="117.0" class="ref-line attention-line" />
+        <text x="865" y="111.0" class="ref-label" text-anchor="end">atenção</text>
+
+        <line x1="70" y1="69.5" x2="870" y2="69.5" class="ref-line alert-line" />
+        <text x="865" y="63.5" class="ref-label" text-anchor="end">alerta</text>
+    
+
+            <line x1="70" y1="22" x2="70" y2="212" class="grid-line" />
+            <line x1="70" y1="212" x2="870" y2="212" class="grid-line" />
+
+            <polyline points="70.0,164.5 90.5,162.0 111.0,163.2 131.5,212.0 152.1,100.3 172.6,154.2 193.1,166.0 213.6,212.0 234.1,158.8 254.6,163.9 275.1,117.0 295.6,116.0 316.2,163.2 336.7,202.5 357.2,210.1 377.7,161.3 398.2,118.0 418.7,163.2 439.2,164.5 459.7,212.0 480.3,163.2 500.8,164.5 521.3,159.8 541.8,164.5 562.3,212.0 582.8,163.9 603.3,164.5 623.8,163.9 644.4,163.2 664.9,210.1 685.4,165.4 705.9,163.2 726.4,166.0 746.9,151.2 767.4,212.0 787.9,210.1 808.5,161.7 829.0,163.2 849.5,163.2 870.0,210.1" class="metric-line" />
+
+            
+            <circle cx="70.0" cy="164.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:39:50
+Valor: 25.00%</title>
+            </circle>
+        
+            <circle cx="90.5" cy="162.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:40:35
+Valor: 26.30%</title>
+            </circle>
+        
+            <circle cx="111.0" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:41:21
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="131.5" cy="212.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:42:07
+Valor: 0.00%</title>
+            </circle>
+        
+            <circle cx="152.1" cy="100.3" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:42:56
+Valor: 58.80%</title>
+            </circle>
+        
+            <circle cx="172.6" cy="154.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:43:47
+Valor: 30.40%</title>
+            </circle>
+        
+            <circle cx="193.1" cy="166.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:44:36
+Valor: 24.20%</title>
+            </circle>
+        
+            <circle cx="213.6" cy="212.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:45:21
+Valor: 0.00%</title>
+            </circle>
+        
+            <circle cx="234.1" cy="158.8" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:46:07
+Valor: 28.00%</title>
+            </circle>
+        
+            <circle cx="254.6" cy="163.9" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:46:53
+Valor: 25.30%</title>
+            </circle>
+        
+            <circle cx="275.1" cy="117.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:47:39
+Valor: 50.00%</title>
+            </circle>
+        
+            <circle cx="295.6" cy="116.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:48:27
+Valor: 50.50%</title>
+            </circle>
+        
+            <circle cx="316.2" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:49:14
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="336.7" cy="202.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:50:00
+Valor: 5.00%</title>
+            </circle>
+        
+            <circle cx="357.2" cy="210.1" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:50:45
+Valor: 1.00%</title>
+            </circle>
+        
+            <circle cx="377.7" cy="161.3" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:51:31
+Valor: 26.70%</title>
+            </circle>
+        
+            <circle cx="398.2" cy="118.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:52:16
+Valor: 49.50%</title>
+            </circle>
+        
+            <circle cx="418.7" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:53:03
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="439.2" cy="164.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:53:49
+Valor: 25.00%</title>
+            </circle>
+        
+            <circle cx="459.7" cy="212.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:54:35
+Valor: 0.00%</title>
+            </circle>
+        
+            <circle cx="480.3" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:55:20
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="500.8" cy="164.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:56:06
+Valor: 25.00%</title>
+            </circle>
+        
+            <circle cx="521.3" cy="159.8" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:56:52
+Valor: 27.50%</title>
+            </circle>
+        
+            <circle cx="541.8" cy="164.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:57:38
+Valor: 25.00%</title>
+            </circle>
+        
+            <circle cx="562.3" cy="212.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:58:24
+Valor: 0.00%</title>
+            </circle>
+        
+            <circle cx="582.8" cy="163.9" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:59:10
+Valor: 25.30%</title>
+            </circle>
+        
+            <circle cx="603.3" cy="164.5" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T16:59:55
+Valor: 25.00%</title>
+            </circle>
+        
+            <circle cx="623.8" cy="163.9" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:00:41
+Valor: 25.30%</title>
+            </circle>
+        
+            <circle cx="644.4" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:01:27
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="664.9" cy="210.1" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:02:12
+Valor: 1.00%</title>
+            </circle>
+        
+            <circle cx="685.4" cy="165.4" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:02:58
+Valor: 24.50%</title>
+            </circle>
+        
+            <circle cx="705.9" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:03:44
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="726.4" cy="166.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:04:29
+Valor: 24.20%</title>
+            </circle>
+        
+            <circle cx="746.9" cy="151.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:05:15
+Valor: 32.00%</title>
+            </circle>
+        
+            <circle cx="767.4" cy="212.0" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:06:00
+Valor: 0.00%</title>
+            </circle>
+        
+            <circle cx="787.9" cy="210.1" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:06:46
+Valor: 1.00%</title>
+            </circle>
+        
+            <circle cx="808.5" cy="161.7" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:07:32
+Valor: 26.50%</title>
+            </circle>
+        
+            <circle cx="829.0" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:08:19
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="849.5" cy="163.2" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:09:04
+Valor: 25.70%</title>
+            </circle>
+        
+            <circle cx="870.0" cy="210.1" r="5.5" class="data-point">
+                <title>Histórico de CPU
+Horário: 2026-09-16T17:09:49
+Valor: 1.00%</title>
+            </circle>
+        
+
+            <circle cx="870.0" cy="210.1" r="8" class="last-point">
+                <title>Valor atual: 1.00%</title>
+            </circle>
+
+            <text x="860.0" y="196.1" class="last-label" text-anchor="end">
+                1.00%
+            </text>
+
+            
+        <text x="70.0" y="242" class="axis-label" text-anchor="middle">-29min</text>
+        <text x="480.3" y="242" class="axis-label" text-anchor="middle">-14min</text>
+        <text x="870.0" y="242" class="axis-label" text-anchor="middle">agora</text>
+    
+        </svg>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;margin-bottom:8px;color:#dbeafe;">
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Primeiro: <b>25.00%</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Média: <b>22.37%</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Atual: <b>1.00%</b></span>
+        </div>
+
+        <div class="small live-chips">
+            Últimos valores: 
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            1.00%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            26.50%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            25.70%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            25.70%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            1.00%
+        </span>
+        
+        </div>
+    </div>
+    
+        
+    <div class="chart live-chart" data-key="ram_percent" data-min="0" data-max="100" data-unit="%">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px;">
+            <div>
+                <h3>Histórico de RAM</h3>
+                <p class="small">Uso da memória RAM. Valores altos indicam pouca folga.</p>
+                <p class="small">Escala Y: 0.00% a 100.00%</p>
+            </div>
+
+            <div style="text-align:right;min-width:150px;">
+                <div class="live-current" style="font-size:28px;font-weight:bold;">26.70%</div>
+                <div class="live-level" style="font-weight:bold;">NORMAL</div>
+            </div>
+        </div>
+
+        <svg viewBox="0 0 900 260" preserveAspectRatio="none" style="width:100%;height:280px;background:#020617;border-radius:12px;">
+            <style>
+                .grid-line {
+                    stroke: #334155;
+                    stroke-width: 1;
+                }
+
+                .ref-line {
+                    stroke-width: 2;
+                    stroke-dasharray: 7 7;
+                }
+
+                .attention-line {
+                    stroke: #facc15;
+                }
+
+                .alert-line {
+                    stroke: #fb7185;
+                }
+
+                .ref-label {
+                    fill: #cbd5e1;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+
+                .axis-label {
+                    fill: #cbd5e1;
+                    font-size: 15px;
+                }
+
+                .metric-line {
+                    fill: none;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+
+                .data-point {
+                    fill: #0f172a;
+                    stroke: #38bdf8;
+                    stroke-width: 4;
+                    cursor: pointer;
+                }
+
+                .data-point:hover {
+                    fill: #ffffff;
+                    stroke: #ffffff;
+                }
+
+                .last-point {
+                    fill: #ffffff;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                }
+
+                .last-label {
+                    fill: #ffffff;
+                    font-size: 17px;
+                    font-weight: bold;
+                }
+            </style>
+
+            
+            <line x1="70" y1="212.0" x2="870" y2="212.0" class="grid-line" />
+        
+            <line x1="70" y1="164.5" x2="870" y2="164.5" class="grid-line" />
+        
+            <line x1="70" y1="117.0" x2="870" y2="117.0" class="grid-line" />
+        
+            <line x1="70" y1="69.5" x2="870" y2="69.5" class="grid-line" />
+        
+            <line x1="70" y1="22.0" x2="870" y2="22.0" class="grid-line" />
+        
+            
+            <text x="60" y="216.0" class="axis-label" text-anchor="end">0.0%</text>
+        
+            <text x="60" y="168.5" class="axis-label" text-anchor="end">25.0%</text>
+        
+            <text x="60" y="121.0" class="axis-label" text-anchor="end">50.0%</text>
+        
+            <text x="60" y="73.5" class="axis-label" text-anchor="end">75.0%</text>
+        
+            <text x="60" y="26.0" class="axis-label" text-anchor="end">100.0%</text>
+        
+            
+        <line x1="70" y1="98.0" x2="870" y2="98.0" class="ref-line attention-line" />
+        <text x="865" y="92.0" class="ref-label" text-anchor="end">atenção</text>
+
+        <line x1="70" y1="60.0" x2="870" y2="60.0" class="ref-line alert-line" />
+        <text x="865" y="54.0" class="ref-label" text-anchor="end">alerta</text>
+    
+
+            <line x1="70" y1="22" x2="70" y2="212" class="grid-line" />
+            <line x1="70" y1="212" x2="870" y2="212" class="grid-line" />
+
+            <polyline points="70.0,174.9 90.5,174.8 111.0,174.9 131.5,175.5 152.1,167.9 172.6,169.2 193.1,171.0 213.6,171.0 234.1,170.8 254.6,170.2 275.1,155.8 295.6,139.8 316.2,161.1 336.7,160.3 357.2,162.4 377.7,160.9 398.2,146.4 418.7,160.9 439.2,160.7 459.7,162.0 480.3,160.3 500.8,161.7 521.3,161.1 541.8,161.5 562.3,162.8 582.8,162.2 603.3,161.3 623.8,161.8 644.4,161.5 664.9,162.2 685.4,161.7 705.9,161.1 726.4,161.3 746.9,160.7 767.4,161.5 787.9,162.6 808.5,160.9 829.0,160.3 849.5,159.8 870.0,161.3" class="metric-line" />
+
+            
+            <circle cx="70.0" cy="174.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:39:50
+Valor: 19.50%</title>
+            </circle>
+        
+            <circle cx="90.5" cy="174.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:40:35
+Valor: 19.60%</title>
+            </circle>
+        
+            <circle cx="111.0" cy="174.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:41:21
+Valor: 19.50%</title>
+            </circle>
+        
+            <circle cx="131.5" cy="175.5" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:42:07
+Valor: 19.20%</title>
+            </circle>
+        
+            <circle cx="152.1" cy="167.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:42:56
+Valor: 23.20%</title>
+            </circle>
+        
+            <circle cx="172.6" cy="169.2" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:43:47
+Valor: 22.50%</title>
+            </circle>
+        
+            <circle cx="193.1" cy="171.0" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:44:36
+Valor: 21.60%</title>
+            </circle>
+        
+            <circle cx="213.6" cy="171.0" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:45:21
+Valor: 21.60%</title>
+            </circle>
+        
+            <circle cx="234.1" cy="170.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:46:07
+Valor: 21.70%</title>
+            </circle>
+        
+            <circle cx="254.6" cy="170.2" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:46:53
+Valor: 22.00%</title>
+            </circle>
+        
+            <circle cx="275.1" cy="155.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:47:39
+Valor: 29.60%</title>
+            </circle>
+        
+            <circle cx="295.6" cy="139.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:48:27
+Valor: 38.00%</title>
+            </circle>
+        
+            <circle cx="316.2" cy="161.1" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:49:14
+Valor: 26.80%</title>
+            </circle>
+        
+            <circle cx="336.7" cy="160.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:50:00
+Valor: 27.20%</title>
+            </circle>
+        
+            <circle cx="357.2" cy="162.4" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:50:45
+Valor: 26.10%</title>
+            </circle>
+        
+            <circle cx="377.7" cy="160.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:51:31
+Valor: 26.90%</title>
+            </circle>
+        
+            <circle cx="398.2" cy="146.4" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:52:16
+Valor: 34.50%</title>
+            </circle>
+        
+            <circle cx="418.7" cy="160.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:53:03
+Valor: 26.90%</title>
+            </circle>
+        
+            <circle cx="439.2" cy="160.7" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:53:49
+Valor: 27.00%</title>
+            </circle>
+        
+            <circle cx="459.7" cy="162.0" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:54:35
+Valor: 26.30%</title>
+            </circle>
+        
+            <circle cx="480.3" cy="160.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:55:20
+Valor: 27.20%</title>
+            </circle>
+        
+            <circle cx="500.8" cy="161.7" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:56:06
+Valor: 26.50%</title>
+            </circle>
+        
+            <circle cx="521.3" cy="161.1" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:56:52
+Valor: 26.80%</title>
+            </circle>
+        
+            <circle cx="541.8" cy="161.5" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:57:38
+Valor: 26.60%</title>
+            </circle>
+        
+            <circle cx="562.3" cy="162.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:58:24
+Valor: 25.90%</title>
+            </circle>
+        
+            <circle cx="582.8" cy="162.2" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:59:10
+Valor: 26.20%</title>
+            </circle>
+        
+            <circle cx="603.3" cy="161.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T16:59:55
+Valor: 26.70%</title>
+            </circle>
+        
+            <circle cx="623.8" cy="161.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:00:41
+Valor: 26.40%</title>
+            </circle>
+        
+            <circle cx="644.4" cy="161.5" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:01:27
+Valor: 26.60%</title>
+            </circle>
+        
+            <circle cx="664.9" cy="162.2" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:02:12
+Valor: 26.20%</title>
+            </circle>
+        
+            <circle cx="685.4" cy="161.7" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:02:58
+Valor: 26.50%</title>
+            </circle>
+        
+            <circle cx="705.9" cy="161.1" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:03:44
+Valor: 26.80%</title>
+            </circle>
+        
+            <circle cx="726.4" cy="161.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:04:29
+Valor: 26.70%</title>
+            </circle>
+        
+            <circle cx="746.9" cy="160.7" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:05:15
+Valor: 27.00%</title>
+            </circle>
+        
+            <circle cx="767.4" cy="161.5" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:06:00
+Valor: 26.60%</title>
+            </circle>
+        
+            <circle cx="787.9" cy="162.6" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:06:46
+Valor: 26.00%</title>
+            </circle>
+        
+            <circle cx="808.5" cy="160.9" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:07:32
+Valor: 26.90%</title>
+            </circle>
+        
+            <circle cx="829.0" cy="160.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:08:19
+Valor: 27.20%</title>
+            </circle>
+        
+            <circle cx="849.5" cy="159.8" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:09:04
+Valor: 27.50%</title>
+            </circle>
+        
+            <circle cx="870.0" cy="161.3" r="5.5" class="data-point">
+                <title>Histórico de RAM
+Horário: 2026-09-16T17:09:49
+Valor: 26.70%</title>
+            </circle>
+        
+
+            <circle cx="870.0" cy="161.3" r="8" class="last-point">
+                <title>Valor atual: 26.70%</title>
+            </circle>
+
+            <text x="860.0" y="147.3" class="last-label" text-anchor="end">
+                26.70%
+            </text>
+
+            
+        <text x="70.0" y="242" class="axis-label" text-anchor="middle">-29min</text>
+        <text x="480.3" y="242" class="axis-label" text-anchor="middle">-14min</text>
+        <text x="870.0" y="242" class="axis-label" text-anchor="middle">agora</text>
+    
+        </svg>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;margin-bottom:8px;color:#dbeafe;">
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Primeiro: <b>19.50%</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Média: <b>25.82%</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Atual: <b>26.70%</b></span>
+        </div>
+
+        <div class="small live-chips">
+            Últimos valores: 
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            26.00%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            26.90%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            27.20%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            27.50%
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            26.70%
+        </span>
+        
+        </div>
+    </div>
+    
+        
+    <div class="chart live-chart" data-key="temperature_c" data-min="20" data-max="90" data-unit=" °C">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px;">
+            <div>
+                <h3>Histórico de Temperatura</h3>
+                <p class="small">Temperatura interna da TV Box.</p>
+                <p class="small">Escala Y: 20.00 °C a 90.00 °C</p>
+            </div>
+
+            <div style="text-align:right;min-width:150px;">
+                <div class="live-current" style="font-size:28px;font-weight:bold;">41.10 °C</div>
+                <div class="live-level" style="font-weight:bold;">NORMAL</div>
+            </div>
+        </div>
+
+        <svg viewBox="0 0 900 260" preserveAspectRatio="none" style="width:100%;height:280px;background:#020617;border-radius:12px;">
+            <style>
+                .grid-line {
+                    stroke: #334155;
+                    stroke-width: 1;
+                }
+
+                .ref-line {
+                    stroke-width: 2;
+                    stroke-dasharray: 7 7;
+                }
+
+                .attention-line {
+                    stroke: #facc15;
+                }
+
+                .alert-line {
+                    stroke: #fb7185;
+                }
+
+                .ref-label {
+                    fill: #cbd5e1;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+
+                .axis-label {
+                    fill: #cbd5e1;
+                    font-size: 15px;
+                }
+
+                .metric-line {
+                    fill: none;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+
+                .data-point {
+                    fill: #0f172a;
+                    stroke: #38bdf8;
+                    stroke-width: 4;
+                    cursor: pointer;
+                }
+
+                .data-point:hover {
+                    fill: #ffffff;
+                    stroke: #ffffff;
+                }
+
+                .last-point {
+                    fill: #ffffff;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                }
+
+                .last-label {
+                    fill: #ffffff;
+                    font-size: 17px;
+                    font-weight: bold;
+                }
+            </style>
+
+            
+            <line x1="70" y1="212.0" x2="870" y2="212.0" class="grid-line" />
+        
+            <line x1="70" y1="164.5" x2="870" y2="164.5" class="grid-line" />
+        
+            <line x1="70" y1="117.0" x2="870" y2="117.0" class="grid-line" />
+        
+            <line x1="70" y1="69.5" x2="870" y2="69.5" class="grid-line" />
+        
+            <line x1="70" y1="22.0" x2="870" y2="22.0" class="grid-line" />
+        
+            
+            <text x="60" y="216.0" class="axis-label" text-anchor="end">20.0 °C</text>
+        
+            <text x="60" y="168.5" class="axis-label" text-anchor="end">37.5 °C</text>
+        
+            <text x="60" y="121.0" class="axis-label" text-anchor="end">55.0 °C</text>
+        
+            <text x="60" y="73.5" class="axis-label" text-anchor="end">72.5 °C</text>
+        
+            <text x="60" y="26.0" class="axis-label" text-anchor="end">90.0 °C</text>
+        
+            
+        <line x1="70" y1="117.0" x2="870" y2="117.0" class="ref-line attention-line" />
+        <text x="865" y="111.0" class="ref-label" text-anchor="end">atenção</text>
+
+        <line x1="70" y1="76.3" x2="870" y2="76.3" class="ref-line alert-line" />
+        <text x="865" y="70.3" class="ref-label" text-anchor="end">alerta</text>
+    
+
+            <line x1="70" y1="22" x2="70" y2="212" class="grid-line" />
+            <line x1="70" y1="212" x2="870" y2="212" class="grid-line" />
+
+            <polyline points="70.0,150.1 90.5,151.2 111.0,149.6 131.5,155.5 152.1,140.6 172.6,143.6 193.1,143.9 213.6,153.6 234.1,150.4 254.6,150.1 275.1,142.2 295.6,138.7 316.2,146.3 336.7,150.9 357.2,155.0 377.7,150.1 398.2,142.8 418.7,145.5 439.2,148.8 459.7,154.7 480.3,149.8 500.8,150.1 521.3,147.9 541.8,147.7 562.3,155.5 582.8,150.7 603.3,150.9 623.8,150.7 644.4,150.4 664.9,155.8 685.4,151.5 705.9,149.3 726.4,151.2 746.9,149.8 767.4,155.5 787.9,157.2 808.5,149.0 829.0,149.6 849.5,148.5 870.0,154.7" class="metric-line" />
+
+            
+            <circle cx="70.0" cy="150.1" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:39:50
+Valor: 42.80 °C</title>
+            </circle>
+        
+            <circle cx="90.5" cy="151.2" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:40:35
+Valor: 42.40 °C</title>
+            </circle>
+        
+            <circle cx="111.0" cy="149.6" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:41:21
+Valor: 43.00 °C</title>
+            </circle>
+        
+            <circle cx="131.5" cy="155.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:42:07
+Valor: 40.80 °C</title>
+            </circle>
+        
+            <circle cx="152.1" cy="140.6" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:42:56
+Valor: 46.30 °C</title>
+            </circle>
+        
+            <circle cx="172.6" cy="143.6" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:43:47
+Valor: 45.20 °C</title>
+            </circle>
+        
+            <circle cx="193.1" cy="143.9" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:44:36
+Valor: 45.10 °C</title>
+            </circle>
+        
+            <circle cx="213.6" cy="153.6" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:45:21
+Valor: 41.50 °C</title>
+            </circle>
+        
+            <circle cx="234.1" cy="150.4" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:46:07
+Valor: 42.70 °C</title>
+            </circle>
+        
+            <circle cx="254.6" cy="150.1" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:46:53
+Valor: 42.80 °C</title>
+            </circle>
+        
+            <circle cx="275.1" cy="142.2" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:47:39
+Valor: 45.70 °C</title>
+            </circle>
+        
+            <circle cx="295.6" cy="138.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:48:27
+Valor: 47.00 °C</title>
+            </circle>
+        
+            <circle cx="316.2" cy="146.3" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:49:14
+Valor: 44.20 °C</title>
+            </circle>
+        
+            <circle cx="336.7" cy="150.9" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:50:00
+Valor: 42.50 °C</title>
+            </circle>
+        
+            <circle cx="357.2" cy="155.0" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:50:45
+Valor: 41.00 °C</title>
+            </circle>
+        
+            <circle cx="377.7" cy="150.1" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:51:31
+Valor: 42.80 °C</title>
+            </circle>
+        
+            <circle cx="398.2" cy="142.8" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:52:16
+Valor: 45.50 °C</title>
+            </circle>
+        
+            <circle cx="418.7" cy="145.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:53:03
+Valor: 44.50 °C</title>
+            </circle>
+        
+            <circle cx="439.2" cy="148.8" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:53:49
+Valor: 43.30 °C</title>
+            </circle>
+        
+            <circle cx="459.7" cy="154.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:54:35
+Valor: 41.10 °C</title>
+            </circle>
+        
+            <circle cx="480.3" cy="149.8" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:55:20
+Valor: 42.90 °C</title>
+            </circle>
+        
+            <circle cx="500.8" cy="150.1" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:56:06
+Valor: 42.80 °C</title>
+            </circle>
+        
+            <circle cx="521.3" cy="147.9" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:56:52
+Valor: 43.60 °C</title>
+            </circle>
+        
+            <circle cx="541.8" cy="147.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:57:38
+Valor: 43.70 °C</title>
+            </circle>
+        
+            <circle cx="562.3" cy="155.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:58:24
+Valor: 40.80 °C</title>
+            </circle>
+        
+            <circle cx="582.8" cy="150.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:59:10
+Valor: 42.60 °C</title>
+            </circle>
+        
+            <circle cx="603.3" cy="150.9" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T16:59:55
+Valor: 42.50 °C</title>
+            </circle>
+        
+            <circle cx="623.8" cy="150.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:00:41
+Valor: 42.60 °C</title>
+            </circle>
+        
+            <circle cx="644.4" cy="150.4" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:01:27
+Valor: 42.70 °C</title>
+            </circle>
+        
+            <circle cx="664.9" cy="155.8" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:02:12
+Valor: 40.70 °C</title>
+            </circle>
+        
+            <circle cx="685.4" cy="151.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:02:58
+Valor: 42.30 °C</title>
+            </circle>
+        
+            <circle cx="705.9" cy="149.3" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:03:44
+Valor: 43.10 °C</title>
+            </circle>
+        
+            <circle cx="726.4" cy="151.2" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:04:29
+Valor: 42.40 °C</title>
+            </circle>
+        
+            <circle cx="746.9" cy="149.8" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:05:15
+Valor: 42.90 °C</title>
+            </circle>
+        
+            <circle cx="767.4" cy="155.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:06:00
+Valor: 40.80 °C</title>
+            </circle>
+        
+            <circle cx="787.9" cy="157.2" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:06:46
+Valor: 40.20 °C</title>
+            </circle>
+        
+            <circle cx="808.5" cy="149.0" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:07:32
+Valor: 43.20 °C</title>
+            </circle>
+        
+            <circle cx="829.0" cy="149.6" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:08:19
+Valor: 43.00 °C</title>
+            </circle>
+        
+            <circle cx="849.5" cy="148.5" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:09:04
+Valor: 43.40 °C</title>
+            </circle>
+        
+            <circle cx="870.0" cy="154.7" r="5.5" class="data-point">
+                <title>Histórico de Temperatura
+Horário: 2026-09-16T17:09:49
+Valor: 41.10 °C</title>
+            </circle>
+        
+
+            <circle cx="870.0" cy="154.7" r="8" class="last-point">
+                <title>Valor atual: 41.10 °C</title>
+            </circle>
+
+            <text x="860.0" y="140.7" class="last-label" text-anchor="end">
+                41.10 °C
+            </text>
+
+            
+        <text x="70.0" y="242" class="axis-label" text-anchor="middle">-29min</text>
+        <text x="480.3" y="242" class="axis-label" text-anchor="middle">-14min</text>
+        <text x="870.0" y="242" class="axis-label" text-anchor="middle">agora</text>
+    
+        </svg>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;margin-bottom:8px;color:#dbeafe;">
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Primeiro: <b>42.80 °C</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Média: <b>42.94 °C</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Atual: <b>41.10 °C</b></span>
+        </div>
+
+        <div class="small live-chips">
+            Últimos valores: 
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            40.20 °C
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            43.20 °C
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            43.00 °C
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            43.40 °C
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            41.10 °C
+        </span>
+        
+        </div>
+    </div>
+    
+        
+    <div class="chart live-chart" data-key="inferred_risk" data-min="0" data-max="1" data-unit="">
+        <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px;">
+            <div>
+                <h3>Histórico de Risco do Nó</h3>
+                <p class="small">Risco operacional do nó. Quanto mais próximo de 1, pior.</p>
+                <p class="small">Escala Y: 0.00 a 1.00</p>
+            </div>
+
+            <div style="text-align:right;min-width:150px;">
+                <div class="live-current" style="font-size:28px;font-weight:bold;">0.17</div>
+                <div class="live-level" style="font-weight:bold;">NORMAL</div>
+            </div>
+        </div>
+
+        <svg viewBox="0 0 900 260" preserveAspectRatio="none" style="width:100%;height:280px;background:#020617;border-radius:12px;">
+            <style>
+                .grid-line {
+                    stroke: #334155;
+                    stroke-width: 1;
+                }
+
+                .ref-line {
+                    stroke-width: 2;
+                    stroke-dasharray: 7 7;
+                }
+
+                .attention-line {
+                    stroke: #facc15;
+                }
+
+                .alert-line {
+                    stroke: #fb7185;
+                }
+
+                .ref-label {
+                    fill: #cbd5e1;
+                    font-size: 16px;
+                    font-weight: bold;
+                }
+
+                .axis-label {
+                    fill: #cbd5e1;
+                    font-size: 15px;
+                }
+
+                .metric-line {
+                    fill: none;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+
+                .data-point {
+                    fill: #0f172a;
+                    stroke: #38bdf8;
+                    stroke-width: 4;
+                    cursor: pointer;
+                }
+
+                .data-point:hover {
+                    fill: #ffffff;
+                    stroke: #ffffff;
+                }
+
+                .last-point {
+                    fill: #ffffff;
+                    stroke: #38bdf8;
+                    stroke-width: 5;
+                }
+
+                .last-label {
+                    fill: #ffffff;
+                    font-size: 17px;
+                    font-weight: bold;
+                }
+            </style>
+
+            
+            <line x1="70" y1="212.0" x2="870" y2="212.0" class="grid-line" />
+        
+            <line x1="70" y1="164.5" x2="870" y2="164.5" class="grid-line" />
+        
+            <line x1="70" y1="117.0" x2="870" y2="117.0" class="grid-line" />
+        
+            <line x1="70" y1="69.5" x2="870" y2="69.5" class="grid-line" />
+        
+            <line x1="70" y1="22.0" x2="870" y2="22.0" class="grid-line" />
+        
+            
+            <text x="60" y="216.0" class="axis-label" text-anchor="end">0.00</text>
+        
+            <text x="60" y="168.5" class="axis-label" text-anchor="end">0.25</text>
+        
+            <text x="60" y="121.0" class="axis-label" text-anchor="end">0.50</text>
+        
+            <text x="60" y="73.5" class="axis-label" text-anchor="end">0.75</text>
+        
+            <text x="60" y="26.0" class="axis-label" text-anchor="end">1.00</text>
+        
+            
+        <line x1="70" y1="145.5" x2="870" y2="145.5" class="ref-line attention-line" />
+        <text x="865" y="139.5" class="ref-label" text-anchor="end">atenção</text>
+
+        <line x1="70" y1="107.5" x2="870" y2="107.5" class="ref-line alert-line" />
+        <text x="865" y="101.5" class="ref-label" text-anchor="end">alerta</text>
+    
+
+            <line x1="70" y1="22" x2="70" y2="212" class="grid-line" />
+            <line x1="70" y1="212" x2="870" y2="212" class="grid-line" />
+
+            <polyline points="70.0,170.1 90.5,170.1 111.0,169.8 131.5,184.4 152.1,146.7 172.6,161.4 193.1,161.7 213.6,179.4 234.1,166.9 254.6,169.1 275.1,153.8 295.6,150.2 316.2,164.1 336.7,177.6 357.2,181.7 377.7,167.4 398.2,152.8 418.7,163.9 439.2,166.4 459.7,181.3 480.3,167.1 500.8,168.0 521.3,150.4 541.8,166.9 562.3,181.6 582.8,167.9 603.3,167.9 623.8,167.8 644.4,167.3 664.9,181.4 685.4,168.6 705.9,167.4 726.4,167.7 746.9,162.8 767.4,181.4 787.9,181.8 808.5,166.8 829.0,167.1 849.5,166.6 870.0,180.7" class="metric-line" />
+
+            
+            <circle cx="70.0" cy="170.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:39:50
+Valor: 0.22</title>
+            </circle>
+        
+            <circle cx="90.5" cy="170.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:40:35
+Valor: 0.22</title>
+            </circle>
+        
+            <circle cx="111.0" cy="169.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:41:21
+Valor: 0.22</title>
+            </circle>
+        
+            <circle cx="131.5" cy="184.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:42:07
+Valor: 0.15</title>
+            </circle>
+        
+            <circle cx="152.1" cy="146.7" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:42:56
+Valor: 0.34</title>
+            </circle>
+        
+            <circle cx="172.6" cy="161.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:43:47
+Valor: 0.27</title>
+            </circle>
+        
+            <circle cx="193.1" cy="161.7" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:44:36
+Valor: 0.26</title>
+            </circle>
+        
+            <circle cx="213.6" cy="179.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:45:21
+Valor: 0.17</title>
+            </circle>
+        
+            <circle cx="234.1" cy="166.9" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:46:07
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="254.6" cy="169.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:46:53
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="275.1" cy="153.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:47:39
+Valor: 0.31</title>
+            </circle>
+        
+            <circle cx="295.6" cy="150.2" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:48:27
+Valor: 0.33</title>
+            </circle>
+        
+            <circle cx="316.2" cy="164.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:49:14
+Valor: 0.25</title>
+            </circle>
+        
+            <circle cx="336.7" cy="177.6" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:50:00
+Valor: 0.18</title>
+            </circle>
+        
+            <circle cx="357.2" cy="181.7" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:50:45
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="377.7" cy="167.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:51:31
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="398.2" cy="152.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:52:16
+Valor: 0.31</title>
+            </circle>
+        
+            <circle cx="418.7" cy="163.9" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:53:03
+Valor: 0.25</title>
+            </circle>
+        
+            <circle cx="439.2" cy="166.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:53:49
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="459.7" cy="181.3" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:54:35
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="480.3" cy="167.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:55:20
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="500.8" cy="168.0" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:56:06
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="521.3" cy="150.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:56:52
+Valor: 0.32</title>
+            </circle>
+        
+            <circle cx="541.8" cy="166.9" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:57:38
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="562.3" cy="181.6" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:58:24
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="582.8" cy="167.9" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:59:10
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="603.3" cy="167.9" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T16:59:55
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="623.8" cy="167.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:00:41
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="644.4" cy="167.3" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:01:27
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="664.9" cy="181.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:02:12
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="685.4" cy="168.6" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:02:58
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="705.9" cy="167.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:03:44
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="726.4" cy="167.7" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:04:29
+Valor: 0.23</title>
+            </circle>
+        
+            <circle cx="746.9" cy="162.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:05:15
+Valor: 0.26</title>
+            </circle>
+        
+            <circle cx="767.4" cy="181.4" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:06:00
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="787.9" cy="181.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:06:46
+Valor: 0.16</title>
+            </circle>
+        
+            <circle cx="808.5" cy="166.8" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:07:32
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="829.0" cy="167.1" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:08:19
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="849.5" cy="166.6" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:09:04
+Valor: 0.24</title>
+            </circle>
+        
+            <circle cx="870.0" cy="180.7" r="5.5" class="data-point">
+                <title>Histórico de Risco do Nó
+Horário: 2026-09-16T17:09:49
+Valor: 0.17</title>
+            </circle>
+        
+
+            <circle cx="870.0" cy="180.7" r="8" class="last-point">
+                <title>Valor atual: 0.17</title>
+            </circle>
+
+            <text x="860.0" y="166.7" class="last-label" text-anchor="end">
+                0.17
+            </text>
+
+            
+        <text x="70.0" y="242" class="axis-label" text-anchor="middle">-29min</text>
+        <text x="480.3" y="242" class="axis-label" text-anchor="middle">-14min</text>
+        <text x="870.0" y="242" class="axis-label" text-anchor="middle">agora</text>
+    
+        </svg>
+
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;margin-bottom:8px;color:#dbeafe;">
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Primeiro: <b>0.22</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Média: <b>0.23</b></span>
+            <span style="background:#0f172a;padding:8px 10px;border-radius:10px;">Atual: <b>0.17</b></span>
+        </div>
+
+        <div class="small live-chips">
+            Últimos valores: 
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            0.16
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            0.24
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            0.24
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            0.24
+        </span>
+        
+        <span style="display:inline-block;background:#334155;color:#e5e7eb;padding:6px 9px;margin:4px;border-radius:999px;font-weight:bold;">
+            0.17
+        </span>
+        
+        </div>
+    </div>
+    
+    </div>
+
+    <div class="section">
+        <h2>Caminho de expansão</h2>
+        <p>
+            Depois de validar que a TV Box consegue operar como nó confiável de borda,
+            a mesma arquitetura pode receber sensores externos: temperatura, umidade,
+            chuva, nível da água, qualidade do ar, ruído, presença e dados comunitários.
+        </p>
+        <p>
+            Assim, antes de espalhar sensores pela cidade, o projeto valida se a infraestrutura
+            computacional realmente aguenta operar de forma contínua.
+        </p>
+    </div>
+
+    
+
+        
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+
+
+    
+<!-- AUTOENCODER_BLOCK_START -->
+<div class="section" style="border: 1px solid #334155;">
+    <h2>Modelo avançado: Autoencoder</h2>
+
+    <div style="
+        background: #7f1d1d;
+        padding: 18px;
+        border-radius: 14px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 18px;
+    ">
+        Status do Autoencoder: ANOMALIA CRÍTICA | Score: 5.50
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Erro de reconstrução</h2>
+            <div class="value">0.098695</div>
+            <p class="small">Diferença entre entrada real e reconstrução do modelo</p>
+        </div>
+
+        <div class="card">
+            <h2>Limite aprendido</h2>
+            <div class="value">0.017935</div>
+            <p class="small">Acima desse limite, o comportamento pode ser anômalo</p>
+        </div>
+
+        <div class="card">
+            <h2>Score de anomalia</h2>
+            <div class="value">5.50</div>
+            <p class="small">Score = erro / limite</p>
+        </div>
+
+        <div class="card">
+            <h2>Amostras de treino</h2>
+            <div class="value">1200</div>
+            <p class="small">Histórico usado para aprender o padrão normal</p>
+        </div>
+    </div>
+
+    <p>
+        O Autoencoder aprende o padrão normal da TV Box usando CPU, RAM,
+        temperatura, disco, latência e carga do sistema. Quando o erro de
+        reconstrução aumenta, o sistema identifica uma possível anomalia operacional.
+    </p>
+
+    <p>
+        Última inferência: <b>2026-09-18T01:37:51</b>
+    </p>
+
+    <p>
+        <a href="/autoencoder.html" style="color:#93c5fd;font-weight:bold;">
+            Abrir painel detalhado do Autoencoder
+        </a>
+    </p>
+</div>
+<!-- AUTOENCODER_BLOCK_END -->
+
+    <div class="footer">
+        Última atualização: 2026-09-16T17:09:49 |
+        IPs: 192.168.3.98 100.106.224.0 fd88:8e68:8318:be00:3592:2c0f:91b6:a348 fd88:8e68:8318:be00:b7b5:b992:769b:dcb6 fd7a:115c:a1e0::aa38:e001 |
+        Atualização automática a cada 10s
+    </div>
+    <script src="/live_charts.js"></script>
+</body>
+</html>

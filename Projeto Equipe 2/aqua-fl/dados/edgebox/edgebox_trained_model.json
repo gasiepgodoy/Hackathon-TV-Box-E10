@@ -1,0 +1,34 @@
+{
+  "created_at": "2026-07-01T23:02:04",
+  "node_id": "tvbox",
+  "model_type": "linear_regression_lightweight",
+  "training_method": "local_training",
+  "federated_ready": true,
+  "aggregation_method_future": "FedAvg",
+  "features": [
+    "bias",
+    "cpu_percent",
+    "ram_percent",
+    "temperature_c",
+    "disk_percent",
+    "latency_ms",
+    "load1"
+  ],
+  "samples_total": 2328,
+  "samples_train": 1862,
+  "samples_test": 466,
+  "train_mae": 0.00039,
+  "test_mae": 0.00042,
+  "weights": [
+    0.012187,
+    0.254016,
+    0.222351,
+    0.181618,
+    0.000833,
+    0.080009,
+    0.09584
+  ],
+  "current_inferred_risk": 0.055,
+  "current_status": "ESTÁVEL",
+  "note": "Modelo treinado localmente na TV Box. Em uma rede federada, estes pesos seriam enviados ao agregador central."
+}

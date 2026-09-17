@@ -1,0 +1,56 @@
+# Ambientes virtuais
+.venv/
+.venv-benchmark/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+logs/
+*.log
+
+# Bancos SQLite
+banco/*.db
+banco/*.db-journal
+edgebox.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Dados brutos e processados de benchmark
+dados/edgebox/raw/
+dados/edgebox/processed/
+dados/edgebox/models/
+
+# Histórico grande / runtime
+dados/edgebox/edgebox_metrics.jsonl
+
+# Arquivos gerados em runtime
+web/edgebox_history.json
+web/edgebox_live.json
+edgebox_history.json
+
+# Temporários
+*.tmp
+*.temp
+*.swp
+*~
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+dados/edgebox/edgebox_autoencoder_latest.json
+dados/edgebox/edgebox_autoencoder_update.json
+dados/edgebox/edgebox_global_model.json
+dados/edgebox/edgebox_latest.json
+dados/edgebox/edgebox_model_update.json
+dados/edgebox/edgebox_state.json

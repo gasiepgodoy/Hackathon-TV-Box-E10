@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="10">
+    <title>EdgeBox Autoencoder</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 28px;
+            background: #0f172a;
+            color: #e5e7eb;
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 42px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #cbd5e1;
+            margin-bottom: 24px;
+        }
+
+        .status {
+            max-width: 900px;
+            margin: 0 auto 26px auto;
+            padding: 22px;
+            border-radius: 18px;
+            text-align: center;
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .stable { background: #14532d; }
+        .attention { background: #854d0e; }
+        .alert { background: #9a3412; }
+        .critical { background: #7f1d1d; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+            margin-bottom: 26px;
+        }
+
+        .card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        }
+
+        .card h2 {
+            color: #93c5fd;
+            font-size: 16px;
+            margin-top: 0;
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .section {
+            background: #111827;
+            border-radius: 18px;
+            padding: 22px;
+            margin-bottom: 26px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+            text-align: left;
+        }
+
+        th {
+            background: #020617;
+            color: #93c5fd;
+        }
+
+        .bar {
+            width: 180px;
+            height: 14px;
+            background: #334155;
+            border-radius: 999px;
+            overflow: hidden;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .bar div {
+            height: 100%;
+            background: #38bdf8;
+        }
+
+        code {
+            color: #86efac;
+        }
+
+        a {
+            color: #93c5fd;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+    <h1>EdgeBox Autoencoder</h1>
+    <p class="subtitle">
+        Detecção de anomalias operacionais usando autoencoder leve na TV Box
+    </p>
+
+    <div class="status critical">
+        Status: ANOMALIA CRÍTICA | Score de anomalia: 5.50
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Erro de reconstrução</h2>
+            <div class="value">0.098695</div>
+        </div>
+
+        <div class="card">
+            <h2>Limite aprendido</h2>
+            <div class="value">0.017935</div>
+        </div>
+
+        <div class="card">
+            <h2>Amostras de treino</h2>
+            <div class="value">1200</div>
+        </div>
+
+        <div class="card">
+            <h2>Modelo</h2>
+            <div class="value">6-3-6</div>
+            <p>Entrada → gargalo → reconstrução</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Como funciona</h2>
+        <p>
+            O autoencoder aprende o padrão normal de funcionamento da TV Box.
+            Ele recebe métricas como CPU, RAM, temperatura, disco, latência e carga do sistema.
+            Depois tenta reconstruir esses mesmos valores.
+        </p>
+        <p>
+            Se a reconstrução fica muito diferente da entrada, o erro aumenta.
+            Quando o erro passa do limite aprendido no treino, o sistema marca como anomalia.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>Comparação entrada vs reconstrução</h2>
+        <table>
+            <tr>
+                <th>Métrica</th>
+                <th>Valor real</th>
+                <th>Entrada normalizada</th>
+                <th>Reconstrução</th>
+                <th>Erro</th>
+            </tr>
+            
+        <tr>
+            <td>CPU</td>
+            <td>0.0%</td>
+            <td>0.000</td>
+            <td>0.027</td>
+            <td>
+                <div class="bar">
+                    <div style="width:10.9%"></div>
+                </div>
+                0.0273
+            </td>
+        </tr>
+        
+        <tr>
+            <td>RAM</td>
+            <td>27.5%</td>
+            <td>0.275</td>
+            <td>0.158</td>
+            <td>
+                <div class="bar">
+                    <div style="width:46.9%"></div>
+                </div>
+                0.1172
+            </td>
+        </tr>
+        
+        <tr>
+            <td>Temperatura</td>
+            <td>41.6 °C</td>
+            <td>0.309</td>
+            <td>0.270</td>
+            <td>
+                <div class="bar">
+                    <div style="width:15.3%"></div>
+                </div>
+                0.0383
+            </td>
+        </tr>
+        
+        <tr>
+            <td>Disco</td>
+            <td>61.7%</td>
+            <td>0.617</td>
+            <td>0.269</td>
+            <td>
+                <div class="bar">
+                    <div style="width:100.0%"></div>
+                </div>
+                0.3481
+            </td>
+        </tr>
+        
+        <tr>
+            <td>Latência</td>
+            <td>7.1 ms</td>
+            <td>0.024</td>
+            <td>0.028</td>
+            <td>
+                <div class="bar">
+                    <div style="width:1.9%"></div>
+                </div>
+                0.0048
+            </td>
+        </tr>
+        
+        <tr>
+            <td>Carga do sistema</td>
+            <td>3.78</td>
+            <td>0.945</td>
+            <td>0.270</td>
+            <td>
+                <div class="bar">
+                    <div style="width:100.0%"></div>
+                </div>
+                0.6746
+            </td>
+        </tr>
+        
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Uso em aprendizado federado</h2>
+        <p>
+            Este modelo foi treinado localmente na TV Box.
+            Em uma rede federada real, cada TV Box treinaria seu próprio autoencoder
+            e enviaria apenas pesos, limite de anomalia e estatísticas para um agregador.
+        </p>
+        <p>
+            Arquivo de atualização federada:
+            <code>edgebox_autoencoder_update.json</code>
+        </p>
+    </div>
+
+    <div class="footer">
+        Última atualização: 2026-09-18T01:37:51 |
+        <a href="/">Voltar ao painel EdgeBox</a>
+    </div>
+</body>
+</html>

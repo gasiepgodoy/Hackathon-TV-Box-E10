@@ -1,0 +1,3187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaFL — Edge Intelligence & Federated Benchmark</title>
+
+    <!-- Google Fonts: Inter & Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            /* Base Charcoal / Slate Dark Palette - Clean Minimalist */
+            --bg-base: #121417;
+            --bg-elevated: #181b20;
+            --card-bg: #1c2026;
+            --card-bg-subtle: #171a20;
+            --border-subtle: #272d36;
+            --border-light: rgba(255, 255, 255, 0.07);
+
+            /* Strict Blue & Green Accent Palette */
+            --blue-500: #3b82f6;
+            --blue-400: #60a5fa;
+            --blue-600: #2563eb;
+            --blue-glow: rgba(59, 130, 246, 0.18);
+
+            --green-500: #10b981;
+            --green-400: #34d399;
+            --green-600: #059669;
+            --green-glow: rgba(16, 185, 129, 0.18);
+
+            /* Text & Functional Colors */
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --text-dim: #4b5563;
+
+            --amber-alert: #f59e0b;
+            --red-alert: #ef4444;
+
+            /* Shadows & Transitions */
+            --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.5);
+            --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image:
+                radial-gradient(circle at 15% 0%, rgba(59, 130, 246, 0.08), transparent 45%),
+                radial-gradient(circle at 85% 70%, rgba(16, 185, 129, 0.06), transparent 50%),
+                radial-gradient(circle at 50% 30%, rgba(24, 27, 32, 0.6), transparent 80%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Typography */
+        h1,
+        h2,
+        h3,
+        h4,
+        .font-heading {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ==========================================================================
+           HEADER & NAVIGATION BAR (Logo Left, Oval Pill Center, Status+Clock Right)
+           ========================================================================== */
+        .top-navbar-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 74px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        /* Left: Logo & Brand */
+        .top-brand {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .top-brand:hover {
+            opacity: 0.92;
+        }
+
+        .aquafl-logo-img {
+            height: 46px;
+            width: auto;
+            display: block;
+            object-fit: contain;
+        }
+
+        /* Center: Floating Oval Pill Navigation */
+        .pill-nav {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(24, 27, 32, 0.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 9999px;
+            padding: 5px 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            transition: var(--transition-smooth);
+        }
+
+        .pill-nav:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(59, 130, 246, 0.12);
+        }
+
+        .nav-item {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: var(--transition-smooth);
+        }
+
+        .nav-item:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .nav-item.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.28), rgba(16, 185, 129, 0.22));
+            border: 1px solid rgba(59, 130, 246, 0.45);
+            box-shadow: 0 0 16px var(--blue-glow);
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            width: 15px;
+            height: 15px;
+            opacity: 0.9;
+        }
+
+        /* Nav Divider | */
+        .nav-divider {
+            width: 1px;
+            height: 18px;
+            background: var(--border-subtle);
+            margin: 0 4px;
+        }
+
+        /* Model Dropdown in Pill Nav */
+        .model-dropdown-wrapper {
+            position: relative;
+        }
+
+        .dropdown-trigger {
+            background: rgba(30, 34, 41, 0.9);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            user-select: none;
+        }
+
+        .dropdown-trigger:hover,
+        .dropdown-trigger.open {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(43, 49, 60, 0.95);
+        }
+
+        .dropdown-arrow {
+            width: 11px;
+            height: 11px;
+            transition: transform 0.2s ease;
+            opacity: 0.75;
+        }
+
+        .dropdown-trigger.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #181b20;
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 6px;
+            width: 230px;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            flex-direction: column;
+            gap: 3px;
+            backdrop-filter: blur(20px);
+            z-index: 1001;
+            animation: dropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dropdown-menu.show {
+            display: flex;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+
+        .dropdown-item {
+            padding: 9px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .dropdown-item:hover {
+            color: #ffffff;
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .dropdown-item.active {
+            color: var(--blue-400);
+            background: rgba(59, 130, 246, 0.2);
+            font-weight: 600;
+        }
+
+        .dropdown-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+        }
+
+        /* Right: Status Badge & Live Clock */
+        .top-right-group {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            padding: 7px 14px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--green-400);
+            letter-spacing: 0.3px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-500);
+            box-shadow: 0 0 10px var(--green-500);
+            animation: pulseDot 2s infinite ease-in-out;
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+        }
+
+        .status-badge.offline .status-dot {
+            background: var(--red-alert);
+            box-shadow: 0 0 8px var(--red-alert);
+            animation: none;
+        }
+
+        .live-clock {
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: rgba(24, 27, 32, 0.7);
+            padding: 7px 14px;
+            border-radius: 9999px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.3);
+                opacity: 0.6;
+            }
+        }
+
+        /* ==========================================================================
+           MAIN LAYOUT & CONTAINERS
+           ========================================================================== */
+        main {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 82px 36px 60px;
+        }
+
+        .page-section {
+            scroll-margin-top: 74px;
+        }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+            margin: 44px 0 34px;
+        }
+
+        /* ==========================================================================
+           3. SEÇÃO 1 — TELEMETRIA OPERACIONAL
+           ========================================================================== */
+        .telemetry-hero-grid {
+            display: grid;
+            grid-template-columns: 1.6fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .hero-banner-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #15181e 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 25px 28px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .hero-banner-card::before {
+            content: "";
+            position: absolute;
+            top: -35px;
+            right: -35px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .hero-banner-content h3 {
+            font-size: 26px;
+            color: #ffffff;
+            line-height: 1.25;
+            margin-bottom: 8px;
+        }
+
+        .hero-banner-content p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            max-width: 580px;
+            line-height: 1.55;
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .hero-tag {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-tag.highlight {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: var(--green-400);
+        }
+
+        /* Health Meter Card */
+        .health-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #15181e 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 21px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .health-gauge-container {
+            position: relative;
+            width: 126px;
+            height: 126px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 4px 0;
+        }
+
+        .health-svg-ring {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .health-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.06);
+            stroke-width: 9.5;
+        }
+
+        .health-ring-val {
+            fill: none;
+            stroke: url(#healthGradient);
+            stroke-width: 9.5;
+            stroke-linecap: round;
+            stroke-dasharray: 408;
+            stroke-dashoffset: 40;
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        .health-score-center {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .health-score-num {
+            font-family: 'Outfit', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1;
+            color: #ffffff;
+        }
+
+        .health-score-unit {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--blue-400);
+        }
+
+        .health-label-badge {
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: var(--green-400);
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            padding: 3px 12px;
+            border-radius: 9999px;
+            margin-top: 5px;
+        }
+
+        .health-risk-meta {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Real-time Metric Cards Grid (Static without jumping on hover) */
+        .metric-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            margin-bottom: 18px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 18px 16px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .metric-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .metric-card-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+        }
+
+        .metric-icon-wrap {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--blue-400);
+        }
+
+        .metric-icon-wrap svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .metric-icon-wrap.green {
+            color: var(--green-400);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .metric-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .metric-large-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 30px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .metric-unit-text {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--blue-400);
+        }
+
+        .metric-unit-text.green {
+            color: var(--green-400);
+        }
+
+        .metric-sub-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Main Telemetry & System Grid */
+        .telemetry-charts-layout {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 18px;
+        }
+
+        .telemetry-chart-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 22px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chart-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chart-title-box h4 {
+            font-size: 16.5px;
+            color: #ffffff;
+        }
+
+        .chart-title-box p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chart-legend-pills {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 12px;
+            border-radius: 9999px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .legend-color-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .chart-canvas-container {
+            width: 100%;
+            height: 315px;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Operational System Info Card */
+        .system-info-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 22px 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .info-list-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .info-data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12.5px;
+        }
+
+        .info-data-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .info-val {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-align: right;
+        }
+
+        /* FL Network Topology Card */
+        .fl-network-widget {
+            margin-top: 10px;
+            background: rgba(18, 20, 23, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 12px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fl-network-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .fl-network-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--blue-400);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        .fl-node-chips {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .fl-chip {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 6px 8px;
+            text-align: center;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .fl-chip.active {
+            border-color: rgba(16, 185, 129, 0.4);
+            color: var(--green-400);
+            background: rgba(16, 185, 129, 0.06);
+        }
+
+        .fl-chip-status {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ==========================================================================
+           4. SEÇÃO 2 — BENCHMARKING & COMPARATIVO DE MODELOS
+           ========================================================================== */
+        .model-selection-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .model-tabs-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .model-tab-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            padding: 10px 18px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: var(--transition-smooth);
+        }
+
+        .model-tab-btn:hover {
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.2);
+            background: #232832;
+        }
+
+        .model-tab-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(16, 185, 129, 0.2));
+            border-color: var(--blue-500);
+            box-shadow: 0 0 16px var(--blue-glow);
+        }
+
+        /* Modelo na fila ou treinando atualmente */
+        .model-tab-btn.bench-pending {
+            border-color: rgba(239, 68, 68, 0.6) !important;
+            color: #f87171 !important;
+            background: rgba(239, 68, 68, 0.12) !important;
+        }
+        .model-tab-btn.bench-pending .model-tab-dot {
+            background: #ef4444 !important;
+            box-shadow: 0 0 8px #ef4444 !important;
+        }
+
+        /* Modelo concluído com sucesso e métricas carregadas */
+        .model-tab-btn.bench-done {
+            border-color: rgba(16, 185, 129, 0.6) !important;
+            color: #34d399 !important;
+            background: rgba(16, 185, 129, 0.12) !important;
+        }
+        .model-tab-btn.bench-done .model-tab-dot {
+            background: #10b981 !important;
+            box-shadow: 0 0 8px #10b981 !important;
+        }
+
+        .model-tab-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .model-tab-btn.active .model-tab-dot {
+            background: var(--blue-400);
+            box-shadow: 0 0 8px var(--blue-400);
+        }
+
+        /* Action Button: Treinar Modelo na EdgeBox (mesmo estilo dos demais quando selecionado) */
+        .train-action-btn {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(16, 185, 129, 0.2));
+            border: 1px solid var(--blue-500);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: var(--transition-smooth);
+            box-shadow: 0 0 16px var(--blue-glow);
+            user-select: none;
+            margin-left: auto;
+        }
+
+        .train-action-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(16, 185, 129, 0.28));
+            border-color: var(--blue-400);
+            box-shadow: 0 0 20px var(--blue-glow);
+            transform: translateY(-1px);
+        }
+
+        .train-action-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .train-action-btn:disabled {
+            opacity: 0.75;
+            cursor: not-allowed;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .train-btn-icon {
+            color: var(--blue-400);
+            filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.6));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .train-action-btn.loading .train-btn-icon {
+            animation: spinTrain 0.9s linear infinite;
+        }
+
+        @keyframes spinTrain {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Toast Notification Container */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast-card {
+            pointer-events: auto;
+            background: rgba(24, 27, 32, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            border-radius: 16px;
+            padding: 14px 18px;
+            color: #ffffff;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(16, 185, 129, 0.2);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            max-width: 460px;
+            animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.3s ease;
+        }
+
+        .toast-card.error {
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .toast-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green-400);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .toast-card.error .toast-icon {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red-alert);
+        }
+
+        .toast-body {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 3px;
+            color: #ffffff;
+        }
+
+        .toast-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .toast-cmd {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.45);
+            padding: 5px 8px;
+            border-radius: 6px;
+            margin-top: 6px;
+            color: var(--green-400);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            word-break: break-all;
+        }
+
+        /* Comparison Table Card */
+        .benchmark-table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 28px;
+            box-shadow: var(--shadow-sm);
+            overflow-x: auto;
+        }
+
+        .bench-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .bench-table th {
+            padding: 14px 16px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(18, 20, 23, 0.4);
+        }
+
+        .bench-table th:first-child {
+            border-top-left-radius: 12px;
+        }
+
+        .bench-table th:last-child {
+            border-top-right-radius: 12px;
+        }
+
+        .bench-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            transition: background 0.15s ease;
+        }
+
+        .bench-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-primary);
+        }
+
+        .bench-table th:first-child,
+        .bench-table td:first-child {
+            min-width: 330px;
+        }
+
+        .model-cell-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .model-cell-name {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 13.5px;
+            white-space: nowrap;
+        }
+
+        .model-cell-tag {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+            min-width: 110px;
+            height: 24px;
+            padding: 0 10px;
+            border-radius: 9999px;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-left: auto;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        .metric-cell-pill {
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .metric-cell-pill.blue {
+            color: var(--blue-400);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .metric-cell-pill.green {
+            color: var(--green-400);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Benchmark Visual Charts Grid */
+        .bench-charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .bench-chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .bench-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 16px;
+        }
+
+        .chart-header-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bench-chart-header h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+            margin-bottom: 2px;
+        }
+
+        .bench-chart-header p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .legend-indicator-line {
+            width: 14px;
+            height: 2.5px;
+            border-radius: 2px;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .legend-indicator-line.solid-blue {
+            background: #3b82f6;
+        }
+
+        .legend-indicator-line.dashed-green {
+            background: repeating-linear-gradient(90deg, #10b981, #10b981 3px, transparent 3px, transparent 6px);
+        }
+
+        /* Active Model Detail Card Drilldown */
+        .model-drilldown-card {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #15181e 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 28px;
+            margin-top: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .drilldown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .drilldown-title h3 {
+            font-size: 22px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drilldown-title p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .drilldown-params-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+        .drilldown-param-box {
+            background: rgba(18, 20, 23, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .param-box-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .param-box-val {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 4px;
+        }
+
+        /* ==========================================================================
+           5. SEÇÃO 3 — SOBRE NÓS (ABOUT US)
+           ========================================================================== */
+        .about-section-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 8px;
+        }
+
+        .about-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .about-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .about-card h4 {
+            font-size: 18px;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .about-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* ==========================================================================
+           FOOTER
+           ========================================================================== */
+        footer {
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 60px;
+            padding: 32px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--blue-400);
+        }
+
+        /* ==========================================================================
+           RESPONSIVENESS
+           ========================================================================== */
+        @media (max-width: 1200px) {
+            .metric-cards-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .telemetry-hero-grid,
+            .telemetry-charts-layout,
+            .bench-charts-grid,
+            .about-section-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .drilldown-params-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .top-navbar-wrapper {
+                padding: 0 16px;
+            }
+
+            .aquafl-logo-svg {
+                height: 38px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding: 90px 16px 60px;
+            }
+
+            .top-navbar-wrapper {
+                height: 64px;
+                padding: 0 12px;
+            }
+
+            .metric-cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .pill-nav {
+                padding: 4px 6px;
+                gap: 3px;
+            }
+
+            .nav-item {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+
+            .drilldown-params-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .aquafl-logo-svg {
+                height: 32px;
+            }
+        }
+
+        @media (max-width: 540px) {
+            .metric-cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-badge span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SVG Gradients for Health Meter & Charts -->
+    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3b82f6" />
+                <stop offset="100%" stop-color="#10b981" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <!-- ==========================================================================
+       TOP NAVBAR: Official Logo Left, Oval Pill Header in Center, Status+Clock Right
+       ========================================================================== -->
+    <header class="top-navbar-wrapper">
+
+        <!-- Left: Official AquaFL Logo (Outside Header) -->
+        <a href="#telemetry" class="top-brand" title="AquaFL — Edge Intelligence Platform">
+            <img src="logo.png" alt="AquaFL Logo" class="aquafl-logo-img">
+        </a>
+
+        <!-- Center: Floating Oval Pill Navigation -->
+        <nav class="pill-nav" id="pillHeader">
+            <!-- Data Telemetry Nav Item (Data icon) -->
+            <a href="#telemetry" class="nav-item active" id="navTelemetryBtn">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+                <span>Telemetria</span>
+            </a>
+
+            <a href="#benchmark" class="nav-item" id="navBenchmarkBtn">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>Benchmark</span>
+            </a>
+
+            <!-- Model Selector Dropdown in Nav -->
+            <div class="model-dropdown-wrapper">
+                <div class="dropdown-trigger" id="modelDropdownTrigger">
+                    <span id="selectedModelLabel">Linear</span>
+                    <svg class="dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
+                <div class="dropdown-menu" id="modelDropdownMenu">
+                    <div class="dropdown-item active" data-model="linear">
+                        <span>Linear Forecaster</span>
+                        <span class="dropdown-badge">2.2K</span>
+                    </div>
+                    <div class="dropdown-item" data-model="mlp">
+                        <span>MLP Neural Net</span>
+                        <span class="dropdown-badge">25.4K</span>
+                    </div>
+                    <div class="dropdown-item" data-model="rnn">
+                        <span>Elman RNN</span>
+                        <span class="dropdown-badge">1.5K</span>
+                    </div>
+                    <div class="dropdown-item" data-model="gru">
+                        <span>GRU Forecaster</span>
+                        <span class="dropdown-badge">4.0K</span>
+                    </div>
+                    <div class="dropdown-item" data-model="lstm">
+                        <span>LSTM Deep Cell</span>
+                        <span class="dropdown-badge">5.3K</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divider "|" -->
+            <div class="nav-divider"></div>
+
+            <!-- Sobre Nós -->
+            <a href="#about" class="nav-item" id="navAboutBtn">
+                <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Sobre Nós</span>
+            </a>
+        </nav>
+
+        <!-- Right: Status Badge & Synchronized Clock (Extreme Right) -->
+        <div class="top-right-group">
+            <div class="status-badge" id="navStatusBadge">
+                <div class="status-dot"></div>
+                <span id="navStatusText">EdgeBox Ao Vivo</span>
+            </div>
+            <div class="live-clock mono" id="liveClock">--:--:--</div>
+        </div>
+
+    </header>
+
+    <!-- ==========================================================================
+       MAIN CONTENT WRAPPER
+       ========================================================================== -->
+    <main>
+
+        <!-- ==========================================================================
+           3. SEÇÃO 1 — TELEMETRIA OPERACIONAL (EDGEBOX)
+           ========================================================================== -->
+        <section id="telemetry" class="page-section">
+
+            <!-- Hero & Operational Health -->
+            <div class="telemetry-hero-grid">
+
+                <!-- Hero Overview Card -->
+                <div class="hero-banner-card">
+                    <div class="hero-banner-content">
+                        <h3>Inteligência de Borda & Telemetria em Tempo Real</h3>
+                        <p>
+                            A EdgeBox AquaFL executa coleta contínua de telemetria, inferência local de modelos neurais
+                            federados e detecção imediata de anomalias com baixo footprint computacional.
+                        </p>
+                    </div>
+
+                    <div class="hero-tags">
+                        <div class="hero-tag highlight">
+                            <span class="status-dot"></span>
+                            <span id="edgeboxNodeId">NODE: TVBOX (ARMv8)</span>
+                        </div>
+                        <div class="hero-tag">
+                            <span>UPTIME:</span>
+                            <strong id="edgeboxUptime" style="color:#ffffff;">--</strong>
+                        </div>
+                        <div class="hero-tag">
+                            <span>FEDAVG PROTOCOL:</span>
+                            <strong style="color:var(--blue-400);">ATIVO</strong>
+                        </div>
+                        <div class="hero-tag">
+                            <span>SAMPLES:</span>
+                            <strong id="samplesCounter" style="color:var(--green-400);">--</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operational Health Ring Card -->
+                <div class="health-card">
+                    <span
+                        style="font-size:11px; font-weight:700; letter-spacing:1px; color:var(--text-muted); text-transform:uppercase;">
+                        Operational Health Score
+                    </span>
+
+                    <div class="health-gauge-container">
+                        <svg class="health-svg-ring" viewBox="0 0 160 160">
+                            <circle class="health-ring-bg" cx="80" cy="80" r="65"></circle>
+                            <circle class="health-ring-val" id="healthRingCircle" cx="80" cy="80" r="65"></circle>
+                        </svg>
+                        <div class="health-score-center">
+                            <span class="health-score-num" id="healthVal">--</span>
+                            <span class="health-score-unit">INDEX / 100</span>
+                        </div>
+                    </div>
+
+                    <div class="health-label-badge" id="healthStatusBadge">
+                        ANALISANDO NÓ
+                    </div>
+                    <div class="health-risk-meta" id="healthRiskMeta">
+                        Risco Operacional: <strong id="riskScoreVal">--</strong>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Real-Time Metrics 6-Card Grid (Static without jumping on hover) -->
+            <div class="metric-cards-grid">
+
+                <!-- CPU Load -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">CPU Load</span>
+                        <div class="metric-icon-wrap">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m-2 6h2m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="cpuVal">--</span>
+                        <span class="metric-unit-text">%</span>
+                    </div>
+                    <div class="metric-sub-desc" id="cpuLoadAverages">Load 1m: --</div>
+                </div>
+
+                <!-- Memory RAM -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">Memory RAM</span>
+                        <div class="metric-icon-wrap green">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="ramVal">--</span>
+                        <span class="metric-unit-text green">%</span>
+                    </div>
+                    <div class="metric-sub-desc" id="ramUsageMb">-- MB / 1822 MB</div>
+                </div>
+
+                <!-- Temperature -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">Temperature</span>
+                        <div class="metric-icon-wrap">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="tempVal">--</span>
+                        <span class="metric-unit-text">°C</span>
+                    </div>
+                    <div class="metric-sub-desc">SoC Térmico TV Box</div>
+                </div>
+
+                <!-- Disk Storage -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">Disk Storage</span>
+                        <div class="metric-icon-wrap green">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="diskVal">--</span>
+                        <span class="metric-unit-text green">%</span>
+                    </div>
+                    <div class="metric-sub-desc" id="diskGbVal">9.37 GB / 28.2 GB</div>
+                </div>
+
+                <!-- Latency -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">Latency</span>
+                        <div class="metric-icon-wrap">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="latencyVal">--</span>
+                        <span class="metric-unit-text">ms</span>
+                    </div>
+                    <div class="metric-sub-desc">Ping ao Servidor FL</div>
+                </div>
+
+                <!-- Network -->
+                <div class="metric-card">
+                    <div class="metric-card-top">
+                        <span class="metric-card-title">Network Bandwidth</span>
+                        <div class="metric-icon-wrap green">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="metric-value-row">
+                        <span class="metric-large-val" id="netTotalVal">--</span>
+                        <span class="metric-unit-text green">kbps</span>
+                    </div>
+                    <div class="metric-sub-desc" id="netRxTxVal">RX: -- | TX: --</div>
+                </div>
+
+            </div>
+
+            <!-- Time-Series Chart & System Info Panel -->
+            <div class="telemetry-charts-layout">
+
+                <!-- Main Canvas Chart -->
+                <div class="telemetry-chart-panel">
+                    <div class="chart-panel-header">
+                        <div class="chart-title-box">
+                            <h4>Histórico Temporal de Telemetria</h4>
+                        </div>
+                        <div class="chart-legend-pills">
+                            <div class="chart-legend-item">
+                                <div class="legend-color-dot" style="background: var(--blue-500);"></div>
+                                <span>CPU %</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <div class="legend-color-dot" style="background: var(--green-500);"></div>
+                                <span>RAM %</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <div class="legend-color-dot" style="background: var(--blue-400);"></div>
+                                <span>TEMP (°C)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-canvas-container">
+                        <canvas id="liveTelemetryCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- System Details & Federated Topology -->
+                <div class="system-info-panel">
+                    <div>
+                        <div class="chart-title-box">
+                            <h4>Parâmetros da EdgeBox</h4>
+                            <p>Status de conectividade e interface de rede.</p>
+                        </div>
+
+                        <div class="info-list-group">
+                            <div class="info-data-row">
+                                <span class="info-label">Função do Nó</span>
+                                <span class="info-val" id="nodeRoleVal" style="color:var(--green-400);">edge_node</span>
+                            </div>
+                            <div class="info-data-row">
+                                <span class="info-label">Endereço IPv4 Local</span>
+                                <span class="info-val mono" id="nodeIpVal" style="font-size:12px;">192.168.3.98</span>
+                            </div>
+                            <div class="info-data-row">
+                                <span class="info-label">Tráfego Cumulativo RX</span>
+                                <span class="info-val" id="nodeRxTotal">-- MB</span>
+                            </div>
+                            <div class="info-data-row">
+                                <span class="info-label">Tráfego Cumulativo TX</span>
+                                <span class="info-val" id="nodeTxTotal">-- MB</span>
+                            </div>
+                            <div class="info-data-row">
+                                <span class="info-label">Status do Agente</span>
+                                <span class="info-val" style="color:var(--green-400);">● Operacional</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Topology Minimal Widget -->
+                    <div class="fl-network-widget">
+                        <div class="fl-network-header">
+                            <span class="fl-network-title">Topologia Federada (FedAvg)</span>
+                            <span style="font-size:10px; color:var(--text-muted);">Sincronização 5-10 s</span>
+                        </div>
+                        <div class="fl-node-chips">
+                            <div class="fl-chip active">
+                                <div>TVBox-01</div>
+                                <div class="fl-chip-status" style="color:var(--green-400);">● Local</div>
+                            </div>
+                            <div class="fl-chip">
+                                <div>Edge-02</div>
+                                <div class="fl-chip-status">● Remoto</div>
+                            </div>
+                            <div class="fl-chip">
+                                <div>Global Hub</div>
+                                <div class="fl-chip-status" style="color:var(--blue-400);">● FedAvg</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ==========================================================================
+           4. SEÇÃO 2 — BENCHMARKING & COMPARATIVO DE MODELOS
+           ========================================================================== -->
+        <section id="benchmark" class="page-section">
+            <div class="section-divider"></div>
+
+            <div style="margin-bottom: 24px;">
+                <h2 style="font-size:32px; color:#ffffff; margin-bottom:6px;">Benchmark</h2>
+                <p style="color:var(--text-secondary); font-size:14px; max-width:760px;">
+                    Comparativo de regressão temporal multivariada (+10 min), tempo de treino na TV Box ARM64 e erro de validação/teste em escala normalizada.
+                </p>
+            </div>
+
+            <!-- Model Selection Filter Tabs & Action Button -->
+            <div class="model-selection-bar">
+                <div class="model-tabs-container" id="modelFilterTabs">
+                    <button class="model-tab-btn active" data-model="linear">
+                        <div class="model-tab-dot"></div>
+                        <span>Linear</span>
+                    </button>
+                    <button class="model-tab-btn" data-model="mlp">
+                        <div class="model-tab-dot"></div>
+                        <span>MLP</span>
+                    </button>
+                    <button class="model-tab-btn" data-model="rnn">
+                        <div class="model-tab-dot"></div>
+                        <span>RNN</span>
+                    </button>
+                    <button class="model-tab-btn" data-model="gru">
+                        <div class="model-tab-dot"></div>
+                        <span>GRU</span>
+                    </button>
+                    <button class="model-tab-btn" data-model="lstm">
+                        <div class="model-tab-dot"></div>
+                        <span>LSTM</span>
+                    </button>
+                </div>
+
+                <!-- Action Button: Realizar Benchmark Sequencial -->
+                <button class="train-action-btn" id="trainModelActionBtn"
+                    title="Disparar treinamento sequencial em pipeline de todos os modelos na EdgeBox">
+                    <span class="train-btn-icon" id="trainBtnIcon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </span>
+                    <span id="trainBtnText">Realizar Benchmark</span>
+                </button>
+            </div>
+
+            <!-- Model Benchmark Comparison Table Card -->
+            <div class="benchmark-table-card">
+                <table class="bench-table" id="benchmarkDataTable">
+                    <thead>
+                        <tr>
+                            <th>Modelo / Topologia</th>
+                            <th>Parâmetros</th>
+                            <th>Melhor Val MSE (Época)</th>
+                            <th>Test MSE Final</th>
+                            <th>Test MAE Final</th>
+                            <th>Tempo de Treino CPU</th>
+                        </tr>
+                    </thead>
+                    <tbody id="benchmarkTableBody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Benchmark Comparative Charts (Learning Curves & Trade-off) -->
+            <div class="bench-charts-grid">
+
+                <!-- Chart 1: Learning Curves (Train vs. Val) for active model -->
+                <div class="bench-chart-card">
+                    <div class="bench-chart-header">
+                        <div class="chart-header-text">
+                            <h4 id="learningCurvesTitle">Curvas de Aprendizado</h4>
+                            <p id="learningCurvesSubtitle">Evolução do erro por época (Train Loss vs. Val MSE) no modelo selecionado.</p>
+                        </div>
+                        <div class="chart-legend-pills">
+                            <div class="chart-legend-item">
+                                <span class="legend-indicator-line solid-blue"></span>
+                                <span>Train Loss</span>
+                            </div>
+                            <div class="chart-legend-item">
+                                <span class="legend-indicator-line dashed-green"></span>
+                                <span>Val MSE</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="lossConvergenceCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Computational Cost vs Test MAE Trade-off -->
+                <div class="bench-chart-card">
+                    <div class="bench-chart-header">
+                        <div class="chart-header-text">
+                            <h4>Custo Computacional vs. Erro</h4>
+                            <p>Tempo de treino na CPU ARM64 (s) vs. Test MAE no horizonte +10 min.</p>
+                        </div>
+                        <div class="chart-legend-pills">
+                            <div class="chart-legend-item">
+                                <div class="legend-color-dot" style="background: #3b82f6;"></div>
+                                <span>Modelos (ARM64)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="tradeoffCanvas"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Active Model Detail Drilldown Card -->
+            <div class="model-drilldown-card" id="modelDrilldownBox">
+                <div class="drilldown-header">
+                    <div class="drilldown-title">
+                        <h3 id="drilldownModelName">Linear Forecaster</h3>
+                        <p id="drilldownModelDesc">Regressão linear multivariada com vetorização plana (Flatten). Menor tempo de treino e footprint de memória mínimo na TV Box.</p>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <span class="section-pill-tag" id="drilldownBadge"
+                            style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:var(--green-400); font-size:10px; text-transform:uppercase; letter-spacing:1.2px; font-weight:700; padding:4px 10px; border-radius:9999px;">Mais Rápido</span>
+                    </div>
+                </div>
+
+                <!-- 4 Key Summary Parameters -->
+                <div class="drilldown-params-grid" id="drilldownParamsContainer">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Feature Error Decomposition Section -->
+                <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+                        <span style="font-size:11px; font-weight:700; color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;">Detalhamento de Erro por Variável (Test MAE +10 min)</span>
+                        <span style="font-size:11px; color:var(--text-secondary); font-family:'JetBrains Mono', monospace;">Escala Normalizada</span>
+                    </div>
+                    <div id="drilldownFeaturesContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==========================================================================
+           5. SEÇÃO 3 — SOBRE NÓS (ABOUT US)
+           ========================================================================== -->
+        <section id="about" class="page-section">
+            <div class="section-divider"></div>
+
+            <div style="margin-bottom: 28px;">
+                <h2 style="font-size:32px; color:#ffffff; margin-bottom:8px;">Sobre Nós</h2>
+                <p
+                    style="color:var(--text-secondary); font-size:14.5px; line-height:1.65; max-width:980px; text-align: justify;">
+                    O AquaFL é um benchmark desenvolvido para avaliar a viabilidade técnica de TV Boxes de baixo custo
+                    como nós de borda (Edge AI). O estudo analisa o desempenho de inferência e treinamento local nesses
+                    dispositivos, mensurando métricas como latência, uso de memória e consumo energético sob limites
+                    operacionais severos. A proposta fundamenta o uso desse hardware acessível em redes de Aprendizado
+                    Federado voltadas ao monitoramento ambiental distribuído, estabelecendo bases para a coleta contínua
+                    de dados e a previsão descentralizada de eventos extremos, como enchentes.
+                </p>
+            </div>
+
+            <div class="about-section-grid">
+
+                <div class="about-card">
+                    <div>
+                        <div class="about-card-icon"
+                            style="background:rgba(59, 130, 246, 0.12); color:var(--blue-400);">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                        </div>
+                        <h4>Hardware Sustentável (TV Box)</h4>
+                        <p>
+                            Reaproveitamento de dispositivos TV Box (SoC ARMv8 quad-core) como nós de borda eficientes,
+                            viabilizando monitoramento contínuo (24/7) com baixo consumo energético e custo reduzido.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="about-card">
+                    <div>
+                        <div class="about-card-icon"
+                            style="background:rgba(16, 185, 129, 0.12); color:var(--green-400);">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <h4>Aprendizado Federado (FedAvg)</h4>
+                        <p>
+                            Treinamento distribuído com agregação centralizada de pesos via FedAvg. Os dados brutos
+                            permanecem restritos ao dispositivo local, garantindo privacidade e otimizando a largura de
+                            banda da rede.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="about-card">
+                    <div>
+                        <div class="about-card-icon"
+                            style="background:rgba(96, 165, 250, 0.12); color:var(--blue-400);">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <h4>Detecção em Tempo Real</h4>
+                        <p>
+                            Inferência local com Autoencoders e redes neurais (GRU, LSTM, MLP) para detecção de
+                            anomalias operacionais e estresse térmico, alcançando latência inferior a 12 ms.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-brand">
+                <img src="logo.png" alt="AquaFL Logo" style="height:32px; width:auto; object-fit:contain;">
+            </div>
+            <div class="footer-links">
+                <a href="#telemetry">Telemetria</a>
+                <a href="#benchmark">Benchmark</a>
+                <a href="#about">Sobre Nós</a>
+                <a href="/legacy.html">Painel Técnico</a>
+                <a href="/autoencoder.html">Autoencoder Lab</a>
+            </div>
+            <div id="footerTimestamp">Sincronizado via EdgeBox Local</div>
+        </footer>
+
+    </main>
+
+    <!-- Load Benchmark Module -->
+    <script src="benchmark_data.js"></script>
+
+    <!-- Dashboard App Engine Script -->
+    <script>
+        (function () {
+            "use strict";
+
+            // Endpoints otimizados com cache do endpoint funcional
+            let cachedLiveUrl = null;
+            let cachedHistoryUrl = null;
+
+            const LIVE_ENDPOINTS = [
+                "./edgebox_live.json",
+                "/edgebox_live.json",
+                "/web/edgebox_live.json"
+            ];
+            const HISTORY_ENDPOINTS = [
+                "./edgebox_history.json",
+                "/edgebox_history.json",
+                "/web/edgebox_history.json"
+            ];
+
+            let historyCache = [];
+            let activeModelId = "linear";
+
+            // Relógio sincronizado
+            function updateClock() {
+                const now = new Date();
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                const s = String(now.getSeconds()).padStart(2, '0');
+                const clockEl = document.getElementById("liveClock");
+                if (clockEl) {
+                    clockEl.textContent = `${h}:${m}:${s}`;
+                }
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            // =========================================================================
+            // 1. HELPERS DE CONVERSÃO E EXTRAÇÃO
+            // =========================================================================
+            function numberValue(val, fallback = 0) {
+                if (val === undefined || val === null || val === "") return fallback;
+                if (typeof val === "string") {
+                    val = val.replace(",", ".").replace(/[^0-9.\-]/g, "");
+                }
+                const n = Number(val);
+                return Number.isFinite(n) ? n : fallback;
+            }
+
+            function textValue(val, fallback = "--") {
+                if (val === undefined || val === null || val === "") return fallback;
+                return String(val);
+            }
+
+            async function fetchWithFallback(endpoints, type = "live") {
+                const cached = type === "live" ? cachedLiveUrl : cachedHistoryUrl;
+                if (cached) {
+                    try {
+                        const res = await fetch(`${cached}?_=${Date.now()}`, { cache: "no-store" });
+                        if (res.ok) return await res.json();
+                    } catch (e) {
+                        if (type === "live") cachedLiveUrl = null;
+                        else cachedHistoryUrl = null;
+                    }
+                }
+
+                for (const url of endpoints) {
+                    try {
+                        const res = await fetch(`${url}?_=${Date.now()}`, { cache: "no-store" });
+                        if (res.ok) {
+                            if (type === "live") cachedLiveUrl = url;
+                            else cachedHistoryUrl = url;
+                            return await res.json();
+                        }
+                    } catch (e) { }
+                }
+                throw new Error("Nenhum endpoint de telemetria respondeu");
+            }
+
+            // =========================================================================
+            // 2. MOTOR DE TELEMETRIA EM TEMPO REAL
+            // =========================================================================
+            async function updateTelemetryLive() {
+                try {
+                    const data = await fetchWithFallback(LIVE_ENDPOINTS);
+
+                    // Se houver samples, pega a última amostra (mais recente)
+                    let item = data;
+                    if (data && Array.isArray(data.samples) && data.samples.length > 0) {
+                        item = data.samples[data.samples.length - 1];
+                        historyCache = data.samples.slice(-50);
+                    } else if (data && data.cpu_percent !== undefined) {
+                        item = data;
+                        if (!historyCache) historyCache = [];
+                        const last = historyCache[historyCache.length - 1];
+                        if (!last || last.timestamp !== item.timestamp) {
+                            historyCache.push(item);
+                            if (historyCache.length > 50) historyCache.shift();
+                        }
+                    }
+
+                    const counterEl = document.getElementById("samplesCounter");
+                    if (counterEl) counterEl.textContent = `${historyCache.length} pontos`;
+                    renderLiveTelemetryChart();
+
+                    const cpu = numberValue(item.cpu_percent);
+                    const ram = numberValue(item.ram_percent);
+                    const ramUsedMb = numberValue(item.ram_used_mb);
+                    const ramTotalMb = numberValue(item.ram_total_mb, 1822.6);
+
+                    const temp = numberValue(item.temperature_c);
+                    const disk = numberValue(item.disk_percent);
+                    const diskUsedGb = numberValue(item.disk_used_gb, 9.37);
+                    const diskTotalGb = numberValue(item.disk_total_gb, 28.21);
+
+                    const latency = numberValue(item.latency_ms, 8.4);
+                    const rx = numberValue(item.rx_kbps);
+                    const tx = numberValue(item.tx_kbps);
+                    const rxTotal = numberValue(item.rx_mb_total);
+                    const txTotal = numberValue(item.tx_mb_total);
+
+                    const load1 = numberValue(item.load1, 1.48);
+                    const uptime = textValue(item.uptime_human, "2d 18h");
+                    const nodeId = textValue(item.node_id, "TVBOX");
+                    const ipAddresses = textValue(item.ip_addresses, "192.168.3.98");
+                    const nodeRole = textValue(item.node_role, "edge_node");
+
+                    // Risco e Saúde Operacional
+                    let riskScore = numberValue(item.inferred_risk ?? item.target_risk, 0.16);
+                    let riskPercent = riskScore <= 1 ? riskScore * 100 : riskScore;
+                    riskPercent = Math.max(0, Math.min(100, riskPercent));
+                    let healthIndex = Math.round(100 - riskPercent);
+
+                    // Atualização dos Cards de Métricas
+                    document.getElementById("cpuVal").textContent = cpu.toFixed(1);
+                    document.getElementById("ramVal").textContent = ram.toFixed(1);
+                    document.getElementById("tempVal").textContent = temp.toFixed(1);
+                    document.getElementById("diskVal").textContent = disk.toFixed(1);
+                    document.getElementById("latencyVal").textContent = latency.toFixed(1);
+                    document.getElementById("netTotalVal").textContent = (rx + tx).toFixed(1);
+
+                    document.getElementById("cpuLoadAverages").textContent = `Load 1m: ${load1.toFixed(2)}`;
+                    document.getElementById("ramUsageMb").textContent = `${ramUsedMb.toFixed(0)} MB / ${ramTotalMb.toFixed(0)} MB`;
+                    document.getElementById("diskGbVal").textContent = `${diskUsedGb.toFixed(1)} GB / ${diskTotalGb.toFixed(1)} GB`;
+                    document.getElementById("netRxTxVal").textContent = `RX: ${rx.toFixed(1)} | TX: ${tx.toFixed(1)}`;
+
+                    document.getElementById("edgeboxUptime").textContent = uptime;
+                    document.getElementById("edgeboxNodeId").textContent = `NODE: ${nodeId.toUpperCase()}`;
+                    document.getElementById("nodeRoleVal").textContent = nodeRole;
+                    document.getElementById("nodeIpVal").textContent = ipAddresses.split(" ")[0] || "192.168.3.98";
+                    document.getElementById("nodeRxTotal").textContent = `${rxTotal.toFixed(1)} MB`;
+                    document.getElementById("nodeTxTotal").textContent = `${txTotal.toFixed(1)} MB`;
+
+                    // Medidor Circular de Saúde
+                    document.getElementById("healthVal").textContent = healthIndex;
+                    document.getElementById("riskScoreVal").textContent = riskScore.toFixed(3);
+
+                    const ringCircle = document.getElementById("healthRingCircle");
+                    if (ringCircle) {
+                        const maxDash = 408;
+                        const offset = maxDash - (healthIndex / 100) * maxDash;
+                        ringCircle.style.strokeDashoffset = offset;
+                    }
+
+                    const healthBadge = document.getElementById("healthStatusBadge");
+                    if (healthBadge) {
+                        if (healthIndex >= 70) {
+                            healthBadge.textContent = "ESTADO ESTÁVEL";
+                            healthBadge.style.color = "var(--green-400)";
+                            healthBadge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                            healthBadge.style.background = "rgba(16, 185, 129, 0.12)";
+                        } else if (healthIndex >= 50) {
+                            healthBadge.textContent = "ATENÇÃO OPERACIONAL";
+                            healthBadge.style.color = "var(--blue-400)";
+                            healthBadge.style.borderColor = "rgba(59, 130, 246, 0.3)";
+                            healthBadge.style.background = "rgba(59, 130, 246, 0.12)";
+                        } else {
+                            healthBadge.textContent = "ALERTA OPERACIONAL";
+                            healthBadge.style.color = "var(--red-alert)";
+                            healthBadge.style.borderColor = "rgba(239, 68, 68, 0.3)";
+                            healthBadge.style.background = "rgba(239, 68, 68, 0.12)";
+                        }
+                    }
+
+                    // Status do Top Header
+                    const timeStr = new Date().toLocaleTimeString();
+                    document.getElementById("navStatusBadge").classList.remove("offline");
+                    document.getElementById("navStatusText").textContent = "EdgeBox Ao Vivo";
+                    document.getElementById("footerTimestamp").textContent = `AquaFL EdgeBox Live • ${timeStr}`;
+
+                } catch (err) {
+                    document.getElementById("navStatusBadge").classList.add("offline");
+                    document.getElementById("navStatusText").textContent = "Aguardando Nó";
+                }
+            }
+
+            async function updateTelemetryHistory() {
+                try {
+                    const data = await fetchWithFallback(HISTORY_ENDPOINTS, "history");
+                    let samples = [];
+                    if (Array.isArray(data)) samples = data;
+                    else if (Array.isArray(data.samples)) samples = data.samples;
+                    else if (Array.isArray(data.history)) samples = data.history;
+
+                    if (samples.length > 0) {
+                        historyCache = samples.slice(-50);
+                        document.getElementById("samplesCounter").textContent = `${historyCache.length} pontos`;
+                        renderLiveTelemetryChart();
+                    }
+                } catch (e) {
+                    renderLiveTelemetryChart();
+                }
+            }
+
+            // =========================================================================
+            // 3. GRÁFICOS EM CANVAS
+            // =========================================================================
+            function setupCanvas(canvasId) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return null;
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+                canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+                const ctx = canvas.getContext("2d");
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                return { ctx, width: rect.width, height: rect.height };
+            }
+
+            function renderLiveTelemetryChart() {
+                const setup = setupCanvas("liveTelemetryCanvas");
+                if (!setup) return;
+                const { ctx, width, height } = setup;
+
+                ctx.clearRect(0, 0, width, height);
+
+                const pad = { left: 40, right: 20, top: 20, bottom: 30 };
+                const cw = width - pad.left - pad.right;
+                const ch = height - pad.top - pad.bottom;
+
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+                ctx.fillStyle = "#6b7280";
+                ctx.font = "10px Inter, sans-serif";
+                ctx.lineWidth = 1;
+
+                for (let i = 0; i <= 4; i++) {
+                    const y = pad.top + (ch / 4) * i;
+                    const val = Math.round(100 - i * 25);
+                    ctx.beginPath();
+                    ctx.moveTo(pad.left, y);
+                    ctx.lineTo(width - pad.right, y);
+                    ctx.stroke();
+                    ctx.fillText(`${val}%`, 10, y + 3);
+                }
+
+                if (!historyCache.length) {
+                    ctx.fillStyle = "#9ca3af";
+                    ctx.fillText("Carregando telemetria da EdgeBox...", pad.left + 20, pad.top + 40);
+                    return;
+                }
+
+                const cpuVals = historyCache.map(s => numberValue(s.cpu_percent, 10));
+                const ramVals = historyCache.map(s => numberValue(s.ram_percent, 25));
+                const tempVals = historyCache.map(s => numberValue(s.temperature_c, 40));
+
+                function drawSmoothLine(vals, strokeColor, fillColor) {
+                    if (vals.length < 2) return;
+                    const step = cw / (vals.length - 1);
+
+                    ctx.beginPath();
+                    vals.forEach((v, i) => {
+                        const x = pad.left + i * step;
+                        const y = pad.top + ch - (Math.min(100, Math.max(0, v)) / 100) * ch;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 2.5;
+                    ctx.lineJoin = "round";
+                    ctx.stroke();
+
+                    if (fillColor) {
+                        ctx.lineTo(pad.left + (vals.length - 1) * step, pad.top + ch);
+                        ctx.lineTo(pad.left, pad.top + ch);
+                        ctx.closePath();
+                        ctx.fillStyle = fillColor;
+                        ctx.fill();
+                    }
+                }
+
+                // RAM (Verde)
+                const ramGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
+                ramGrad.addColorStop(0, "rgba(16, 185, 129, 0.2)");
+                ramGrad.addColorStop(1, "rgba(16, 185, 129, 0.0)");
+                drawSmoothLine(ramVals, "#10b981", ramGrad);
+
+                // CPU (Azul)
+                const cpuGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + ch);
+                cpuGrad.addColorStop(0, "rgba(59, 130, 246, 0.25)");
+                cpuGrad.addColorStop(1, "rgba(59, 130, 246, 0.0)");
+                drawSmoothLine(cpuVals, "#3b82f6", cpuGrad);
+
+                // Temp (Azul Claro)
+                drawSmoothLine(tempVals, "#60a5fa", null);
+            }
+
+            function renderLossConvergenceChart() {
+                const setup = setupCanvas("lossConvergenceCanvas");
+                if (!setup) return;
+                const { ctx, width, height } = setup;
+
+                ctx.clearRect(0, 0, width, height);
+                const pad = { left: 45, right: 30, top: 25, bottom: 35 };
+                const cw = width - pad.left - pad.right;
+                const ch = height - pad.top - pad.bottom;
+
+                if (!window.AquaBenchmarkData) return;
+                const m = window.AquaBenchmarkData.getModel(activeModelId);
+                if (!m || !m.history || !m.history.length) return;
+
+                const history = m.history;
+                const minY = 0.0;
+                const maxY = 1.20;
+
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+                ctx.fillStyle = "#6b7280";
+                ctx.font = "10px Inter, sans-serif";
+                ctx.lineWidth = 1;
+
+                // Eixo Y - Gridlines
+                const yTicks = [0.20, 0.40, 0.60, 0.80, 1.00, 1.20];
+                yTicks.forEach(tick => {
+                    const y = pad.top + ch - ((tick - minY) / (maxY - minY)) * ch;
+                    if (y >= pad.top && y <= pad.top + ch) {
+                        ctx.beginPath();
+                        ctx.moveTo(pad.left, y);
+                        ctx.lineTo(width - pad.right, y);
+                        ctx.stroke();
+                        ctx.fillText(tick.toFixed(2), 10, y + 3);
+                    }
+                });
+
+                // Eixo X - Épocas (1 a 10)
+                const numEpochs = history.length;
+                for (let i = 0; i < numEpochs; i++) {
+                    const epochNum = history[i].epoch || (i + 1);
+                    if (epochNum === 1 || epochNum === Math.floor(numEpochs / 2) || epochNum === numEpochs) {
+                        const x = pad.left + (i / (numEpochs - 1)) * cw;
+                        ctx.fillText(`Época ${epochNum}`, x - 18, height - 12);
+                    }
+                }
+
+                // 1. Train Loss (Linha Contínua Azul)
+                ctx.beginPath();
+                history.forEach((h, i) => {
+                    const x = pad.left + (i / (numEpochs - 1)) * cw;
+                    const val = Math.min(maxY, Math.max(minY, h.train_loss));
+                    const y = pad.top + ch - ((val - minY) / (maxY - minY)) * ch;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = "#3b82f6";
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([]);
+                ctx.stroke();
+
+                // Pontos na Train Loss
+                history.forEach((h, i) => {
+                    const x = pad.left + (i / (numEpochs - 1)) * cw;
+                    const val = Math.min(maxY, Math.max(minY, h.train_loss));
+                    const y = pad.top + ch - ((val - minY) / (maxY - minY)) * ch;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = "#3b82f6";
+                    ctx.fill();
+                });
+
+                // 2. Validation MSE (Linha Tracejada Verde)
+                ctx.beginPath();
+                history.forEach((h, i) => {
+                    const x = pad.left + (i / (numEpochs - 1)) * cw;
+                    const val = Math.min(maxY, Math.max(minY, h.validation_mse));
+                    const y = pad.top + ch - ((val - minY) / (maxY - minY)) * ch;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = "#10b981";
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([6, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Pontos na Validation MSE
+                history.forEach((h, i) => {
+                    const x = pad.left + (i / (numEpochs - 1)) * cw;
+                    const val = Math.min(maxY, Math.max(minY, h.validation_mse));
+                    const y = pad.top + ch - ((val - minY) / (maxY - minY)) * ch;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+                    ctx.fillStyle = "#10b981";
+                    ctx.fill();
+                });
+
+                // Destaque para a Melhor Época de Validação
+                if (m.best_epoch && m.best_epoch <= numEpochs) {
+                    const bIdx = m.best_epoch - 1;
+                    const bX = pad.left + (bIdx / (numEpochs - 1)) * cw;
+                    const bY = pad.top + ch - ((m.best_val_mse - minY) / (maxY - minY)) * ch;
+
+                    ctx.beginPath();
+                    ctx.arc(bX, bY, 8, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(16, 185, 129, 0.35)";
+                    ctx.fill();
+                    ctx.strokeStyle = "#10b981";
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    const pillW = 88;
+                    const pillH = 18;
+                    const pillX = Math.max(pad.left + 5, Math.min(width - pad.right - pillW - 5, bX - pillW / 2));
+                    const pillY = Math.max(pad.top - 15, bY - 22);
+
+                    ctx.fillStyle = "rgba(20, 24, 30, 0.92)";
+                    ctx.strokeStyle = "rgba(16, 185, 129, 0.6)";
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.roundRect ? ctx.roundRect(pillX, pillY, pillW, pillH, 5) : ctx.rect(pillX, pillY, pillW, pillH);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#34d399";
+                    ctx.font = "bold 9.5px JetBrains Mono, monospace";
+                    ctx.textAlign = "center";
+                    ctx.fillText(`Best: ${m.best_val_mse.toFixed(4)}`, pillX + pillW / 2, pillY + 12.5);
+                    ctx.textAlign = "left";
+                }
+            }
+
+            function renderTradeoffChart() {
+                const setup = setupCanvas("tradeoffCanvas");
+                if (!setup) return;
+                const { ctx, width, height } = setup;
+
+                ctx.clearRect(0, 0, width, height);
+                const pad = { left: 45, right: 35, top: 25, bottom: 35 };
+                const cw = width - pad.left - pad.right;
+                const ch = height - pad.top - pad.bottom;
+
+                const models = window.AquaBenchmarkData ? window.AquaBenchmarkData.models : {};
+                const modelKeys = Object.keys(models);
+                if (!modelKeys.length) return;
+
+                const maxTime = 350; // segundos (0 a 350s)
+                const minMae = 0.40;
+                const maxMae = 0.70;
+
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+                ctx.fillStyle = "#6b7280";
+                ctx.font = "10px Inter, sans-serif";
+
+                // Eixos
+                ctx.beginPath();
+                ctx.moveTo(pad.left, pad.top);
+                ctx.lineTo(pad.left, pad.top + ch);
+                ctx.lineTo(pad.left + cw, pad.top + ch);
+                ctx.stroke();
+
+                ctx.fillText("Test MAE", pad.left - 5, pad.top - 10);
+                ctx.fillText("Tempo de Treinamento CPU (segundos)", pad.left + cw / 2 - 85, height - 12);
+
+                // Gridlines X (Tempo 0s a 350s)
+                [0, 50, 100, 150, 200, 250, 300, 350].forEach(t => {
+                    const x = pad.left + (t / maxTime) * cw;
+                    if (t % 100 === 0 || t === 0 || t === 350) {
+                        ctx.fillText(`${t}s`, x - 8, pad.top + ch + 16);
+                    }
+                });
+
+                // Gridlines Y (Test MAE 0.40 a 0.70)
+                [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70].forEach(mae => {
+                    const y = pad.top + ch - ((mae - minMae) / (maxMae - minMae)) * ch;
+                    ctx.beginPath();
+                    ctx.moveTo(pad.left, y);
+                    ctx.lineTo(pad.left + cw, y);
+                    ctx.stroke();
+                    ctx.fillText(mae.toFixed(2), 12, y + 3);
+                });
+
+                // Renderiza cada modelo no Scatter Plot
+                modelKeys.forEach(k => {
+                    const m = models[k];
+                    const x = pad.left + (Math.min(maxTime, m.train_time_s) / maxTime) * cw;
+                    const y = pad.top + ch - ((Math.min(maxMae, Math.max(minMae, m.test_mae)) - minMae) / (maxMae - minMae)) * ch;
+
+                    const radius = 7 + Math.min(10, Math.sqrt(m.parameters) / 18);
+                    const color = m.badgeColor || "#3b82f6";
+                    const isActive = k === activeModelId;
+
+                    if (isActive) {
+                        ctx.beginPath();
+                        ctx.arc(x, y, radius + 6, 0, Math.PI * 2);
+                        ctx.fillStyle = `${color}35`;
+                        ctx.fill();
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+
+                    // Rótulo com nome e MAE
+                    ctx.fillStyle = isActive ? "#ffffff" : "#d1d5db";
+                    ctx.font = isActive ? "bold 10.5px Inter, sans-serif" : "10px Inter, sans-serif";
+                    
+                    // Ajuste de posição do texto para evitar cortes
+                    let textX = x + radius + 5;
+                    let textY = y + 3;
+                    if (x > width - 110) {
+                        textX = x - radius - 80;
+                    }
+                    if (y < pad.top + 15) {
+                        textY = y + 14;
+                    }
+                    ctx.fillText(`${m.name.split(" ")[0]} (${m.test_mae.toFixed(4)})`, textX, textY);
+                });
+            }
+
+            // =========================================================================
+            // 4. TABELA DE BENCHMARK & DRILLDOWN
+            // =========================================================================
+            function populateBenchmarkTable() {
+                const tbody = document.getElementById("benchmarkTableBody");
+                if (!tbody || !window.AquaBenchmarkData) return;
+
+                const models = window.AquaBenchmarkData.models;
+                tbody.innerHTML = "";
+
+                Object.keys(models).forEach(key => {
+                    const m = models[key];
+                    const tr = document.createElement("tr");
+                    tr.dataset.model = key;
+                    if (key === activeModelId) tr.classList.add("highlight-row");
+
+                    const paramFormatted = (m.parameters >= 1000)
+                        ? (m.parameters / 1000).toFixed(1) + 'K'
+                        : m.parameters.toString();
+
+                    tr.innerHTML = `
+                    <td>
+                        <div class="model-cell-title">
+                            <div>
+                                <div class="model-cell-name">${m.name}</div>
+                                <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">${m.category}</div>
+                            </div>
+                            <span class="model-cell-tag" style="background:${m.badgeColor}22; color:${m.badgeColor}; border:1px solid ${m.badgeColor}44;">${m.badge}</span>
+                        </div>
+                    </td>
+                    <td class="mono" style="color:var(--text-primary); font-weight:600;">${paramFormatted}</td>
+                    <td>
+                        <span class="metric-cell-pill green">${m.best_val_mse.toFixed(4)}</span>
+                        <span class="mono" style="font-size:11px; color:var(--text-secondary); margin-left:4px;">(Época ${m.best_epoch})</span>
+                    </td>
+                    <td class="mono" style="color:var(--text-primary); font-weight:600;">${m.test_mse.toFixed(4)}</td>
+                    <td class="mono" style="color:var(--blue-400); font-weight:600;">${m.test_mae.toFixed(4)}</td>
+                    <td>
+                        <span class="metric-cell-pill blue">${m.train_time_s.toFixed(2)} s</span>
+                    </td>
+                `;
+
+                    tr.addEventListener("click", () => selectActiveModel(key));
+                    tbody.appendChild(tr);
+                });
+            }
+
+            function updateDrilldownView() {
+                if (!window.AquaBenchmarkData) return;
+                const m = window.AquaBenchmarkData.getModel(activeModelId);
+                if (!m) return;
+
+                const nameEl = document.getElementById("drilldownModelName");
+                if (nameEl) nameEl.textContent = m.name;
+
+                const descEl = document.getElementById("drilldownModelDesc");
+                if (descEl) descEl.textContent = m.description;
+
+                const badgeEl = document.getElementById("drilldownBadge");
+                if (badgeEl) {
+                    badgeEl.textContent = m.badge;
+                    badgeEl.style.backgroundColor = `${m.badgeColor}22`;
+                    badgeEl.style.color = m.badgeColor;
+                    badgeEl.style.borderColor = `${m.badgeColor}55`;
+                }
+
+                // 4 Summary Metric Boxes
+                const container = document.getElementById("drilldownParamsContainer");
+                if (container) {
+                    const paramFormatted = (m.parameters >= 1000)
+                        ? (m.parameters / 1000).toFixed(1) + 'K'
+                        : m.parameters.toString();
+
+                    container.innerHTML = `
+                    <div class="drilldown-param-box">
+                        <div class="param-box-label">Test MAE Global</div>
+                        <div class="param-box-val" style="color:var(--blue-400); font-size:18px;">${m.test_mae.toFixed(4)}</div>
+                    </div>
+                    <div class="drilldown-param-box">
+                        <div class="param-box-label">Melhor Ponto de Parada</div>
+                        <div class="param-box-val" style="color:var(--green-400); font-size:16px;">Época ${m.best_epoch} <span style="font-size:12px; color:var(--text-secondary);">(Val MSE: ${m.best_val_mse.toFixed(4)})</span></div>
+                    </div>
+                    <div class="drilldown-param-box">
+                        <div class="param-box-label">Tempo Total de Execução</div>
+                        <div class="param-box-val" style="color:var(--text-primary); font-size:16px;">${m.train_time_s.toFixed(2)} s <span style="font-size:12px; color:var(--text-secondary);">(CPU ARM64)</span></div>
+                    </div>
+                    <div class="drilldown-param-box">
+                        <div class="param-box-label">Complexidade & Test MSE</div>
+                        <div class="param-box-val" style="color:var(--text-primary); font-size:16px;">${paramFormatted} params <span style="font-size:12px; color:var(--text-secondary);">(MSE: ${m.test_mse.toFixed(4)})</span></div>
+                    </div>
+                `;
+                }
+
+                // Feature Error Decomposition Bars
+                const featContainer = document.getElementById("drilldownFeaturesContainer");
+                if (featContainer && m.test_mae_features) {
+                    const feats = m.test_mae_features;
+                    const labels = window.AquaBenchmarkData.featureLabels || {
+                        cpu_percent: "CPU %",
+                        ram_percent: "RAM %",
+                        temperature_c: "Temp (°C)",
+                        disk_percent: "Disk %",
+                        latency_ms: "Latência (ms)",
+                        load1: "Load 1m"
+                    };
+
+                    featContainer.innerHTML = Object.keys(feats).map(key => {
+                        const val = feats[key] || 0;
+                        const label = labels[key] || key;
+                        const pct = Math.min(100, Math.max(5, (val / 1.5) * 100));
+
+                        return `
+                        <div style="background:rgba(18,20,23,0.7); border:1px solid var(--border-subtle); border-radius:12px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:11.5px; color:var(--text-secondary); font-weight:600;">${label}</span>
+                                <span class="mono" style="font-size:12px; font-weight:700; color:#ffffff;">${val.toFixed(4)}</span>
+                            </div>
+                            <div style="height:5px; background:rgba(255,255,255,0.06); border-radius:9999px; overflow:hidden;">
+                                <div style="height:100%; width:${pct}%; background:${m.badgeColor}; border-radius:9999px;"></div>
+                            </div>
+                        </div>
+                    `;
+                    }).join("");
+                }
+            }
+
+            const MODEL_DISPLAY_NAMES = {
+                linear: "Linear Forecaster",
+                mlp: "MLP Neural Net",
+                rnn: "Elman RNN",
+                gru: "GRU Forecaster",
+                lstm: "LSTM Deep Cell"
+            };
+
+            function selectActiveModel(modelId) {
+                activeModelId = modelId || "linear";
+
+                const m = window.AquaBenchmarkData ? window.AquaBenchmarkData.getModel(activeModelId) : null;
+                if (m) {
+                    document.getElementById("selectedModelLabel").textContent = m.name.split(" ")[0];
+                }
+
+                document.querySelectorAll("#benchmarkTableBody tr").forEach(tr => {
+                    tr.classList.toggle("highlight-row", tr.dataset.model === activeModelId);
+                });
+
+                updateDrilldownView();
+
+                document.querySelectorAll(".dropdown-item").forEach(item => {
+                    item.classList.toggle("active", item.dataset.model === activeModelId);
+                });
+
+                document.querySelectorAll(".model-tab-btn").forEach(btn => {
+                    btn.classList.toggle("active", btn.dataset.model === activeModelId);
+                });
+
+                renderLossConvergenceChart();
+                renderTradeoffChart();
+
+                // Tenta sincronizar métricas reais em segundo plano se disponíveis no disco
+                syncModelMetricsFromDisk(activeModelId, true);
+            }
+
+            // =========================================================================
+            // 5. INTERAÇÕES, BOTÕES E MOTOR DO PIPELINE DE BENCHMARK
+            // =========================================================================
+            function showToast(title, message, cmd, isError = false) {
+                let container = document.getElementById("toastContainer");
+                if (!container) {
+                    container = document.createElement("div");
+                    container.id = "toastContainer";
+                    container.className = "toast-container";
+                    document.body.appendChild(container);
+                }
+
+                const toast = document.createElement("div");
+                toast.className = `toast-card ${isError ? "error" : ""}`;
+                toast.innerHTML = `
+                    <div class="toast-icon">
+                        ${isError ?
+                        `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>` :
+                        `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
+                    }
+                    </div>
+                    <div class="toast-body">
+                        <div class="toast-title">${title}</div>
+                        <div class="toast-desc">${message}</div>
+                        ${cmd ? `<div class="toast-cmd">${cmd}</div>` : ""}
+                    </div>
+                `;
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = "0";
+                    toast.style.transform = "translateY(10px) scale(0.95)";
+                    setTimeout(() => toast.remove(), 300);
+                }, 5500);
+            }
+
+            async function syncModelMetricsFromDisk(modelKey, silent = false) {
+                try {
+                    const metricsUrl = `/dados/edgebox/models/${modelKey}/w60_h60/metrics.json?_=${Date.now()}`;
+                    const res = await fetch(metricsUrl, { cache: "no-store" });
+                    if (!res.ok) throw new Error("Artefato de métricas ainda não disponível.");
+                    const m = await res.json();
+
+                    // Atualiza ou inicializa o modelo no objeto global do frontend
+                    if (!window.AquaBenchmarkData) window.AquaBenchmarkData = { models: {} };
+                    if (!window.AquaBenchmarkData.models) window.AquaBenchmarkData.models = {};
+
+                    const target = window.AquaBenchmarkData.models[modelKey] || {};
+
+                    // Mapeamento direto com o schema real do metrics.json
+                    target.parameters = m.parameter_count || target.parameters;
+                    target.train_time_s = m.training_seconds || target.train_time_s;
+                    target.test_mse = m.test_mse ?? target.test_mse;
+                    target.test_mae = m.test_mae ?? target.test_mae;
+                    target.test_rmse = m.test_rmse ?? target.test_rmse;
+                    target.final_val_mse = m.validation_mse ?? target.final_val_mse;
+                    if (m.trained_at) target.trained_at = m.trained_at;
+
+                    // Extração da melhor época a partir do histórico real
+                    if (Array.isArray(m.history) && m.history.length > 0) {
+                        target.history = m.history;
+                        let best = m.history.reduce((prev, curr) =>
+                            (curr.validation_mse < prev.validation_mse) ? curr : prev, m.history[0]);
+                        target.best_epoch = best.epoch;
+                        target.best_val_mse = best.validation_mse;
+                    }
+
+                    if (m.test_mae_per_feature) {
+                        target.test_mae_features = m.test_mae_per_feature;
+                    }
+
+                    window.AquaBenchmarkData.models[modelKey] = target;
+
+                    // Notificar e redesenhar os componentes visuais
+                    populateBenchmarkTable();
+                    updateDrilldownView();
+                    renderLossConvergenceChart();
+                    renderTradeoffChart();
+
+                    if (!silent) {
+                        showToast("Treino Concluído", `Métricas reais de ${modelKey.toUpperCase()} sincronizadas. Test MAE: ${target.test_mae ? target.test_mae.toFixed(4) : "OK"}`, "");
+                    }
+                    return m;
+                } catch (err) {
+                    console.warn(`[AquaFL] syncModelMetricsFromDisk (${modelKey}):`, err);
+                    return null;
+                }
+            }
+
+            const BENCHMARK_SEQUENCE = ['linear', 'mlp', 'rnn', 'gru', 'lstm'];
+            const BENCH_STORAGE_KEY = "aquafl_benchmark_pipeline";
+            let isBenchmarkRunning = false;
+
+            function saveBenchmarkProgress(state) {
+                try {
+                    localStorage.setItem(BENCH_STORAGE_KEY, JSON.stringify(state));
+                } catch (e) { }
+            }
+
+            function getStoredBenchmarkProgress() {
+                try {
+                    return JSON.parse(localStorage.getItem(BENCH_STORAGE_KEY)) || null;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function clearBenchmarkProgress() {
+                try {
+                    localStorage.removeItem(BENCH_STORAGE_KEY);
+                } catch (e) { }
+            }
+
+            async function pollModelCompletion(modelKey, startTime, maxWaitMs = 600000) {
+                const pollIntervalMs = 2000;
+                const deadline = Date.now() + maxWaitMs;
+
+                while (Date.now() < deadline) {
+                    try {
+                        const res = await fetch(`/dados/edgebox/models/${modelKey}/w60_h60/metrics.json?_=${Date.now()}`, { cache: "no-store" });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const trainedAt = data.trained_at ? new Date(data.trained_at).getTime() : 0;
+                            
+                            // Se o arquivo foi gerado após o início desta rodada, o treino acabou
+                            if (trainedAt >= (startTime - 5000)) {
+                                return true;
+                            }
+                        }
+                    } catch (e) {
+                        // Arquivo pode estar sendo escrito no momento, continua tentando
+                    }
+                    await new Promise(r => setTimeout(r, pollIntervalMs));
+                }
+                throw new Error(`Timeout aguardando treinamento de ${modelKey}`);
+            }
+
+            async function runFullBenchmarkPipeline(startIndex = 0, isResumed = false, resumeStartedAt = null) {
+                if (isBenchmarkRunning && !isResumed) {
+                    showToast("Benchmark em Execução", "O benchmark já está em execução na TV Box.", "", true);
+                    return;
+                }
+                isBenchmarkRunning = true;
+
+                const btn = document.getElementById("trainModelActionBtn");
+                const btnText = document.getElementById("trainBtnText");
+                const btnIcon = document.getElementById("trainBtnIcon");
+                const tabButtons = document.querySelectorAll(".model-tab-btn");
+
+                // 1. Bloquear interação manual e inicializar estado visual
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add("loading");
+                    if (btnIcon) {
+                        btnIcon.innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`;
+                    }
+                }
+                tabButtons.forEach(btnTab => {
+                    btnTab.style.pointerEvents = "none"; // Impede clique manual durante o benchmark
+                });
+
+                // Se começou do zero, marca todos como pendentes
+                if (startIndex === 0 && !isResumed) {
+                    tabButtons.forEach(btnTab => {
+                        btnTab.classList.remove("bench-done", "active");
+                        btnTab.classList.add("bench-pending");
+                    });
+                    saveBenchmarkProgress({
+                        running: true,
+                        currentIndex: 0,
+                        completed: []
+                    });
+                    showToast("Benchmark Iniciado", "Executando pipeline completo de modelos na TV Box...", "");
+                }
+
+                for (let i = startIndex; i < BENCHMARK_SEQUENCE.length; i++) {
+                    const modelKey = BENCHMARK_SEQUENCE[i];
+                    const tabEl = document.querySelector(`.model-tab-btn[data-model="${modelKey}"]`);
+
+                    if (btnText) btnText.textContent = `Treinando ${modelKey.toUpperCase()} (${i + 1}/5)...`;
+                    selectActiveModel(modelKey); // Foca visualmente no modelo em execução
+
+                    try {
+                        let startTime = Date.now();
+
+                        // Se é o primeiro modelo em um pipeline reconectado, não dispara novo POST
+                        if (isResumed && i === startIndex) {
+                            if (resumeStartedAt) {
+                                startTime = typeof resumeStartedAt === "number" ? resumeStartedAt : new Date(resumeStartedAt).getTime();
+                            } else {
+                                startTime = Date.now() - 30000;
+                            }
+                        } else {
+                            const response = await fetch('/api/train', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    model: modelKey,
+                                    epochs: 10,
+                                    batch_size: 32,
+                                    learning_rate: 0.001
+                                })
+                            });
+
+                            if (!response.ok) throw new Error(`Falha na API ao iniciar ${modelKey}`);
+                        }
+
+                        // Aguarda a conclusão real do treino via polling do arquivo metrics.json
+                        await pollModelCompletion(modelKey, startTime);
+
+                        // Carrega os dados reais e atualiza tabelas/gráficos
+                        await syncModelMetricsFromDisk(modelKey);
+
+                        // Transição visual: Modelo finalizado fica VERDE
+                        if (tabEl) {
+                            tabEl.classList.remove("bench-pending");
+                            tabEl.classList.add("bench-done");
+                        }
+
+                        // Salva progresso no localStorage
+                        const progress = getStoredBenchmarkProgress() || { running: true, completed: [], currentIndex: i };
+                        if (!progress.completed) progress.completed = [];
+                        if (!progress.completed.includes(modelKey)) progress.completed.push(modelKey);
+                        progress.currentIndex = i + 1;
+                        progress.running = true;
+                        saveBenchmarkProgress(progress);
+
+                        showToast("Sucesso", `Modelo ${modelKey.toUpperCase()} concluído e sincronizado.`, "");
+
+                    } catch (err) {
+                        console.error(`Erro no benchmark do modelo ${modelKey}:`, err);
+                        showToast("Erro no Modelo", `Falha ao processar ${modelKey.toUpperCase()}. Continuando próximo...`, "", true);
+                    }
+
+                    // Intervalo de resfriamento/estabilização da CPU do SoC (2 segundos)
+                    if (i < BENCHMARK_SEQUENCE.length - 1) {
+                        if (btnText) btnText.textContent = `Estabilizando CPU (2s)...`;
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+
+                // Restauração do estado final da interface
+                clearBenchmarkProgress();
+                isBenchmarkRunning = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove("loading");
+                    if (btnIcon) {
+                        btnIcon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+                    }
+                    if (btnText) btnText.textContent = "Realizar Benchmark";
+                }
+
+                // Reabilita seleção e cliques manuais
+                tabButtons.forEach(btnTab => {
+                    btnTab.style.pointerEvents = "auto";
+                });
+
+                showToast("Benchmark Concluído", "Todas as topologias foram treinadas e avaliadas.", "");
+            }
+
+            function initInteractions() {
+                const trigger = document.getElementById("modelDropdownTrigger");
+                const menu = document.getElementById("modelDropdownMenu");
+
+                // Botão Realizar Benchmark Sequencial
+                const trainBtn = document.getElementById("trainModelActionBtn");
+                if (trainBtn) {
+                    trainBtn.addEventListener("click", () => {
+                        if (isBenchmarkRunning) {
+                            showToast("Benchmark em Execução", "O benchmark já está em execução na TV Box.", "", true);
+                            return;
+                        }
+                        runFullBenchmarkPipeline();
+                    });
+                }
+
+                // Dropdown do Topo
+                if (trigger && menu) {
+                    trigger.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        const isOpen = menu.classList.contains("show");
+                        menu.classList.toggle("show", !isOpen);
+                        trigger.classList.toggle("open", !isOpen);
+                    });
+
+                    document.addEventListener("click", () => {
+                        menu.classList.remove("show");
+                        trigger.classList.remove("open");
+                    });
+                }
+
+                // Itens do Menu Dropdown
+                document.querySelectorAll(".dropdown-item").forEach(item => {
+                    item.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        const mod = item.dataset.model;
+                        selectActiveModel(mod);
+                        if (menu) menu.classList.remove("show");
+                        if (trigger) trigger.classList.remove("open");
+                        const benchEl = document.getElementById("benchmark");
+                        if (benchEl) benchEl.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                });
+
+                // Abas de Filtro de Modelos (Linear, MLP, RNN, etc.)
+                document.querySelectorAll(".model-tab-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        if (isBenchmarkRunning) return;
+                        selectActiveModel(btn.dataset.model);
+                    });
+                });
+
+                // Navegação suave por âncoras (#telemetry, #benchmark, #about)
+                document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                    anchor.addEventListener('click', (e) => {
+                        const targetId = anchor.getAttribute('href');
+                        if (targetId && targetId !== '#') {
+                            const targetEl = document.querySelector(targetId);
+                            if (targetEl) {
+                                e.preventDefault();
+                                if (targetId === '#telemetry') {
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                } else {
+                                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                                if (history.pushState) {
+                                    history.pushState(null, null, targetId);
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // Scroll spy para o Pill Header
+                const navTel = document.getElementById("navTelemetryBtn");
+                const navBench = document.getElementById("navBenchmarkBtn");
+                const navAbout = document.getElementById("navAboutBtn");
+
+                window.addEventListener("scroll", () => {
+                    const benchEl = document.getElementById("benchmark");
+                    const aboutEl = document.getElementById("about");
+                    if (!benchEl || !aboutEl) return;
+
+                    const scrollY = window.scrollY + 120;
+                    const aboutTop = aboutEl.offsetTop;
+                    const benchTop = benchEl.offsetTop;
+
+                    if (scrollY >= aboutTop) {
+                        if (navAbout) navAbout.classList.add("active");
+                        if (navBench) navBench.classList.remove("active");
+                        if (navTel) navTel.classList.remove("active");
+                    } else if (scrollY >= benchTop) {
+                        if (navBench) navBench.classList.add("active");
+                        if (navTel) navTel.classList.remove("active");
+                        if (navAbout) navAbout.classList.remove("active");
+                    } else {
+                        if (navTel) navTel.classList.add("active");
+                        if (navBench) navBench.classList.remove("active");
+                        if (navAbout) navAbout.classList.remove("active");
+                    }
+                });
+
+                // Redesenhar gráficos ao redimensionar tela
+                window.addEventListener("resize", () => {
+                    renderLiveTelemetryChart();
+                    renderLossConvergenceChart();
+                    renderTradeoffChart();
+                });
+            }
+
+            async function checkAndResumeOngoingBenchmark() {
+                try {
+                    let serverState = null;
+                    try {
+                        const res = await fetch(`/api/benchmark/status?_=${Date.now()}`, { cache: "no-store" });
+                        if (res.ok) {
+                            serverState = await res.json();
+                        }
+                    } catch (e) { }
+
+                    const localState = getStoredBenchmarkProgress();
+                    const isRunning = (serverState && serverState.running) || (localState && localState.running);
+
+                    if (!isRunning) {
+                        clearBenchmarkProgress();
+                        return;
+                    }
+
+                    const currentModel = (serverState && serverState.current_model) || (localState && BENCHMARK_SEQUENCE[localState.currentIndex]) || "linear";
+                    const completedModels = (serverState && serverState.completed_models) || (localState && localState.completed) || [];
+                    const startedAt = (serverState && serverState.started_at) || null;
+
+                    let currentIndex = BENCHMARK_SEQUENCE.indexOf(currentModel);
+                    if (currentIndex === -1) currentIndex = 0;
+
+                    // Ajusta visual das abas
+                    BENCHMARK_SEQUENCE.forEach(mod => {
+                        const tabEl = document.querySelector(`.model-tab-btn[data-model="${mod}"]`);
+                        if (tabEl) {
+                            tabEl.style.pointerEvents = "none";
+                            if (completedModels.includes(mod)) {
+                                tabEl.classList.remove("bench-pending", "active");
+                                tabEl.classList.add("bench-done");
+                            } else {
+                                tabEl.classList.remove("bench-done", "active");
+                                tabEl.classList.add("bench-pending");
+                            }
+                        }
+                    });
+
+                    // Retoma a execução sem duplicar POST do modelo em andamento
+                    runFullBenchmarkPipeline(currentIndex, true, startedAt);
+                } catch (err) {
+                    console.warn("[AquaFL] Erro ao verificar benchmark ativo:", err);
+                }
+            }
+
+            // =========================================================================
+            // 6. INICIALIZAÇÃO E HIDRATAÇÃO DOS DADOS
+            // =========================================================================
+            async function init() {
+                initInteractions();
+
+                // Hidratação prévia: carrega os artefatos de metrics.json existentes em disco na TV Box
+                const allModels = ['linear', 'mlp', 'rnn', 'gru', 'lstm'];
+                for (const key of allModels) {
+                    await syncModelMetricsFromDisk(key, true);
+                }
+
+                populateBenchmarkTable();
+                selectActiveModel("linear");
+
+                updateTelemetryLive();
+                updateTelemetryHistory();
+
+                setTimeout(() => {
+                    renderLiveTelemetryChart();
+                    renderLossConvergenceChart();
+                    renderTradeoffChart();
+                }, 100);
+
+                // Checa e retoma benchmark em andamento caso a página tenha sido recarregada (F5)
+                await checkAndResumeOngoingBenchmark();
+
+                // Taxa de atualização em alta frequência (500ms para Live e 15s para Histórico completo)
+                setInterval(updateTelemetryLive, 500);
+                setInterval(updateTelemetryHistory, 15000);
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+
+</html>

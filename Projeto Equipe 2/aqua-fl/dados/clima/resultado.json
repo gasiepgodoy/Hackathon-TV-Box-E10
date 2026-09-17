@@ -1,0 +1,50 @@
+[
+  {
+    "node_id": "NO-01",
+    "node_name": "Parque das Águas",
+    "current": {
+      "time": "2026-09-10T00:00",
+      "temperature": 18.918648035238707,
+      "humidity": 96.61196652167854,
+      "rain": 2.4394885465393594,
+      "wind": 5.395911817872666,
+      "solar": 0,
+      "water_level": 48.817125097103805,
+      "vulnerability": 1.0
+    },
+    "risk_score": 0.49869595680736456,
+    "risk_level": "AMARELO - atenção experimental"
+  },
+  {
+    "node_id": "NO-02",
+    "node_name": "Marginal Dom Aguirre",
+    "current": {
+      "time": "2026-09-10T00:00",
+      "temperature": 18.3551981871743,
+      "humidity": 99.62872471521251,
+      "rain": 4.160890337356467,
+      "wind": 4.622451920660513,
+      "solar": 0,
+      "water_level": 71.51534368807862,
+      "vulnerability": 1.25
+    },
+    "risk_score": 0.6042924947575192,
+    "risk_level": "LARANJA - risco elevado experimental"
+  },
+  {
+    "node_id": "NO-03",
+    "node_name": "Jardim Abaeté",
+    "current": {
+      "time": "2026-09-10T00:00",
+      "temperature": 19.331860571649404,
+      "humidity": 94.98386705925677,
+      "rain": 2.373346481558107,
+      "wind": 5.144742824324501,
+      "solar": 0,
+      "water_level": 40.2233011966281,
+      "vulnerability": 0.85
+    },
+    "risk_score": 0.45816406734188375,
+    "risk_level": "AMARELO - atenção experimental"
+  }
+]
