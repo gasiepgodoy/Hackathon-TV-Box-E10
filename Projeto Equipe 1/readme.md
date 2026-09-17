@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT" />
 </p>
 
-# M.A.B.I by Multi-Forge — Assistente Acadêmica com IA em TV Box Reaproveitada
+# MultiForge — Plataforma de Provisionamento e Reaproveitamento de TV Boxes Apreendidas
 
 > 1º Hackathon TV Box Unesp Sorocaba — Equipe 1
 
@@ -17,16 +17,22 @@
 
 ## Resumo
 
-A **M.A.B.I** (Mina — Assistente Baseada em Inteligência) é uma assistente acadêmica com inteligência artificial que roda dentro de uma TV Box BTV E10 reaproveitada, transformada em totem interativo de acesso a informações universitárias.
+O **MultiForge** é uma plataforma open-source de preparação, provisionamento e gerenciamento de dispositivos ARM, voltada ao reaproveitamento de TV Boxes apreendidas como computadores de borda para uso educacional. A proposta é oferecer uma base reutilizável para diferentes aplicações, desde o catálogo de hardware e a gravação do sistema até a configuração de rede e a operação dos módulos.
 
-Para viabilizar a operação nesse hardware limitado (2 GB RAM, 8 GB eMMC), a equipe desenvolveu a **Multi-Forge**: uma plataforma completa de preparação, provisionamento e gerenciamento do equipamento — com Linux otimizado, conexão Wi-Fi pelo celular via QR Code, recuperação automática de falhas e sistema modular de aplicações.
+Na BTV E10 (2 GB de RAM e 8 GB de eMMC), a plataforma reúne Linux otimizado, configuração Wi-Fi pelo celular via QR Code na TV, monitoramento do equipamento e recuperação automática de falhas de conexão. Assim, a infraestrutura de implantação fica separada das aplicações que o dispositivo executa.
 
-A solução combina duas frentes:
+**Módulo principal: M.A.B.I (Mina — Assistente Baseada em Inteligência).** A assistente acadêmica transforma a TV Box em um totem interativo de acesso a informações universitárias, com reconhecimento de voz offline, interface gráfica na TV e consulta a dados acadêmicos locais. O coletor acadêmico RAG complementa essa aplicação com recursos de busca e indexação; funcionalidades conectadas dependem dos serviços disponíveis.
 
-| Frente | O que faz |
+### Componentes da plataforma
+
+| Componente | O que faz |
 |---|---|
-| **Multi-Forge** (infraestrutura) | Prepara a TV Box do zero: grava a imagem, configura Wi-Fi pelo celular, monitora a saúde do hardware e gerencia módulos de aplicação |
-| **M.A.B.I** (aplicação) | Assistente virtual com voz offline, interface gráfica em tela de TV, consulta a dados acadêmicos locais e recursos de IA conectados |
+| **ForgeImager** | Gravador desktop (Rust + Tauri v2 + React 19): grava a imagem no MicroSD, verifica SHA-256 e injeta configurações de primeiro boot em ext4 sem montagem no host |
+| **ForgeOS** | Sistema base da TV Box: reúne ponto de acesso Wi-Fi, portal web, tela HDMI de configuração e watchdog com rollback automático |
+| **ForgeDB** | Catálogo de dispositivos, imagens e módulos, com validação por JSON Schema e distribuição via CDN com fallback offline |
+| **ForgeModules** | Camada de aplicações modulares, com manifesto `module.yaml`; a **Mina é o módulo principal** da proposta educacional |
+
+O MultiForge fornece a infraestrutura comum; a Mina demonstra seu uso principal na educação. Essa separação permite ampliar a plataforma com outros módulos sem refazer o processo de preparação e configuração do equipamento.
 
 **Repo principal (código completo):** https://github.com/multi-forge/multi-forge
 
@@ -109,7 +115,7 @@ flowchart TB
 - **Offline-first:** todo o provisionamento funciona sem internet — a box cria sua própria rede.
 - **Sem periféricos:** não precisa de teclado, mouse nem monitor. A TV mostra o QR, o celular faz o resto.
 - **Recuperação automática:** se a senha do Wi-Fi estiver errada ou a rede cair, o watchdog restaura o ponto de acesso em 75 segundos.
-- **Modular:** a M.A.B.I é um módulo como qualquer outro — pode ser substituída ou acompanhada por outras aplicações via `module.yaml`.
+- **Modular:** a Mina (M.A.B.I) é o módulo principal da proposta educacional; outras aplicações podem ampliar a plataforma por meio de manifestos `module.yaml`.
 
 ---
 
@@ -322,10 +328,10 @@ Projeto Equipe 1/
 
 ## Como reproduzir
 
-### 1. Download da imagem
+### 1. Imagem e ForgeImager
 
-Imagem pré-compilada + ForgeImager:
-https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.2.0
+- [Imagem pré-compilada do sistema](https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.2.0)
+- [ForgeImager — código-fonte e instruções de compilação](https://github.com/multi-forge/multi-forge/tree/main/ForgeImager)
 
 ### 2. Gravação no MicroSD
 
@@ -404,6 +410,12 @@ xzcat forgeos-btv-e10.img.xz | sudo dd of=/dev/sdX bs=4M status=progress && sync
 | Coletor RAG (web-scraping) | ✅ Homologado |
 | Suporte eduroam (EAP) | ✅ Testado |
 | Testes automatizados | ✅ 34 testes passando |
+
+---
+
+## Artigo
+
+[Leia o artigo do projeto no Overleaf](https://www.overleaf.com/read/gbwypjdbnhwg#d3352f).
 
 ---
 
