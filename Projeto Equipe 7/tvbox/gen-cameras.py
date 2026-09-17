@@ -2,9 +2,18 @@
 # Detecta as câmeras conectadas e regenera o mediamtx.yml conforme a preferência
 # de cada uma (qualidade e retenção), que o app grava em camera-settings.json.
 # O mediamtx só é reiniciado quando o arquivo realmente muda.
-import os, glob, json, re, subprocess
+import os, glob, json, re, subprocess, fcntl
 
 MAX = 2  # câmeras suportadas simultaneamente (limite de banda USB)
+PATHS = ["cam" if i == 0 else "cam%d" % (i + 1) for i in range(MAX)]
+# Registro câmera física -> path. Antes o path saía da ORDEM de detecção: com a
+# C920 e a Jieli juntas, a C920 era "cam"; plugando a Jieli sozinha, ela virava
+# "cam" e a linha do tempo dela mostrava as imagens da C920. Com o registro,
+# cada câmera tem sempre a mesma pasta, e só "esquecer" libera a vaga.
+REGISTRO = "/opt/secbox/camera-paths.json"
+# Trava compartilhada com o clip-server (rota /forget), que também reescreve o
+# registro: sem ela, uma rodada do timer podia ressuscitar uma câmera esquecida.
+LOCK = "/opt/secbox/cameras.lock"
 BYID = "/dev/v4l/by-id"
 MTX_YML = "/opt/mediamtx/mediamtx.yml"
 CONFIG_JSON = "/opt/secbox/config.json"
@@ -125,12 +134,65 @@ def auth_block(token, interna):
     ]
 
 
-def build(cams, settings):
+def ler_json(caminho, padrao):
+    try:
+        with open(caminho) as f:
+            return json.load(f)
+    except Exception:
+        return padrao
+
+
+def gravar_json(caminho, dado):
+    # Troca atômica: quem lê (clip-server, motion, agent, rec-prune) nunca vê
+    # o arquivo pela metade.
+    tmp = caminho + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(dado, f)
+    os.replace(tmp, caminho)
+
+
+def atribuir(cams, registro):
+    """Dá a cada câmera conectada um path estável.
+
+    Devolve (atribuidas, pendentes): atribuidas é [(byid, sizes, path)] na
+    ordem dos paths; pendentes são câmeras conectadas sem vaga — ou porque há
+    mais de MAX plugadas, ou porque as vagas estão com câmeras lembradas que
+    estão desconectadas. Nesse caso nada é tirado de ninguém sozinho: liberar
+    a vaga apaga gravação, e isso é decisão do usuário (botão Esquecer).
+    Altera `registro` no lugar quando uma câmera nova ganha vaga.
+    """
+    registro_valido = {k: v for k, v in registro.items() if v in PATHS}
+    registro.clear()
+    registro.update(registro_valido)
+    ocupados = set(registro.values())
+    atribuidas, pendentes = [], []
+    for byid, sizes in cams:
+        cid = cam_id(byid)
+        if cid in registro:
+            atribuidas.append((byid, sizes, registro[cid]))
+    for byid, sizes in cams:
+        cid = cam_id(byid)
+        if cid in registro:
+            continue
+        livre = next((p for p in PATHS if p not in ocupados), None)
+        if livre is None:
+            pendentes.append((byid, sizes))
+            continue
+        registro[cid] = livre
+        ocupados.add(livre)
+        atribuidas.append((byid, sizes, livre))
+    atribuidas.sort(key=lambda a: PATHS.index(a[2]))
+    return atribuidas, pendentes
+
+
+def build(atribuidas, settings):
     token, interna = segredos()
     lines = ["playback: yes"] + auth_block(token, interna) + ["paths:"]
     meta = []
-    for i, (byid, sizes) in enumerate(cams[:MAX]):
-        path = "cam" if i == 0 else "cam%d" % (i + 1)
+    for byid, sizes, path in atribuidas:
+        # O número acompanha o path, não a ordem: a "Câmera 2" continua sendo
+        # a 2 mesmo quando está plugada sozinha.
+        i = PATHS.index(path)
         cfg = dict(DEFAULT, **settings["cameras"].get(cam_id(byid), {}))
         p = PRESETS.get(cfg["quality"], PRESETS["media"])
         # cai para a maior resolução suportada se o preset não existir na câmera
@@ -175,21 +237,46 @@ def build(cams, settings):
     return "\n".join(lines) + "\n", meta
 
 
-settings = load_settings()
-cams = list_cameras()
-yml, meta = build(cams, settings)
-json.dump({"cameras": meta, "connected": len(cams), "limit": MAX,
-           "exceeded": len(cams) > MAX, "presets": PRESETS,
-           "fps_options": FPS_OPTIONS, "cpu_per_mpps": CPU_PER_MPPS,
-           "sensitivities": sorted(SENSITIVITIES),
-           "record_modes": list(REC_MODES),
-           "notify": dict({"motion": True, "camera_offline": True},
-                          **settings["notify"])},
-          open(CAMERAS_JSON, "w"))
-old = open(MTX_YML).read() if os.path.exists(MTX_YML) else ""
-if old != yml:
-    open(MTX_YML, "w").write(yml)
-    subprocess.run(["systemctl", "restart", "mediamtx"])
-    print("mediamtx atualizado (%d cameras)" % min(len(cams), MAX))
-else:
-    print("sem mudanca (%d cameras)" % min(len(cams), MAX))
+def main():
+    with open(LOCK, "w") as trava:
+        fcntl.flock(trava, fcntl.LOCK_EX)
+        settings = load_settings()
+        cams = list_cameras()
+        registro = ler_json(REGISTRO, {})
+        antes = dict(registro)
+        atribuidas, pendentes = atribuir(cams, registro)
+        if registro != antes:
+            gravar_json(REGISTRO, registro)
+        yml, meta = build(atribuidas, settings)
+        conectadas = {cam_id(b) for b, _ in cams}
+        # Tudo que a box lembra: configuração salva ou vaga no registro. É a
+        # lista que o app usa para oferecer "esquecer" também a câmeras que
+        # não estão plugadas agora.
+        lembradas = sorted(set(settings["cameras"]) | set(registro))
+        gravar_json(CAMERAS_JSON, {
+            "cameras": meta, "connected": len(cams), "limit": MAX,
+            # compatibilidade com apps antigos, que só olham este campo
+            "exceeded": bool(pendentes),
+            "pendentes": [{"id": cam_id(b), "label": label(b)} for b, _ in pendentes],
+            "lembradas": [{"id": cid, "label": label(cid),
+                           "path": registro.get(cid),
+                           "conectada": cid in conectadas} for cid in lembradas],
+            "presets": PRESETS,
+            "fps_options": FPS_OPTIONS, "cpu_per_mpps": CPU_PER_MPPS,
+            "sensitivities": sorted(SENSITIVITIES),
+            "record_modes": list(REC_MODES),
+            "notify": dict({"motion": True, "camera_offline": True},
+                           **settings["notify"])})
+        old = open(MTX_YML).read() if os.path.exists(MTX_YML) else ""
+        if old != yml:
+            open(MTX_YML, "w").write(yml)
+            subprocess.run(["systemctl", "restart", "mediamtx"])
+            print("mediamtx atualizado (%d cameras)" % len(atribuidas))
+        else:
+            print("sem mudanca (%d cameras)" % len(atribuidas))
+        if pendentes:
+            print("sem vaga para: %s" % ", ".join(cam_id(b) for b, _ in pendentes))
+
+
+if __name__ == "__main__":
+    main()

@@ -94,7 +94,6 @@ class ApiService {
     } catch (_) {}
   }
 
-  // Ao sair da conta: sem isto o aparelho continuaria recebendo os alertas.
   // Preferencias de notificacao DESTE celular. Nao vao para a TV box: la o
   // arquivo e unico para todos os aparelhos, e silenciar o aviso num telefone
   // silenciava em todos. A identidade do celular e o proprio token FCM.
@@ -131,6 +130,7 @@ class ApiService {
     }
   }
 
+  // Ao sair da conta: sem isto o aparelho continuaria recebendo os alertas.
   static Future<void> unregisterPush(String token, String fcmToken) async {
     try {
       await http.post(
@@ -144,7 +144,6 @@ class ApiService {
     } catch (_) {}
   }
 
-  // Cabeçalho de acesso aos serviços da box. O token vem de deviceToken().
   // Baixa um trecho gravado como MP4, em fluxo, informando o progresso.
   //
   // O token vai no CABEÇALHO, e não na query como o player faz: aqui o arquivo
@@ -195,6 +194,7 @@ class ApiService {
     }
   }
 
+  // Cabeçalho de acesso aos serviços da box. O token vem de deviceToken().
   static Map<String, String> _midia(String? token) =>
       token == null ? {} : {'Authorization': 'Bearer $token'};
 
@@ -236,6 +236,24 @@ class ApiService {
 
   // Grava qualidade/retenção por câmera. Demora mais: a TV box reinicia a
   // captura para aplicar a nova configuração.
+  // Esquece uma câmera na box: configuração, vaga e gravações. Timeout longo
+  // porque a box para o MediaMTX, apaga a pasta e redetecta as câmeras antes
+  // de responder. Devolve os bytes apagados, ou null se falhou.
+  static Future<int?> esquecerCamera(String id, [String? token]) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$clipBase/forget'),
+              headers: {'Content-Type': 'application/json', ..._midia(token)},
+              body: jsonEncode({'id': id}))
+          .timeout(const Duration(seconds: 120));
+      if (r.statusCode != 200) return null;
+      final d = jsonDecode(r.body);
+      return (d is Map ? d['apagado_bytes'] as num? : null)?.toInt() ?? 0;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<bool> saveSettings(Map<String, dynamic> body,
       [String? token]) async {
     try {

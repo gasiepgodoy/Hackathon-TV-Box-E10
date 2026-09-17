@@ -1,0 +1,7 @@
+[Unit]
+Description=Redetecta cameras a cada 30s
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+[Install]
+WantedBy=timers.target

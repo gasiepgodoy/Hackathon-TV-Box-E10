@@ -82,7 +82,7 @@ apt install -y ffmpeg v4l-utils zbar-tools python3 python3-paho-mqtt python3-lib
 ```bash
 cp systemd/*.service systemd/*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now mediamtx secbox-agent secbox-motion secbox-clip secbox-leds sd-guard.timer
+systemctl enable --now mediamtx secbox-agent secbox-motion secbox-clip secbox-leds sd-guard.timer secbox-cameras.timer
 # descarte da gravacao sem movimento (ver GRAVACAO.md):
 systemctl enable --now secbox-recprune.timer
 # alarme sonoro (precisa de uma saida de audio funcional, ver ALARME.md):
@@ -97,6 +97,27 @@ systemctl enable --now usb-guard
 > barramento na porta da TV box — use um **hub USB com fonte própria**. Se a câmera
 > voltar com outro `/dev/videoN`, aponte o `mediamtx.yml` para um caminho estável
 > em `/dev/v4l/by-id/`.
+
+## Cada câmera tem sua pasta
+
+O `gen-cameras.py` roda a cada 30 s (`secbox-cameras.timer`) e mantém em
+`/opt/secbox/camera-paths.json` qual câmera física usa qual caminho
+(`cam`, `cam2`). Antes o caminho saía da **ordem** de detecção: plugada
+sozinha, a segunda câmera virava `cam` e a linha do tempo dela mostrava as
+imagens da primeira. Agora câmera conhecida volta sempre para a mesma pasta, e
+câmera nova ganha uma vaga livre.
+
+Se as vagas estiverem todas com câmeras **lembradas** (plugadas ou não), uma
+câmera nova fica de fora e o app avisa. A box não tira a vaga de ninguém
+sozinha, porque liberar uma vaga apaga gravação.
+
+**Esquecer** é a rota `POST /forget` do clip-server, acionada pelo botão no
+app. Apaga a configuração da câmera, a vaga no registro e a pasta de gravações
+dela, esvazia o cache de clipes e redetecta as câmeras. Se a câmera continuar
+plugada, ela volta na hora como nova, com os padrões; para removê-la de vez,
+desconecta-se o cabo antes. O caminho só é apagado se tiver o formato
+`cam`/`camN` — um registro corrompido com caminho vazio levaria todas as
+gravações junto.
 
 ## Uma câmera ruim derrubando a outra
 

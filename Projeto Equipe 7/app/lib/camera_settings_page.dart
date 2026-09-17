@@ -38,6 +38,10 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   Map<String, bool> _notify = {};
   Map<String, bool> _origNotify = {};
   String? _fcm;            // identidade deste celular
+  // Câmeras que a box lembra mas não estão plugadas, e as plugadas sem vaga.
+  List<Map<String, dynamic>> _lembradasOffline = [];
+  List<Map<String, dynamic>> _pendentes = [];
+  int _limite = 2;
   bool _pushIndisponivel = false;  // sem token FCM ou sem contato com o servidor
   List<String> _sensitivities = ['baixa', 'media', 'alta'];
   List<int> _fpsOptions = [3, 5, 10, 15];
@@ -113,6 +117,14 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
     if (!mounted) return;
     setState(() {
       _cams = cams;
+      _lembradasOffline = ((c['lembradas'] as List?) ?? [])
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .where((e) => e['conectada'] != true)
+          .toList();
+      _pendentes = ((c['pendentes'] as List?) ?? [])
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .toList();
+      _limite = (c['limit'] as num?)?.toInt() ?? 2;
       _presets = (c['presets'] as Map?)?.cast<String, dynamic>() ?? {};
       _sensitivities = ((c['sensitivities'] as List?) ?? _sensitivities)
           .map((e) => e.toString())
@@ -305,7 +317,9 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                     const SizedBox(height: 8),
                     _notifyCard(),
                     const SizedBox(height: 8),
+                    if (_pendentes.isNotEmpty) _pendentesCard(),
                     for (final cam in _cams) _cameraCard(cam),
+                    if (_lembradasOffline.isNotEmpty) _lembradasCard(),
                   ],
                 ),
       bottomNavigationBar: (_loading || _error != null)
@@ -607,8 +621,154 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                 'Alta dispara com pouco movimento; baixa evita alarme falso.',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           ],
+          const Divider(height: 24),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _saving
+                  ? null
+                  : () => _esquecer(
+                        id,
+                        cam['name']?.toString() ?? 'Câmera',
+                        cam['path']?.toString(),
+                        conectada: true,
+                      ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              icon: const Icon(Icons.delete_forever, size: 18),
+              label: const Text('Esquecer esta câmera'),
+            ),
+          ),
         ]),
       ),
     );
+  }
+
+  // Câmeras plugadas que ficaram sem vaga porque as vagas estão com câmeras
+  // lembradas. A box não tira a vaga de ninguém sozinha — isso apagaria
+  // gravação —, então o app explica e aponta o botão.
+  Widget _pendentesCard() {
+    final nomes = _pendentes.map((p) => p['label']).join(', ');
+    final verbo = _pendentes.length == 1 ? 'está conectada' : 'estão conectadas';
+    return Card(
+      color: Colors.orange.withValues(alpha: 0.15),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          const Icon(Icons.videocam_off, color: Colors.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$nomes $verbo, mas não há vaga: a GuardianBox guarda até '
+              '$_limite câmeras. Esqueça uma câmera para liberar.',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _lembradasCard() => Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Câmeras desconectadas',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+                'A GuardianBox ainda guarda a configuração e a vaga delas. '
+                'Se forem plugadas de novo, retomam de onde pararam.',
+                style: TextStyle(color: Colors.grey, fontSize: 12)),
+            for (final l in _lembradasOffline)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.videocam_off_outlined),
+                title: Text(l['label']?.toString() ?? l['id'].toString()),
+                subtitle: Text(
+                    _tamanhoGravacao(l['path']?.toString()) ?? 'sem gravações'),
+                trailing: IconButton(
+                  tooltip: 'Esquecer',
+                  icon: const Icon(Icons.delete_forever, color: Colors.red),
+                  onPressed: _saving
+                      ? null
+                      : () => _esquecer(
+                            l['id'].toString(),
+                            l['label']?.toString() ?? 'Câmera',
+                            l['path']?.toString(),
+                            conectada: false,
+                          ),
+                ),
+              ),
+          ]),
+        ),
+      );
+
+  String? _tamanhoGravacao(String? path) {
+    if (path == null) return null;
+    final b =
+        ((_storage['per_camera'] as Map?)?[path] as num?)?.toDouble() ?? 0;
+    return b > 0 ? '${_gb(b)} de gravações' : null;
+  }
+
+  // Confirmação explícita: apaga gravação, e isso não tem volta.
+  Future<void> _esquecer(String id, String nome, String? path,
+      {required bool conectada}) async {
+    final grav = _tamanhoGravacao(path);
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Esquecer $nome?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('A GuardianBox vai apagar:'),
+            const SizedBox(height: 6),
+            const Text('• as configurações desta câmera'),
+            Text(grav != null
+                ? '• $grav — sem volta'
+                : '• as gravações dela (não há nenhuma agora)'),
+            if (grav != null) ...[
+              const SizedBox(height: 12),
+              const Text(
+                  'Se precisar de algum trecho, baixe antes pela linha do tempo.',
+                  style: TextStyle(fontSize: 13)),
+            ],
+            if (conectada) ...[
+              const SizedBox(height: 12),
+              const Text(
+                  'Ela continua plugada, então volta em seguida como câmera '
+                  'nova, com as configurações padrão. Para removê-la de vez, '
+                  'desconecte o cabo antes.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey)),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Esquecer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmou != true || !mounted) return;
+    setState(() => _saving = true);
+    final apagado = await ApiService.esquecerCamera(id, widget.token);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    final String msg;
+    if (apagado == null) {
+      msg = 'Não foi possível esquecer a câmera.';
+    } else if (apagado > 0) {
+      msg = '$nome esquecida — ${_gb(apagado)} liberados.';
+    } else {
+      msg = '$nome esquecida.';
+    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    if (apagado != null) await _load();
   }
 }

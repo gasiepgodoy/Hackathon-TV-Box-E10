@@ -6,6 +6,7 @@
 #   /storage                        -> espaço, uso por câmera e autonomia estimada
 #   /settings  (GET | POST)         -> qualidade, retenção e modo de gravação
 #   /alarm     (GET | POST)         -> armar/desarmar o disparo por movimento
+#   /forget    (POST)               -> esquecer uma câmera (config, vaga e gravações)
 #   /health                         -> vivo? autenticação ligada? (sempre aberto)
 #
 # AUTENTICAÇÃO: se "api_token" existir no config.json, toda rota (menos /health)
@@ -17,7 +18,7 @@
 # O app pede trechos alinhados numa grade de tempo, então o mesmo minuto é
 # sempre a mesma chave: o remux roda uma única vez e as próximas requisições
 # são servidas direto do cache em disco.
-import base64, hashlib, hmac, json, os, subprocess, tempfile, threading
+import base64, fcntl, hashlib, hmac, json, os, re, shutil, subprocess, tempfile, threading
 import urllib.parse, urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -30,6 +31,8 @@ CAMERAS_JSON = "/opt/secbox/cameras.json"
 SETTINGS_JSON = "/opt/secbox/camera-settings.json"
 ALARM_STATE = "/opt/secbox/alarm-state.json"
 PRUNE_STATS = "/opt/secbox/rec-prune.json"
+REGISTRO = "/opt/secbox/camera-paths.json"   # câmera -> path (gen-cameras.py)
+CAMERAS_LOCK = "/opt/secbox/cameras.lock"    # a mesma trava do gen-cameras.py
 GEN_CAMERAS = "/opt/secbox/gen-cameras.py"
 REC_DIR = "/opt/mediamtx/rec"
 CACHE_DIR = "/opt/secbox-clip/cache"
@@ -269,6 +272,91 @@ def _apply_settings(new):
     return cur
 
 
+def _ler_json(caminho, padrao):
+    try:
+        with open(caminho) as f:
+            return json.load(f)
+    except Exception:
+        return padrao
+
+
+def _gravar_json(caminho, dado):
+    tmp = caminho + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(dado, f)
+    os.replace(tmp, caminho)
+
+
+# Id é o nome by-id da câmera sem o sufixo, ex. usb-046d_HD_Pro_Webcam_C920.
+ID_VALIDO = re.compile(r"[A-Za-z0-9_.:\-]{1,120}")
+# O path vira nome de pasta dentro de REC_DIR e é apagado com rmtree. Só passa
+# o formato que o gen-cameras.py gera: com "" aqui, o rmtree levaria TODAS as
+# gravações de todas as câmeras.
+PATH_VALIDO = re.compile(r"cam[0-9]{0,2}")
+
+
+def _esquecer(cid):
+    """Esquece uma câmera: configuração, vaga no registro e gravações.
+
+    Devolve (status_http, corpo). A câmera pode estar plugada ou não. Se
+    estiver, o gen-cameras.py a detecta de novo na mesma hora e ela volta como
+    câmera nova, com os padrões — o que é o "zerar" que a demonstração pede.
+    Para ela sumir de vez, desconecta-se o cabo antes.
+    """
+    if not ID_VALIDO.fullmatch(cid or ""):
+        return 400, {"error": "id_invalido"}
+
+    with open(CAMERAS_LOCK, "w") as trava:
+        fcntl.flock(trava, fcntl.LOCK_EX)
+        settings = _load_settings()
+        registro = _ler_json(REGISTRO, {})
+        if cid not in settings["cameras"] and cid not in registro:
+            return 404, {"error": "desconhecida"}
+        path = registro.pop(cid, None)
+        settings["cameras"].pop(cid, None)
+        _gravar_json(SETTINGS_JSON, settings)
+        _gravar_json(REGISTRO, registro)
+
+    apagado = 0
+    if path is not None:
+        if not PATH_VALIDO.fullmatch(path):
+            # Registro corrompido. A configuração já saiu; a pasta fica, porque
+            # apagar algo com nome inesperado é o erro que não tem volta.
+            return 500, {"error": "path_invalido", "path": path}
+        pasta = os.path.join(REC_DIR, path)
+        # Para o MediaMTX antes: ele escreve nessa pasta, e apagar com o
+        # arquivo aberto deixaria o segmento atual gravando num inode órfão.
+        subprocess.run(["systemctl", "stop", "mediamtx"], timeout=60)
+        apagado = _dir_size(pasta)
+        shutil.rmtree(pasta, ignore_errors=True)
+        # O contador de espaço liberado era desta câmera; a próxima que
+        # herdar o path começa do zero.
+        stats = _ler_json(PRUNE_STATS, None)
+        if isinstance(stats, dict):
+            for chave in ("paths", "acumulado"):
+                if isinstance(stats.get(chave), dict):
+                    stats[chave].pop(path, None)
+            _gravar_json(PRUNE_STATS, stats)
+        # O cache é indexado por path+horário. Não dá para separar por câmera,
+        # e ele é descartável: sai inteiro, para nenhum clipe velho ser
+        # servido como se fosse da câmera que herdar a vaga.
+        try:
+            for nome in os.listdir(CACHE_DIR):
+                try:
+                    os.remove(os.path.join(CACHE_DIR, nome))
+                except OSError:
+                    pass
+        except OSError:
+            pass
+
+    # Regenera tudo (inclusive readmite a câmera, se ainda estiver plugada) e
+    # garante o MediaMTX de pé mesmo que o yml não tenha mudado.
+    subprocess.run(["python3", GEN_CAMERAS], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, timeout=120)
+    subprocess.run(["systemctl", "start", "mediamtx"], timeout=60)
+    return 200, {"ok": True, "path": path, "apagado_bytes": apagado}
+
+
 def _build(src):
     # Remuxa o trecho para MP4 num arquivo temporário; None se falhar.
     fd, tmp = tempfile.mkstemp(suffix=".mp4", dir=CACHE_DIR)
@@ -344,6 +432,25 @@ class Handler(BaseHTTPRequestHandler):
                 json.dump({"armed": armado, "seconds": segundos}, f, indent=2)
             os.replace(tmp, ALARM_STATE)
             self._send_json({"armed": armado, "seconds": segundos})
+            return
+        if caminho == "/forget":
+            try:
+                n = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(n) or b"{}")
+                cid = str(body.get("id", ""))
+            except Exception:
+                self.send_error(400)
+                return
+            status, corpo = _esquecer(cid)
+            if status != 200:
+                data = json.dumps(corpo).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            self._send_json(corpo)
             return
         if caminho != "/settings":
             self.send_error(404)
@@ -487,11 +594,14 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
-if TOKEN:
+if __name__ != "__main__":
+    pass  # importado (teste): não sobe servidor
+elif TOKEN:
     print("clip-server 9997: autenticacao LIGADA", flush=True)
 else:
     print("clip-server 9997: SEM AUTENTICACAO — qualquer um que alcance esta "
           "porta le as cameras e ESCREVE a configuracao. Defina 'api_token' em "
           + CONFIG_JSON + " antes de publicar na internet.", flush=True)
 
-ThreadingHTTPServer(("0.0.0.0", 9997), Handler).serve_forever()
+if __name__ == "__main__":
+    ThreadingHTTPServer(("0.0.0.0", 9997), Handler).serve_forever()

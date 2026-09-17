@@ -50,6 +50,7 @@ class _CameraPageState extends State<CameraPage> {
   int _connected = 0;
   int _limit = 0;
   bool _exceeded = false;
+  int _semVaga = 0; // câmeras plugadas que não entraram por falta de vaga
   CamInfo get _cam => _cams[_camIndex.clamp(0, _cams.length - 1)];
 
   bool _live = true;
@@ -111,6 +112,7 @@ class _CameraPageState extends State<CameraPage> {
           _connected = (data['connected'] as num?)?.toInt() ?? list.length;
           _limit = (data['limit'] as num?)?.toInt() ?? list.length;
           _exceeded = data['exceeded'] == true;
+          _semVaga = ((data['pendentes'] as List?) ?? const []).length;
           if (_camIndex >= _cams.length) _camIndex = 0;
         });
       }
@@ -686,7 +688,9 @@ class _CameraPageState extends State<CameraPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '$_connected câmeras conectadas, mas só $_limit são suportadas — as extras não são transmitidas.',
+                    _semVaga > 0
+                        ? '$_semVaga câmera(s) conectada(s) sem vaga. Esqueça uma câmera antiga nas configurações para liberar.'
+                        : '$_connected câmeras conectadas, mas só $_limit são suportadas — as extras não são transmitidas.',
                     style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),

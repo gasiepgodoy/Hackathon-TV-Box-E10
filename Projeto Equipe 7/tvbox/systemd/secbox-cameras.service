@@ -1,0 +1,5 @@
+[Unit]
+Description=SecBox camera detection
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/secbox/gen-cameras.py
