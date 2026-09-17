@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Guardian Co. — gerado por gerar-logo.py; edite lá, não aqui -->
+  <g fill="none" stroke="#fff" stroke-width="5.20" stroke-linecap="round">
+    <path d="M 76.08 58.00 A 21.08 21.08 0 1 1 68.55 41.85"/>
+    <path d="M 10.58 63.03 A 50.59 50.59 0 0 1 74.85 28.86"/>
+    <line x1="55.00" y1="58.00" x2="76.08" y2="58.00"/>
+  </g>
+  <circle cx="55.00" cy="58.00" r="6.32" fill="#fff"/>
+</svg>
