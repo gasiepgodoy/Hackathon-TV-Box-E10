@@ -111,10 +111,49 @@ def connect_wifi(ssid, password):
     uuid = _nmcli("-g", "connection.uuid", "connection", "show", "id", novo)
     esquecer_wifi(exceto=uuid.stdout.strip() if uuid else None)
     _nmcli("connection", "modify", "id", novo, "connection.id", WIFI_PERFIL)
+    _sync_disco()   # o keyfile do perfil precisa estar na eMMC antes de qualquer desligamento
     print("Wi-Fi conectado, perfil", WIFI_PERFIL, flush=True)
     return True
 
 _pareando = threading.Event()
+
+
+def _sync_disco():
+    """Força tudo o que está pendente para a eMMC (no Windows do simulador não existe)."""
+    getattr(os, "sync", lambda: None)()
+
+
+def _sincronizar_pasta(caminho):
+    # Sem isto a criação/remoção do arquivo fica só na memória até o commit.
+    try:
+        fd = os.open(os.path.dirname(caminho) or ".", os.O_RDONLY)
+    except OSError:
+        return   # (o Windows do simulador não abre pastas)
+    try: os.fsync(fd)
+    except OSError: pass
+    finally: os.close(fd)
+
+
+def marcar_pareada():
+    """Grava a marca de pareada e força para o disco na hora.
+
+    A raiz é montada com commit=180: sem isto, um arquivo recém-gravado pode
+    levar 3 minutos para chegar à eMMC, e a box desligada da tomada nesse
+    intervalo voltaria ao pareamento sem ninguém pedir.
+    """
+    tmp = CLAIMED_FLAG + ".tmp"
+    with open(tmp, "w") as f:
+        f.write("ok"); f.flush(); os.fsync(f.fileno())
+    os.replace(tmp, CLAIMED_FLAG)
+    _sincronizar_pasta(CLAIMED_FLAG)
+    _sync_disco()   # e tudo o mais que o pareamento gravou (perfil de Wi-Fi, câmeras)
+
+
+def desmarcar_pareada():
+    try: os.remove(CLAIMED_FLAG)
+    except OSError: pass
+    _sincronizar_pasta(CLAIMED_FLAG)
+    _sync_disco()
 
 
 def iniciar_pareamento(client):
@@ -210,8 +249,7 @@ def esquecer_box(client, apagar_gravacoes):
     subprocess.run(["python3", GEN_CAMERAS], stdout=subprocess.DEVNULL,
                    stderr=subprocess.DEVNULL, timeout=120)
     subprocess.run(["systemctl", "start", "mediamtx"], timeout=60)
-    try: os.remove(CLAIMED_FLAG)
-    except OSError: pass
+    desmarcar_pareada()
     time.sleep(3)   # dá tempo do evento acima sair antes de a rede cair
     esquecer_wifi()
     print("Box esquecida: Wi-Fi apagado, aguardando QR.", flush=True)
@@ -246,8 +284,8 @@ def on_message(client, userdata, msg):
     except Exception: data = {}
     if topic == RESULT_TOPIC:
         if data.get("result") == "ok":
-            open(CLAIMED_FLAG, "w").write("ok")
-            print("Pareamento confirmado pelo servidor.")
+            marcar_pareada()
+            print("Pareamento confirmado pelo servidor.", flush=True)
         return
     parts = topic.split("/")
     module = parts[2] if len(parts) > 2 else "?"
