@@ -1,0 +1,117 @@
+[
+    {
+        "id": "tab_forget",
+        "type": "tab",
+        "label": "API - Esquecer box",
+        "disabled": false,
+        "info": "Desfaz o pareamento de uma GuardianBox e manda ela voltar a ler QR."
+    },
+    {
+        "id": "forget_in",
+        "type": "http in",
+        "z": "tab_forget",
+        "name": "POST /api/forget-device",
+        "url": "/api/forget-device",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 190,
+        "y": 100,
+        "wires": [
+            [
+                "forget_valida"
+            ]
+        ]
+    },
+    {
+        "id": "forget_valida",
+        "type": "function",
+        "z": "tab_forget",
+        "name": "valida",
+        "func": "// POST /api/forget-device  { device, apagar_gravacoes }\nconst b = msg.payload || {};\nconst h = String((msg.req.headers || {}).authorization || '');\nconst sessao = h.replace(/^Bearer\\s+/i, '').trim();\nconst device = String(b.device || '');\nif (!sessao || !/^[A-Za-z0-9-]{3,32}$/.test(device)) {\n    msg.statusCode = 400;\n    msg.payload = { error: 'missing' };\n    return [null, msg];\n}\n// Padrao e apagar: a gravacao antiga ficaria visivel para o proximo dono.\nmsg.apagar = b.apagar_gravacoes !== false;\nmsg.device = device;\nmsg.params = [sessao, device];\nreturn [msg, null];",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 100,
+        "wires": [
+            [
+                "forget_pg"
+            ],
+            [
+                "forget_resp"
+            ]
+        ]
+    },
+    {
+        "id": "forget_pg",
+        "type": "postgresql",
+        "z": "tab_forget",
+        "name": "forget_device",
+        "query": "SELECT forget_device($1, $2) AS status",
+        "postgreSQLConfig": "pg_secdb",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 600,
+        "y": 100,
+        "wires": [
+            [
+                "forget_decide"
+            ]
+        ]
+    },
+    {
+        "id": "forget_decide",
+        "type": "function",
+        "z": "tab_forget",
+        "name": "manda a box esquecer",
+        "func": "const st = ((msg.payload && msg.payload[0]) || {}).status;\nif (st === 'ok') {\n    // A box ja foi solta no banco; agora a ordem para ela voltar ao pareamento.\n    // Mensagem nova para o MQTT: a original carrega req/res da requisicao HTTP.\n    const ordem = {\n        topic: 'devices/' + msg.device + '/sistema/command',\n        payload: JSON.stringify({ action: 'esquecer', apagar_gravacoes: msg.apagar }),\n        qos: 1,\n        retain: false,\n    };\n    msg.statusCode = 200;\n    msg.payload = { status: 'esquecida' };\n    return [ordem, msg];\n}\nif (st === 'offline') {\n    msg.statusCode = 409;\n    msg.payload = { error: 'offline' };\n    return [null, msg];\n}\nmsg.statusCode = 403;\nmsg.payload = { error: 'forbidden' };\nreturn [null, msg];",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 820,
+        "y": 100,
+        "wires": [
+            [
+                "forget_mqtt"
+            ],
+            [
+                "forget_resp"
+            ]
+        ]
+    },
+    {
+        "id": "forget_mqtt",
+        "type": "mqtt out",
+        "z": "tab_forget",
+        "name": "sistema/command",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_broker_local",
+        "x": 1060,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "forget_resp",
+        "type": "http response",
+        "z": "tab_forget",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1050,
+        "y": 140,
+        "wires": []
+    }
+]

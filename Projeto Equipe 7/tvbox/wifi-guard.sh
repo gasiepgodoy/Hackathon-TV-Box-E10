@@ -32,6 +32,10 @@ SETTLE=20          # espera depois de cada tentativa, antes de checar de novo
 MIN_UPTIME=900     # não reiniciar a box nos primeiros 15 min (evita laço)
 MIN_EPISODE=600    # nem por uma queda que ainda não passou de 10 min
 LOG=/var/log/wifi-guard.log
+# Sem esta marca a box está em modo pareamento: esqueceu a rede de propósito e
+# espera o QR. Escalar aí recarregaria o driver e reiniciaria a box a cada
+# 15 min, no meio do cadastro.
+CLAIMED=/opt/secbox/claimed
 
 log() {
     printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$LOG"
@@ -176,9 +180,20 @@ PY
 fails=0
 level=0
 down_since=0
+pareando=0
 log "wifi-guard iniciado (iface=$IFACE perfil=$PROFILE modulo=$MODULE)"
 
 while true; do
+    if [ ! -e "$CLAIMED" ]; then
+        [ "$pareando" -eq 0 ] && log "modo pareamento: vigia em espera"
+        pareando=1; fails=0; level=0; down_since=0
+        sleep "$INTERVAL"
+        continue
+    fi
+    if [ "$pareando" -eq 1 ]; then
+        log "pareada de novo: vigia retomado"
+        pareando=0
+    fi
     if link_ok; then
         if [ "$level" -gt 0 ]; then
             down=$(( $(date +%s) - down_since ))

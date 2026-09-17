@@ -98,6 +98,35 @@ systemctl enable --now usb-guard
 > voltar com outro `/dev/videoN`, aponte o `mediamtx.yml` para um caminho estável
 > em `/dev/v4l/by-id/`.
 
+## Esquecer a box (voltar ao pareamento)
+
+O app manda `POST /api/forget-device` ao servidor; ele solta o dono no banco e
+publica `devices/<id>/sistema/command` com `{"action":"esquecer"}`. O
+`agent.py` então apaga o estado do dono (configurações de câmera, registro de
+caminhos, alarme), opcionalmente as gravações, remove a marca
+`/opt/secbox/claimed` e **por último** apaga o Wi-Fi — a partir daí a box está
+fora da rede e só volta pelo QR. `device.json` e `config.json` ficam: são a
+identidade e os segredos de fábrica, não do dono.
+
+Três detalhes que fazem isso funcionar:
+
+**Todos os perfis Wi-Fi são apagados, não só o `wifi-interna`.** Havia dois
+`wifi-interna-alt` para a mesma rede com conexão automática; apagar só um
+deixaria o NetworkManager reconectar sozinho, e a box não esqueceria nada.
+
+**O `wifi-guard` fica em espera sem a marca `claimed`.** Sem isso ele veria a
+ausência de rede como queda, recarregaria o driver e reiniciaria a box a cada
+15 min, no meio do cadastro.
+
+**O pareamento recria o perfil com o nome `wifi-interna`.** O
+`nmcli device wifi connect` o batizaria com o SSID, e o vigia passaria a
+tentar subir um perfil inexistente — laço de reinício na primeira queda. O
+perfil novo só substitui os antigos depois de conectar: um QR com senha errada
+não derruba um Wi-Fi que funcionava.
+
+O servidor recusa esquecer uma box **offline**: sem rede ela não receberia a
+ordem e ficaria órfã — sem dono no banco, mas pareada e sem ler QR.
+
 ## Cada câmera tem sua pasta
 
 O `gen-cameras.py` roda a cada 30 s (`secbox-cameras.timer`) e mantém em

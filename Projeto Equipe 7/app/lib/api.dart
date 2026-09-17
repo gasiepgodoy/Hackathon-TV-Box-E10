@@ -236,6 +236,30 @@ class ApiService {
 
   // Grava qualidade/retenção por câmera. Demora mais: a TV box reinicia a
   // captura para aplicar a nova configuração.
+  // Desfaz o pareamento da GuardianBox: o servidor solta o dono e manda a box
+  // apagar o Wi-Fi e voltar a ler QR. Devolve 'ok', 'offline' ou 'erro'.
+  static Future<String> esquecerBox(String session, String deviceId,
+      {required bool apagarGravacoes}) async {
+    try {
+      final r = await http
+          .post(Uri.parse('$apiBase/forget-device'),
+              headers: {
+                'Authorization': 'Bearer $session',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'device': deviceId,
+                'apagar_gravacoes': apagarGravacoes,
+              }))
+          .timeout(const Duration(seconds: 20));
+      if (r.statusCode == 200) return 'ok';
+      if (r.statusCode == 409) return 'offline';
+      return 'erro';
+    } catch (_) {
+      return 'erro';
+    }
+  }
+
   // Esquece uma câmera na box: configuração, vaga e gravações. Timeout longo
   // porque a box para o MediaMTX, apaga a pasta e redetecta as câmeras antes
   // de responder. Devolve os bytes apagados, ou null se falhou.

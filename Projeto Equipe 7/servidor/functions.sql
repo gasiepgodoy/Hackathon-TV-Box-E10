@@ -120,6 +120,31 @@ BEGIN
                               'notify', coalesce(v_notify, '{}'::jsonb));
 END; $$ LANGUAGE plpgsql;
 
+-- forget_device: o dono desfaz o pareamento de uma GuardianBox.
+--
+-- Solta o dono, o nome e o histórico, e o flow manda a box voltar ao modo
+-- pareamento. Recusa box offline: sem rede ela não receberia a ordem, e
+-- ficaria sem dono aqui mas pareada e conectada lá — órfã, sem ninguém que a
+-- enxergue e sem ler QR para ser reivindicada de novo.
+--
+-- Sessão inválida e "não é o dono" respondem igual ('forbidden'): distinguir
+-- revelaria quais device_id existem.
+CREATE OR REPLACE FUNCTION forget_device(p_session TEXT, p_device_id TEXT)
+RETURNS TEXT AS $$
+DECLARE v_user BIGINT; v_owner BIGINT; v_online BOOLEAN;
+BEGIN
+    v_user := user_from_token(p_session);
+    IF v_user IS NULL THEN RETURN 'forbidden'; END IF;
+    SELECT owner_id, online INTO v_owner, v_online
+        FROM devices WHERE device_id = p_device_id;
+    IF v_owner IS DISTINCT FROM v_user THEN RETURN 'forbidden'; END IF;
+    IF NOT coalesce(v_online, false) THEN RETURN 'offline'; END IF;
+    UPDATE devices SET owner_id = NULL, claimed_at = NULL, name = NULL
+        WHERE device_id = p_device_id;
+    DELETE FROM events WHERE device_id = p_device_id;
+    RETURN 'ok';
+END; $$ LANGUAGE plpgsql;
+
 -- claim_device: valida o token de pareamento E o segredo de fábrica, e vincula
 -- o aparelho ao dono.
 --

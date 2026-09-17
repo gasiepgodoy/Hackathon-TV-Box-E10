@@ -103,6 +103,80 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     }
   }
 
+  // Devolve a box ao estado de caixa: sai da conta, esquece o Wi-Fi e volta a
+  // ler QR. Para usar de novo é o mesmo caminho de uma box nova.
+  Future<void> _esquecerBox() async {
+    if (!deviceOnline) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('A GuardianBox precisa estar online para ser '
+              'esquecida — sem rede ela não recebe a ordem.')));
+      return;
+    }
+    var apagar = true;
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text('Esquecer ${widget.name}?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('A GuardianBox vai:'),
+              const SizedBox(height: 6),
+              const Text('• sair da sua conta e do histórico'),
+              const Text('• esquecer a rede Wi-Fi e sair do ar'),
+              const Text('• voltar ao modo de pareamento'),
+              const SizedBox(height: 12),
+              const Text(
+                  'Para usar de novo: toque em adicionar dispositivo, informe '
+                  'a rede Wi-Fi e mostre o QR para a câmera da GuardianBox. '
+                  'O LED vermelho pisca enquanto ela procura o QR.',
+                  style: TextStyle(fontSize: 13)),
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: apagar,
+                onChanged: (v) => setLocal(() => apagar = v ?? true),
+                title: const Text('Apagar também as gravações'),
+                subtitle: const Text(
+                    'Desmarcado, quem parear a box depois verá as imagens '
+                    'antigas.',
+                    style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Esquecer'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmou != true || !mounted) return;
+    final r = await ApiService.esquecerBox(widget.token, widget.deviceId,
+        apagarGravacoes: apagar);
+    if (!mounted) return;
+    final mensageiro = ScaffoldMessenger.of(context);
+    if (r == 'ok') {
+      mensageiro.showSnackBar(SnackBar(
+          content: Text('${widget.name} esquecida. Ela volta ao modo de '
+              'pareamento em alguns segundos.')));
+      Navigator.pop(context, true);
+    } else {
+      mensageiro.showSnackBar(SnackBar(
+          content: Text(r == 'offline'
+              ? 'A GuardianBox saiu do ar antes de receber a ordem.'
+              : 'Não foi possível esquecer a GuardianBox.')));
+    }
+  }
+
   Future<void> _sendSnapshot() async {
     final ok = await ApiService.command(
         widget.token, widget.deviceId, 'camera', 'snapshot');
@@ -117,7 +191,27 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.name)),
+      appBar: AppBar(
+        title: Text(widget.name),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'esquecer') _esquecerBox();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'esquecer',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.link_off, color: Colors.red),
+                  title: Text('Esquecer esta GuardianBox',
+                      style: TextStyle(color: Colors.red)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

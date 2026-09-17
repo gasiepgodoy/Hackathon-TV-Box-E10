@@ -150,16 +150,20 @@ class _DevicesPageState extends State<DevicesPage> {
                                     trailing: Icon(Icons.circle,
                                         size: 14,
                                         color: online ? Colors.green : Colors.red),
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => DeviceDetailPage(
-                                          token: widget.token,
-                                          deviceId: d['device_id'].toString(),
-                                          name: name,
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => DeviceDetailPage(
+                                            token: widget.token,
+                                            deviceId: d['device_id'].toString(),
+                                            name: name,
+                                          ),
                                         ),
-                                      ),
-                                    ),
+                                      );
+                                      // a box pode ter sido esquecida lá dentro
+                                      _load();
+                                    },
                                   ),
                                 );
                               },

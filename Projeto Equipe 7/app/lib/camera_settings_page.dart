@@ -621,23 +621,6 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                 'Alta dispara com pouco movimento; baixa evita alarme falso.',
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           ],
-          const Divider(height: 24),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _saving
-                  ? null
-                  : () => _esquecer(
-                        id,
-                        cam['name']?.toString() ?? 'Câmera',
-                        cam['path']?.toString(),
-                        conectada: true,
-                      ),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              icon: const Icon(Icons.delete_forever, size: 18),
-              label: const Text('Esquecer esta câmera'),
-            ),
-          ),
         ]),
       ),
     );
@@ -694,7 +677,6 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
                             l['id'].toString(),
                             l['label']?.toString() ?? 'Câmera',
                             l['path']?.toString(),
-                            conectada: false,
                           ),
                 ),
               ),
@@ -710,8 +692,7 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
   }
 
   // Confirmação explícita: apaga gravação, e isso não tem volta.
-  Future<void> _esquecer(String id, String nome, String? path,
-      {required bool conectada}) async {
+  Future<void> _esquecer(String id, String nome, String? path) async {
     final grav = _tamanhoGravacao(path);
     final confirmou = await showDialog<bool>(
       context: context,
@@ -732,14 +713,6 @@ class _CameraSettingsPageState extends State<CameraSettingsPage> {
               const Text(
                   'Se precisar de algum trecho, baixe antes pela linha do tempo.',
                   style: TextStyle(fontSize: 13)),
-            ],
-            if (conectada) ...[
-              const SizedBox(height: 12),
-              const Text(
-                  'Ela continua plugada, então volta em seguida como câmera '
-                  'nova, com as configurações padrão. Para removê-la de vez, '
-                  'desconecte o cabo antes.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey)),
             ],
           ],
         ),
