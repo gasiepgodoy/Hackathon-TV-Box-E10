@@ -13,7 +13,7 @@
 
 > 1º Hackathon TV Box Unesp Sorocaba — Equipe 1
 
-> **⚠️ Repositório principal:** o código completo e atualizado deste projeto está em **[github.com/multi-forge/multi-forge](https://github.com/multi-forge/multi-forge)** — este diretório é o espelho da entrega no hackathon.
+> **Repositório principal:** o código completo e atualizado deste projeto está em **[github.com/multi-forge/multi-forge](https://github.com/multi-forge/multi-forge)** — este diretório é o espelho da entrega no hackathon.
 >
 > 📄 **Artigo científico:** [leia o artigo do projeto no Overleaf](https://www.overleaf.com/read/gbwypjdbnhwg#d3352f).
 
