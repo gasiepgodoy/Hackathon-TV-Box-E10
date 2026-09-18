@@ -1,394 +1,377 @@
-# EdgeBox FL
+# AquaFL
 
-## Infraestrutura distribuída de borda com TV Boxes reaproveitadas
+## Benchmark de Edge AI em TV Boxes para Monitoramento Ambiental Distribuído
 
-O **EdgeBox FL** é uma prova de conceito que propõe o reaproveitamento de **TV Boxes** como nós de borda para uma futura infraestrutura urbana inteligente.
+O **AquaFL** investiga o uso de TV Boxes de baixo custo como nós de computação de borda capazes de coletar dados, armazenar histórico, executar modelos de inteligência artificial e realizar treinamento local.
 
-A proposta principal é validar se uma TV Box de baixo custo consegue operar continuamente, coletar dados, armazenar histórico, processar informações localmente, executar modelos leves e preparar atualizações para uma arquitetura de aprendizado federado.
+Nesta etapa, a própria TV Box é utilizada como fonte de dados para validar a infraestrutura computacional antes da integração com sensores ambientais externos.
 
-Antes de acoplar sensores externos em campo, o projeto valida se a própria TV Box consegue funcionar como nó computacional confiável.
-
----
-
-## Objetivo do projeto
-
-O objetivo é verificar se uma TV Box reaproveitada pode atuar como um nó de borda capaz de:
-
-- Coletar dados internos do sistema;
-- Armazenar dados localmente;
-- Executar inferência com modelos leves;
-- Detectar anomalias operacionais;
-- Exibir dados em um painel web;
-- Enviar médias ou atualizações para um computador central;
-- Servir como base futura para uma rede urbana de sensores.
+O objetivo é avaliar desempenho, consumo de recursos e limites operacionais do hardware, verificando se TV Boxes reaproveitadas podem ser utilizadas como nós distribuídos de Edge AI e, futuramente, de aprendizado federado.
 
 ---
 
-## Motivação
+## Objetivo
 
-Projetos de cidades inteligentes normalmente dependem de sensores, gateways e servidores dedicados, o que pode aumentar o custo e dificultar a implantação em larga escala.
+O projeto busca avaliar se uma TV Box ARM64 de baixo custo pode:
 
-O EdgeBox FL propõe uma alternativa de baixo custo: reutilizar TV Boxes como pequenos computadores de borda.
-
-A ideia é validar primeiro a infraestrutura computacional. Se a TV Box conseguir operar de forma estável, ela poderá futuramente receber sensores externos, como sensores de temperatura, umidade, chuva, qualidade do ar, ruído, presença ou nível da água.
+- coletar métricas continuamente;
+- armazenar dados localmente;
+- executar inferência em tempo real;
+- detectar anomalias;
+- treinar modelos de aprendizado de máquina;
+- executar modelos temporais leves;
+- disponibilizar telemetria em um dashboard web;
+- atuar futuramente como nó de uma arquitetura de aprendizado federado.
 
 ---
 
-## Arquitetura geral
+## Arquitetura atual
 
 ```text
 TV Box
-  ↓
-Coleta de métricas internas
-  ↓
-Armazenamento local
-  ↓
-Modelo de risco operacional
-  ↓
-Autoencoder para detecção de anomalias
-  ↓
-Dashboard web
-  ↓
-Futura agregação federada
+   ↓
+Coleta de métricas do sistema
+   ↓
+Histórico local
+   ↓
+┌──────────────────────────────┐
+│ Monitoramento operacional    │
+│ Heurística de risco          │
+└──────────────────────────────┘
+   ↓
+┌──────────────────────────────┐
+│ Detecção de anomalias        │
+│ Autoencoder                  │
+└──────────────────────────────┘
+   ↓
+┌──────────────────────────────┐
+│ Benchmark de previsão        │
+│ Linear / MLP / RNN / GRU     │
+│ / LSTM                       │
+└──────────────────────────────┘
+   ↓
+Dashboard Web
 ```
 
 ---
 
 ## Hardware utilizado
 
-- TV Box com processador Amlogic;
-- 2 GB de RAM;
-- Debian GNU/Linux ARM64;
-- Armazenamento local;
-- Acesso via SSH;
-- Acesso remoto via Tailscale.
+A implementação atual utiliza uma TV Box com:
+
+- arquitetura ARM64;
+- processador Cortex-A53 quad-core;
+- aproximadamente 2 GB de RAM;
+- Debian GNU/Linux;
+- armazenamento local;
+- acesso via SSH;
+- acesso remoto através do Tailscale.
 
 ---
 
-## Dados coletados
+## Métricas coletadas
 
-A própria TV Box é usada como fonte de dados nesta primeira etapa.
+A própria TV Box funciona como fonte de dados nesta fase do projeto.
 
-As métricas coletadas são:
+As principais métricas são:
 
 | Métrica | Descrição |
-|---|---|
-| CPU | Uso do processador |
-| RAM | Uso da memória |
+| --- | --- |
+| CPU | Utilização do processador |
+| RAM | Utilização da memória |
 | Temperatura | Temperatura interna do dispositivo |
-| Disco | Espaço utilizado no armazenamento |
+| Disco | Percentual de armazenamento utilizado |
 | Latência | Tempo de resposta da rede |
-| Load average | Carga média do sistema |
+| Load Average | Carga média do sistema |
 | Rede | Tráfego de entrada e saída |
-| Uptime | Tempo ligado sem reiniciar |
+| Uptime | Tempo de funcionamento |
+
+Os dados são armazenados localmente e utilizados tanto pelo dashboard quanto pelos experimentos de aprendizado de máquina.
 
 ---
 
-## Armazenamento dos dados
+## Risco operacional
 
-Os dados são armazenados localmente na própria TV Box.
+O dashboard apresenta um indicador de risco operacional da TV Box.
 
-Principais arquivos:
+Esse valor **não representa risco de enchente ou risco ambiental**. Ele representa apenas o estado computacional do nó.
+
+A implementação atual utiliza uma heurística ponderada baseada em:
 
 ```text
-/root/aqua-fl/edgebox_metrics.jsonl
-/root/aqua-fl/edgebox.db
-/root/aqua-fl/edgebox_latest.json
+25% CPU
+22% RAM
+22% Temperatura
+12% Disco
+10% Latência
+ 9% Load Average
 ```
 
-O arquivo `edgebox_metrics.jsonl` armazena o histórico bruto das coletas.
-
-O arquivo `edgebox.db` é o banco SQLite local, usado para armazenar os dados de forma estruturada.
+O valor resultante é utilizado para classificar o estado operacional do dispositivo.
 
 ---
 
-## Banco de dados
+## Detecção de anomalias
 
-O projeto utiliza SQLite.
+O projeto também utiliza um Autoencoder leve para detectar comportamentos anormais da TV Box.
 
-Principais tabelas:
+Arquitetura atual:
 
-| Tabela | Função |
-|---|---|
-| `metrics` | Armazena as métricas coletadas da TV Box |
-| `model_updates` | Armazena atualizações do modelo linear |
-| `autoencoder_results` | Armazena inferências do Autoencoder |
-| `autoencoder_models` | Armazena modelos Autoencoder treinados |
-| `autoencoder_updates` | Armazena atualizações federadas do Autoencoder |
-
-Exemplo de consulta:
-
-```bash
-sqlite3 /root/aqua-fl/edgebox.db "SELECT timestamp, cpu_percent, ram_percent, temperature_c, inferred_risk, status FROM metrics ORDER BY id DESC LIMIT 10;"
+```text
+6 entradas
+   ↓
+3 neurônios
+   ↓
+6 saídas
 ```
+
+As entradas correspondem às principais métricas operacionais.
+
+O modelo aprende o comportamento normal do sistema e utiliza o erro de reconstrução para identificar possíveis anomalias.
 
 ---
 
-## Modelo de risco operacional
+## Benchmark de modelos
 
-O primeiro modelo calcula um **risco operacional** da TV Box.
+Uma das principais etapas do AquaFL é avaliar a capacidade da TV Box de realizar treinamento local.
 
-Esse risco não representa risco de alagamento ou risco ambiental. Ele representa a saúde operacional do nó de borda.
+Atualmente são avaliadas as seguintes arquiteturas supervisionadas:
 
-O cálculo considera:
+- Regressão linear;
+- MLP;
+- RNN;
+- GRU;
+- LSTM.
+
+Os modelos recebem janelas temporais de métricas da TV Box e realizam previsão de estados futuros.
+
+O benchmark busca comparar:
+
+- erro de previsão;
+- tempo de treinamento;
+- tempo de inferência;
+- consumo de memória;
+- uso de CPU;
+- temperatura do dispositivo;
+- número de parâmetros;
+- tamanho do modelo.
+
+A finalidade não é apenas identificar qual modelo apresenta menor erro, mas avaliar quais arquiteturas são viáveis em hardware de baixo custo.
+
+---
+
+## Dashboard
+
+O AquaFL possui um dashboard web para acompanhamento do nó.
+
+O painel apresenta, entre outras informações:
 
 - CPU;
 - RAM;
-- Temperatura;
-- Disco;
-- Latência;
-- Carga do sistema.
-
-A fórmula base usa uma média ponderada:
-
-```text
-Risco =
-0,25 × CPU
-+ 0,22 × RAM
-+ 0,22 × temperatura
-+ 0,12 × disco
-+ 0,10 × latência
-+ 0,09 × carga do sistema
-```
-
-Classificação:
-
-```text
-0,00 a 0,35 → Estável
-0,35 a 0,55 → Atenção
-0,55 a 0,75 → Alerta
-0,75 a 1,00 → Crítico
-```
-
----
-
-## Autoencoder para detecção de anomalias
-
-Além do modelo de risco operacional, o projeto implementa um **Autoencoder leve** para detecção de anomalias.
-
-O Autoencoder aprende o padrão normal de funcionamento da TV Box. Depois, ele tenta reconstruir os dados atuais. Se a reconstrução fica muito diferente da entrada, o erro aumenta e o sistema identifica uma possível anomalia.
-
-Arquitetura usada:
-
-```text
-6 entradas → 3 neurônios → 6 saídas
-```
-
-Entradas do modelo:
-
-- CPU;
-- RAM;
-- Temperatura;
-- Disco;
-- Latência;
-- Carga do sistema.
-
-Saídas:
-
-- Reconstrução das mesmas variáveis.
-
-O modelo calcula:
-
-```text
-erro de reconstrução = diferença entre entrada real e saída reconstruída
-```
-
-Se o erro passar do limite aprendido durante o treinamento, o sistema indica anomalia.
-
----
-
-## Aprendizado federado
-
-O EdgeBox FL foi pensado para evoluir para uma arquitetura de **aprendizado federado**.
-
-Em uma rede com várias TV Boxes:
-
-```text
-TV Box 1 → treina modelo local
-TV Box 2 → treina modelo local
-TV Box 3 → treina modelo local
-        ↓
-Enviam apenas pesos, médias ou atualizações
-        ↓
-Computador central agrega os modelos
-```
-
-A principal vantagem é que os dados brutos permanecem em cada nó local. O sistema compartilha apenas o aprendizado, como pesos do modelo, limiares e estatísticas.
-
----
-
-## Dashboard web
-
-O projeto possui um painel web local para visualização dos dados.
-
-Acesso na rede local:
-
-```text
-http://IP_DA_TVBOX:8080
-```
-
-Exemplo:
-
-```text
-http://192.168.3.63:8080
-```
-
-O painel mostra:
-
-- Status do nó;
-- CPU;
-- RAM;
-- Temperatura;
-- Disco;
-- Latência;
-- Uptime;
-- Risco operacional;
-- Histórico em gráficos;
-- Resultado do Autoencoder;
-- Dados do modelo local.
-
----
-
-## Serviços systemd
-
-O sistema utiliza serviços do Debian para rodar automaticamente.
-
-Principais serviços:
-
-| Serviço | Função |
-|---|---|
-| `aquafl-web.service` | Mantém o dashboard web online |
-| `edgebox-update.service` | Coleta dados e atualiza o painel |
-| `edgebox-autoencoder.service` | Executa inferência do Autoencoder |
-| `tailscaled.service` | Permite acesso remoto via Tailscale |
-
-Verificar status:
-
-```bash
-systemctl status aquafl-web --no-pager
-systemctl status edgebox-update --no-pager
-systemctl status edgebox-autoencoder --no-pager
-systemctl status tailscaled --no-pager
-```
-
----
-
-## Instalação básica
-
-Instalar dependências:
-
-```bash
-apt update
-apt install -y python3 python3-numpy sqlite3 iputils-ping git
-```
-
-Rodar coleta manual:
-
-```bash
-python3 edgebox_node.py
-```
-
-Treinar Autoencoder:
-
-```bash
-python3 edgebox_autoencoder.py train
-```
-
-Executar inferência:
-
-```bash
-python3 edgebox_autoencoder.py infer
-```
+- temperatura;
+- disco;
+- latência;
+- uptime;
+- risco operacional;
+- histórico recente;
+- resultados dos benchmarks;
+- métricas dos modelos treinados.
 
 ---
 
 ## Estrutura do projeto
 
+O código da Equipe 2 está localizado em:
+
 ```text
-edgebox-fl
-├── src/
-│   ├── edgebox_node.py
-│   ├── edgebox_autoencoder.py
-│   ├── edgebox_db_sync.py
-│   └── edgebox_site_autoencoder.py
+Projeto Equipe 2/
+├── readme.md
+└── aqua-fl/
+```
+
+Dentro de `aqua-fl/`:
+
+```text
+aqua-fl/
+├── dados/
+│   ├── clima/
+│   └── edgebox/
+│
+├── fluxos/
+│   ├── clima/
+│   └── edgebox/
+│       ├── benchmark/
+│       └── models/
 │
 ├── scripts/
-│   ├── edgebox_loop.sh
-│   └── edgebox_autoencoder_loop.sh
-│
-├── systemd/
-│   ├── aquafl-web.service
-│   ├── edgebox-update.service
-│   └── edgebox-autoencoder.service
-│
-├── data_samples/
-│   ├── metrics_last_1000.csv
-│   ├── autoencoder_last_1000.csv
-│   └── edgebox_metrics_sample.jsonl
-│
-├── docs/
-├── README.md
-├── requirements.txt
-└── .gitignore
+├── tests/
+├── web/
+├── config.py
+├── server.py
+├── edgebox_loop.sh
+└── requirements-benchmark.txt
 ```
 
 ---
 
-## Arquivos que não devem ser enviados ao GitHub
+## Modelos supervisionados
 
-Alguns arquivos são gerados localmente e podem ficar muito grandes. Por isso, não devem ser enviados diretamente ao repositório.
-
-Exemplos:
+Os modelos utilizados no benchmark estão em:
 
 ```text
-edgebox.db
-edgebox_metrics.jsonl
-*.log
-*.tar.gz
-backups/
-tokens
-chaves SSH
-arquivos do Tailscale
+fluxos/edgebox/models/
 ```
 
-Para o GitHub, recomenda-se enviar apenas amostras dos dados em `data_samples/`.
+Atualmente:
+
+```text
+linear.py
+mlp.py
+rnn.py
+gru.py
+lstm.py
+common.py
+```
+
+Os resultados dos experimentos podem ser armazenados em:
+
+```text
+dados/edgebox/models/
+```
 
 ---
 
-## Aplicações futuras
+## Execução na TV Box
 
-Depois da validação da TV Box como nó de borda, a arquitetura pode ser expandida para sensores externos e aplicações urbanas, como:
+A instalação utilizada durante o desenvolvimento considera o projeto localizado em:
 
-- Monitoramento de alagamentos;
-- Qualidade do ar;
-- Ruído urbano;
-- Temperatura e umidade;
-- Presença;
-- Mobilidade urbana;
-- Dados comunitários;
-- Redes distribuídas de sensores.
+```text
+/root/aqua-fl
+```
 
----
+Alguns scripts operacionais ainda utilizam esse caminho absoluto.
 
-## Estado atual do projeto
+Para reproduzir exatamente o ambiente atual da TV Box, copie ou clone o conteúdo da pasta `aqua-fl` para:
 
-Atualmente, o projeto já possui:
+```bash
+/root/aqua-fl
+```
 
-- TV Box com Linux funcionando;
-- Coleta automática de métricas internas;
-- Dashboard web;
-- Banco SQLite local;
-- Modelo de risco operacional;
-- Autoencoder para anomalias;
-- Serviços automáticos com systemd;
-- Acesso remoto via Tailscale;
-- Repositório GitHub para versionamento.
+Exemplo:
+
+```bash
+cd /root
+git clone <repositorio>
+cp -a "<repositorio>/Projeto Equipe 2/aqua-fl" /root/aqua-fl
+cd /root/aqua-fl
+```
 
 ---
 
-## Conclusão
+## Dependências para benchmark
 
-O EdgeBox FL não é apenas um painel de monitoramento. Ele é uma prova de conceito para validar TV Boxes reaproveitadas como nós inteligentes de borda.
+O ambiente utilizado para os modelos supervisionados utiliza Python e PyTorch em CPU.
 
-A proposta prepara o caminho para uma infraestrutura urbana distribuída, de baixo custo, escalável e capaz de utilizar aprendizado federado em aplicações futuras.
-Líder da equipe deve contatar a [organização do evento](eduardo.godoy@unesp.br) para cadastro de colaborador da pasta para edição.
+Exemplo:
+
+```bash
+python3 -m venv .venv-benchmark
+source .venv-benchmark/bin/activate
+pip install numpy
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+```
+
+---
+
+## Arquivos que não são versionados
+
+Arquivos gerados durante a operação podem atingir centenas de megabytes ou gigabytes e não fazem parte do repositório.
+
+Entre eles:
+
+```text
+*.db
+*.log
+__pycache__/
+dados/edgebox/raw/
+dados/edgebox/processed/
+dados/edgebox/edgebox_metrics.jsonl
+```
+
+Esses arquivos são criados ou utilizados localmente na TV Box.
+
+---
+
+## Aprendizado federado
+
+O aprendizado federado representa a próxima evolução da arquitetura.
+
+A proposta futura é utilizar múltiplas TV Boxes:
+
+```text
+TV Box 1 ─┐
+TV Box 2 ─┼── treinamento local
+TV Box 3 ─┘
+      ↓
+atualizações dos modelos
+      ↓
+agregação federada
+      ↓
+modelo global
+```
+
+Dessa forma, diferentes nós poderão colaborar no treinamento sem necessidade de centralizar todos os dados brutos.
+
+---
+
+## Aplicação ambiental futura
+
+Após validar a TV Box como plataforma de Edge AI, o AquaFL pretende integrar sensores ambientais externos.
+
+Possíveis aplicações incluem:
+
+- monitoramento de chuva;
+- nível de rios e córregos;
+- enchentes e alagamentos;
+- temperatura e umidade;
+- qualidade do ar;
+- redes distribuídas de sensores urbanos.
+
+A arquitetura também permite explorar transferência de aprendizado entre regiões com diferentes quantidades de dados históricos.
+
+---
+
+## Estado atual
+
+Atualmente o AquaFL possui:
+
+- TV Box ARM64 executando Debian;
+- coleta contínua de métricas;
+- armazenamento local;
+- dashboard web;
+- indicador de risco operacional;
+- benchmark supervisionado;
+- modelos Linear, MLP, RNN, GRU e LSTM;
+- treinamento local na própria TV Box;
+- acesso remoto através de Tailscale;
+- estrutura preparada para expansão futura para aprendizado federado.
+
+---
+
+## Próximas etapas
+
+- ampliar os benchmarks de desempenho;
+- avaliar limites de CPU, RAM e temperatura;
+- comparar diferentes janelas e horizontes de previsão;
+- integrar sensores ambientais;
+- testar múltiplas TV Boxes;
+- implementar agregação federada;
+- avaliar transferência de aprendizado entre diferentes regiões.
+
+---
+
+## Visão do projeto
+
+O AquaFL busca demonstrar que equipamentos baratos e reaproveitados podem funcionar como nós inteligentes de borda.
+
+A proposta combina **reutilização de hardware, Edge AI, monitoramento distribuído e aprendizado federado** para criar uma infraestrutura acessível e escalável para aplicações ambientais.
