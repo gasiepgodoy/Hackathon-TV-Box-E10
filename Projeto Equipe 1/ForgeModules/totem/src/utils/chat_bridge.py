@@ -20,7 +20,7 @@ class ChatBridge:
     def __init__(self, binary_path: Optional[str] = None, backend: Optional[str] = None):
         self._config = ConfigManager.get_instance()
         llm_opts = self._config.get_config("LLM_OPTIONS", {})
-        backend_value = (backend or llm_opts.get("BACKEND") or os.getenv("CHAT_BACKEND") or DEFAULT_BACKEND).lower()
+        backend_value = (backend or os.getenv("CHAT_BACKEND") or llm_opts.get("BACKEND") or "groq").lower()
         if backend_value in ("binary", "apicomm"):
             self.backend = "binary"
         else:
@@ -322,6 +322,120 @@ class ChatBridge:
 
         return full_response
 
+    async def _send_and_stream_with_tools(
+        self,
+        api_url: str,
+        api_key: str,
+        model: str,
+        temperature: float,
+        max_tokens: int,
+        prompt: str,
+        backend_name: str,
+        on_token=None, on_emotion=None, on_chunk=None, on_control=None
+    ) -> str:
+        from src.utils.academic_tools import TOOLS_SCHEMA, execute_academic_tool
+        
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        if not self._session or self._session.closed:
+            self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20, connect=8))
+
+        system_instruction = (
+            "Você é a MABI (Módulo Acadêmico Baseado em Inteligência Artificial), a assistente de voz oficial do Totem da UNESP Sorocaba.\n"
+            "DIRETRIZES FUNDAMENTAIS:\n"
+            "1. RESPOSTA DE VOZ: Sua resposta será falada em voz alta via sintetizador vocal (TTS). Seja natural, amigável, clara e concisa (1 a 3 frases). Evite markdown elaborado, tabelas ou asteriscos.\n"
+            "2. ZERO ALUCINAÇÃO: Você tem ferramentas oficiais (tools) para consultar professores, salas, aulas, calendário escolar e normas acadêmicas. Toda vez que o usuário perguntar sobre a universidade, chame OBRIGATORIAMENTE as ferramentas correspondentes.\n"
+            "3. SÍNTESE: Ao receber os dados das ferramentas, resuma as informações essenciais de forma fluida para o aluno."
+        )
+
+        messages = [
+            {"role": "system", "content": system_instruction}
+        ]
+        messages.extend(self._history[-MAX_HISTORY:])
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model": model,
+            "messages": messages,
+            "tools": TOOLS_SCHEMA,
+            "tool_choice": "auto",
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+
+        try:
+            async with self._session.post(api_url, json=payload, headers=headers) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    raise RuntimeError(f"{backend_name.upper()} tool calling error {resp.status}: {body}")
+                data = await resp.json()
+        except Exception as exc:
+            return await self._stream_api_request(
+                api_url, api_key, model, temperature, max_tokens, prompt, backend_name,
+                on_token, on_emotion, on_chunk, on_control
+            )
+
+        choice = data["choices"][0]
+        msg = choice["message"]
+        messages.append(msg)
+
+        if msg.get("tool_calls"):
+            if on_emotion:
+                await on_emotion("thinking")
+            if on_token:
+                await on_token("Consultando base acadêmica...")
+
+            for tc in msg["tool_calls"]:
+                fn_name = tc["function"]["name"]
+                try:
+                    args = json.loads(tc["function"]["arguments"])
+                except Exception:
+                    args = {}
+                
+                result = await asyncio.to_thread(execute_academic_tool, fn_name, args)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
+                    "content": json.dumps(result, ensure_ascii=False)
+                })
+
+            payload2 = {
+                "model": model,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            async with self._session.post(api_url, json=payload2, headers=headers) as resp2:
+                if resp2.status != 200:
+                    body2 = await resp2.text()
+                    raise RuntimeError(f"{backend_name.upper()} final reply error {resp2.status}: {body2}")
+                data2 = await resp2.json()
+
+            final_text = data2["choices"][0]["message"]["content"].strip()
+        else:
+            final_text = (msg.get("content") or "").strip()
+
+        if on_emotion:
+            await on_emotion("neutral")
+
+        import re
+        text_clean = re.sub(r'\b(Prof|Profa|Dr|Dra|Sr|Sra)\.\s*', r'\1 ', final_text)
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text_clean) if s.strip()]
+        if not sentences:
+            sentences = [final_text]
+
+        for s in sentences:
+            if on_chunk:
+                await on_chunk(s, 2.5, "neutral")
+            if on_token:
+                await on_token(s + " ")
+
+        self._append_history("user", prompt)
+        self._append_history("assistant", final_text)
+        return final_text
+
     async def _send_and_stream_openai(
         self,
         prompt: str,
@@ -331,6 +445,28 @@ class ChatBridge:
         bk = self.backend
         
         key = opts.get("API_KEY") or os.getenv(f"{bk.upper()}_API_KEY") or os.getenv("LLM_API_KEY")
+        if not key:
+            from pathlib import Path
+            candidates = [
+                Path(".env"),
+                Path(__file__).parent.parent.parent / ".env",
+                Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\Projeto Equipe 1\ForgeModules\totem\.env"),
+                Path("/root/app/.env")
+            ]
+            for p in candidates:
+                if p.exists():
+                    try:
+                        with open(p, "r", encoding="utf-8") as f:
+                            for line in f:
+                                if line.strip().startswith(f"{bk.upper()}_API_KEY="):
+                                    key = line.strip().split("=", 1)[1].strip()
+                                    if key:
+                                        break
+                    except Exception:
+                        pass
+                if key:
+                    break
+
         if not key and bk != "ollama":
             raise RuntimeError(f"API key for {bk} not set.")
 
@@ -344,11 +480,17 @@ class ChatBridge:
         
         model_map = {
             "cerebras": os.getenv("CEREBRAS_CHAT_MODEL") or "zai-glm-4.7",
-            "groq": os.getenv("GROQ_CHAT_MODEL") or "llama3-8b-8192",
+            "groq": os.getenv("GROQ_CHAT_MODEL") or "openai/gpt-oss-20b",
             "openai": os.getenv("OPENAI_CHAT_MODEL") or "gpt-4o-mini",
             "ollama": os.getenv("OLLAMA_CHAT_MODEL") or "llama3"
         }
         model = opts.get("MODEL") or model_map.get(bk, model_map["cerebras"])
+
+        if bk in ("groq", "openai"):
+            return await self._send_and_stream_with_tools(
+                url, key, model, opts.get("TEMPERATURE", 0.7), opts.get("MAX_TOKENS", 2048),
+                prompt, bk, on_token, on_emotion, on_chunk, on_control
+            )
 
         return await self._stream_api_request(
             url, key, model, opts.get("TEMPERATURE", 0.7), opts.get("MAX_TOKENS", 2048),

@@ -109,10 +109,10 @@ class ConfigManager:
         },
         "LLM_OPTIONS": {
             "ENABLED": True,
-            "BACKEND": "cerebras",
+            "BACKEND": "groq",
             "API_KEY": "",
-            "MODEL": "zai-glm-4.7",
-            "API_URL": "https://api.cerebras.ai/v1/chat/completions",
+            "MODEL": "openai/gpt-oss-20b",
+            "API_URL": "https://api.groq.com/openai/v1/chat/completions",
             "TEMPERATURE": 0.7,
             "MAX_TOKENS": 2048,
         },
@@ -142,6 +142,16 @@ class ConfigManager:
         if self._initialized:
             return
         self._initialized = True
+
+        # Load .env file
+        try:
+            from dotenv import load_dotenv
+            for candidate in [Path(".env"), Path("../.env"), Path(__file__).parent.parent.parent / ".env"]:
+                if candidate.exists():
+                    load_dotenv(candidate)
+                    break
+        except Exception:
+            pass
 
         # Initialize config file paths.
         self._init_config_paths()

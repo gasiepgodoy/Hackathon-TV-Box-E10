@@ -147,22 +147,7 @@ async def cli_loop():
                 print(f"{CLR_YELLOW}\nAté mais! Encerrando a Mina...{CLR_RESET}")
                 break
 
-            # Interceptador de intenções local (MABI/Offline)
-            from src.utils.intent_classifier import IntentClassifier
-            intent_classifier = IntentClassifier()
-            intent_detected, local_response = intent_classifier.classify_and_execute(user_input)
-
-            if intent_detected:
-                print(f"{CLR_MAGENTA}Mina (Local):{CLR_RESET} {local_response}")
-                if use_tts and tts_client:
-                    audio_task = tts_client.pre_synthesize(local_response)
-                    if audio_task:
-                        audio_bytes = await audio_task
-                        if audio_bytes:
-                            await tts_client.play(audio_bytes)
-                print("")  # Nova linha
-                continue
-
+            # Processamento direto com IA e Tool Calling (Sem Intent Classifier)
             print(f"{CLR_MAGENTA}Mina:{CLR_RESET} ", end="", flush=True)
 
             # TTS Tracking
