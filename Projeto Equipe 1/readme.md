@@ -38,6 +38,8 @@ Na BTV E10 (2 GB de RAM e 8 GB de eMMC), a plataforma reúne Linux otimizado, co
 
 O MultiForge fornece a infraestrutura comum; a Mina demonstra seu uso principal na educação. Essa separação permite ampliar a plataforma com outros módulos sem refazer o processo de preparação e configuração do equipamento.
 
+> 🧩 **Módulos:** o módulo principal (Mina) e os demais módulos ficam no repositório principal — código e especificação em [ForgeModules](https://github.com/multi-forge/multi-forge/tree/main/ForgeModules), lista oficial em [ForgeDB/modules/catalog.yaml](https://github.com/multi-forge/multi-forge/blob/main/ForgeDB/modules/catalog.yaml).
+
 **Repo principal (código completo):** https://github.com/multi-forge/multi-forge
 
 ---
