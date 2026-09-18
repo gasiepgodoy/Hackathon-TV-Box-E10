@@ -48,7 +48,7 @@ O MultiForge fornece a infraestrutura comum; a Mina demonstra seu uso principal 
 - **Configurar a box sem teclado, mouse ou monitor:** portal cativo com QR Code renderizado direto no framebuffer (`/dev/fb0`) da TV; o celular faz todo o provisionamento via `http://192.168.4.1:8080`.
 - **Sobreviver a senha errada sem intervenção:** watchdog com rollback automático para o modo AP em 75 s, sem reiniciar o equipamento.
 - **Conectar na rede da universidade (eduroam):** suporte nativo a EAP/802.1X (PEAP, TTLS, PWD e TLS) no portal de provisionamento.
-- **Falar e ouvir sem internet em 2 GB de RAM:** reconhecimento de voz 100% offline (Sherpa-ONNX) + síntese Piper TTS rodando no próprio ARM64, sem enviar áudio para a nuvem.
+- **Teste de IA local:** Foram feitos testes de modelos quantizados q4, e atingiu incriveis 23tkps apos otimizaçoes do MultiForge.
 - **Gravar configuração sem `mount` no PC:** o ForgeImager injeta Wi-Fi e usuário direto na partição ext4 da imagem (`forge-write-conf`), com SHA-256 e verificação byte a byte.
 - **Suportar qualquer placa no futuro:** ForgeDB com validação em CI (JSON Schema Draft 2020-12), distribuição via CDN com fallback offline e autodeteção de hardware por fingerprints (USB VID/PID, device tree, modelo de armazenamento).
 - **Funcionar em Windows, Linux e macOS:** gravação com polkit/UDisks2 (Linux), `authopen` + Touch ID (macOS) e modo Administrador (Windows).
