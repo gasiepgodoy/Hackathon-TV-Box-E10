@@ -47,15 +47,18 @@
 
 ## 📁 Estrutura do Repositório
 
-* `static/logo.png` — Logotipo do projeto exibido no cabeçalho do dashboard
-* `templates/index.html` — Dashboard responsivo com Player HTML5/Canvas e Gráficos
-* `main.py` — Servidor Flask, Thread da IA e Lógica das ROIs
-* `requirements.txt` — Lista de dependências Python
-* `yolov8n.onnx` — Modelo YOLOv8 otimizado para inferência rápida via OpenCV DNN
-* `yolov8n.pt` — Pesos originais do YOLOv8 (PyTorch)
-* `README.md` — Documentação oficial do projeto
-* *(config_roi.json)* — Gerado dinamicamente ao marcar as ROIs pela interface web
-* *(banco_dados.db)* — Banco SQLite criado automaticamente na primeira execução
+<pre><code>Projeto Equipe 5/
+├── static/
+│   └── logo.png         # Logotipo do projeto exibido no cabeçalho do dashboard
+├── templates/
+│   └── index.html       # Dashboard responsivo com Player HTML5/Canvas e Gráficos
+├── main.py              # Servidor Flask, Thread da IA e Lógica das ROIs
+├── requirements.txt     # Lista de dependências Python
+├── yolov8n.onnx         # Modelo YOLOv8 otimizado para inferência rápida via OpenCV DNN
+├── yolov8n.pt           # Pesos originais do YOLOv8 (PyTorch)
+├── README.md            # Documentação oficial do projeto
+├── (config_roi.json)    # Gerado dinamicamente ao marcar as ROIs pela interface web
+└── (banco_dados.db)     # Banco SQLite criado automaticamente na primeira execução</code></pre>
 
 ---
 
