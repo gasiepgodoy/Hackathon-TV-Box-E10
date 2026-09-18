@@ -13,6 +13,10 @@
 
 > 1º Hackathon TV Box Unesp Sorocaba — Equipe 1
 
+> **⚠️ Repositório principal:** o código completo e atualizado deste projeto está em **[github.com/multi-forge/multi-forge](https://github.com/multi-forge/multi-forge)** — este diretório é o espelho da entrega no hackathon.
+>
+> 📄 **Artigo científico:** [leia o artigo do projeto no Overleaf](https://www.overleaf.com/read/gbwypjdbnhwg#d3352f).
+
 ---
 
 ## Resumo
@@ -35,6 +39,19 @@ Na BTV E10 (2 GB de RAM e 8 GB de eMMC), a plataforma reúne Linux otimizado, co
 O MultiForge fornece a infraestrutura comum; a Mina demonstra seu uso principal na educação. Essa separação permite ampliar a plataforma com outros módulos sem refazer o processo de preparação e configuração do equipamento.
 
 **Repo principal (código completo):** https://github.com/multi-forge/multi-forge
+
+---
+
+## Desafios técnicos — o que foi mais difícil
+
+- **Estabilizar o Wi-Fi no hardware real:** o chip RTL8189FTV sofria erros de CRC e quedas de firmware — a solução foi um DTB Enterprise com SDIO travado em 25 MHz e CMA reduzido para 64 MB (liberando 192 MB de RAM).
+- **Configurar a box sem teclado, mouse ou monitor:** portal cativo com QR Code renderizado direto no framebuffer (`/dev/fb0`) da TV; o celular faz todo o provisionamento via `http://192.168.4.1:8080`.
+- **Sobreviver a senha errada sem intervenção:** watchdog com rollback automático para o modo AP em 75 s, sem reiniciar o equipamento.
+- **Conectar na rede da universidade (eduroam):** suporte nativo a EAP/802.1X (PEAP, TTLS, PWD e TLS) no portal de provisionamento.
+- **Falar e ouvir sem internet em 2 GB de RAM:** reconhecimento de voz 100% offline (Sherpa-ONNX) + síntese Piper TTS rodando no próprio ARM64, sem enviar áudio para a nuvem.
+- **Gravar configuração sem `mount` no PC:** o ForgeImager injeta Wi-Fi e usuário direto na partição ext4 da imagem (`forge-write-conf`), com SHA-256 e verificação byte a byte.
+- **Suportar qualquer placa no futuro:** ForgeDB com validação em CI (JSON Schema Draft 2020-12), distribuição via CDN com fallback offline e autodeteção de hardware por fingerprints (USB VID/PID, device tree, modelo de armazenamento).
+- **Funcionar em Windows, Linux e macOS:** gravação com polkit/UDisks2 (Linux), `authopen` + Touch ID (macOS) e modo Administrador (Windows).
 
 ---
 
