@@ -58,5 +58,5 @@ Distribuicao Linux customizada e stack de provisionamento on-device:
 
 ## 4. ForgeModules
 Aplicacoes modulares executadas sobre o ForgeOS:
-- **Totem (Mina AI):** Assistente virtual para quiosques com processamento de voz offline (Sherpa-ONNX), interface PyQt5 e classificador de intencoes local.
+- **Totem (Mina AI):** Assistente virtual para quiosques com interface PyQt5 e consulta a dados acadêmicos locais.
 - **Coletor Acadêmico & RAG:** Servico assincrono de coleta de dados com FastAPI e LangChain RAG, com opcoes de execucao local (SQLite) ou em container (PostgreSQL).

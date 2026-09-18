@@ -8,7 +8,7 @@ Diretorio central de aplicacoes modulares compativeis com o ecossistema ForgeOS.
 
 | Modulo | Categoria | Descricao | Stack | Estado |
 |--------|-----------|-----------|-------|--------|
-| **[totem](totem/)** | AI / Voz | Mina - Assistente Virtual Acadêmica para quiosques com voz offline e GUI | Python 3, PyQt5, Sherpa-ONNX, SQLite | Estavel |
+| **[totem](totem/)** | AI | Mina - Assistente Virtual Acadêmica para quiosques com interface na TV e GUI | Python 3, PyQt5, SQLite | Estavel |
 | **[web-scraping](sub-modulos/web-scraping/)** | Dados / RAG | Coletor assincrono de dados universitarios com API FastAPI e agente LangChain | Python 3.12, FastAPI, PostgreSQL/SQLite, LangChain | Homologado |
 
 ---
