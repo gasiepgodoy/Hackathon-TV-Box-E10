@@ -68,15 +68,15 @@ GROQ_MODEL = "openai/gpt-oss-20b"
 
 def get_db_path() -> str:
     candidates = [
-        Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\config\academic.db"),
-        Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\Projeto Equipe 1\ForgeModules\totem\config\academic.db"),
         Path(__file__).parent / "config" / "academic.db",
+        Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\Projeto Equipe 1\config\academic.db"),
+        Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\Projeto Equipe 1\ForgeModules\totem\config\academic.db"),
         Path("/root/app/config/academic.db"),
     ]
     for p in candidates:
         if p.exists():
             return str(p)
-    return str(Path(r"C:\Users\Aluno\Hackathon-TV-Box-E10\config\academic.db"))
+    return str(Path(__file__).parent / "config" / "academic.db")
 
 DB_PATH = get_db_path()
 
