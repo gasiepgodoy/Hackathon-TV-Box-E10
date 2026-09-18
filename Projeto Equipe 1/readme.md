@@ -249,6 +249,10 @@ Interface responsiva para desktop, TV e smartphones, otimizada para appliances d
 
 ## Hardware utilizado
 
+![Vista explodida da BTV Express E10](imagens/btv-e10-exploded.png)
+
+*Vista explodida: tampa superior, blindagem, PCB (SoC Amlogic S905X2, RAM, eMMC e conectores), chassi e tampa inferior.*
+
 | Componente | Especificação |
 |---|---|
 | Dispositivo | BTV Express E10 (TV Box apreendida) |
