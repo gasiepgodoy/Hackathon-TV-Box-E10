@@ -47,18 +47,15 @@
 
 ## 📁 Estrutura do Repositório
 
-Projeto Equipe 5/  
-├── static/  
-│   └── logo.png         # Logotipo do projeto exibido no cabeçalho do dashboard  
-├── templates/  
-│   └── index.html       # Dashboard responsivo com Player HTML5/Canvas e Gráficos  
-├── main.py              # Servidor Flask, Thread da IA e Lógica das ROIs  
-├── requirements.txt     # Lista de dependências Python  
-├── yolov8n.onnx         # Modelo YOLOv8 otimizado para inferência rápida via OpenCV DNN  
-├── yolov8n.pt           # Pesos originais do YOLOv8 (PyTorch)  
-├── README.md            # Documentação oficial do projeto  
-├── (config_roi.json)    # Gerado dinamicamente ao marcar as ROIs pela interface web  
-└── (banco_dados.db)     # Banco SQLite criado automaticamente na primeira execução  
+* `static/logo.png` — Logotipo do projeto exibido no cabeçalho do dashboard
+* `templates/index.html` — Dashboard responsivo com Player HTML5/Canvas e Gráficos
+* `main.py` — Servidor Flask, Thread da IA e Lógica das ROIs
+* `requirements.txt` — Lista de dependências Python
+* `yolov8n.onnx` — Modelo YOLOv8 otimizado para inferência rápida via OpenCV DNN
+* `yolov8n.pt` — Pesos originais do YOLOv8 (PyTorch)
+* `README.md` — Documentação oficial do projeto
+* *(config_roi.json)* — Gerado dinamicamente ao marcar as ROIs pela interface web
+* *(banco_dados.db)* — Banco SQLite criado automaticamente na primeira execução
 
 ---
 
@@ -66,17 +63,17 @@ Projeto Equipe 5/
 
 1. **Sincronizar Fuso Horário do Sistema (Linux):**  
    `timedatectl set-timezone America/Sao_Paulo`  
-   `localectl set-locale LC_TIME=pt_BR.UTF-8`  
+   `localectl set-locale LC_TIME=pt_BR.UTF-8`
 
 2. **Configurar e Ativar o Ambiente Virtual Python:**  
    `python3 -m venv venv`  
-   `source venv/bin/activate`  
+   `source venv/bin/activate`
 
 3. **Instalar Dependências:**  
-   `pip install -r requirements.txt`  
+   `pip install -r requirements.txt`
 
 4. **Iniciar a Aplicação:**  
-   `python main.py`  
+   `python main.py`
 
 ---
 
