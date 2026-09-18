@@ -64,7 +64,7 @@ A aplicação opera através de um modelo multi-thread assíncrono para garantir
 
 ## 🧠 Métricas e Algoritmo de Estimativa
 
-O tempo estimado de espera na fila é calculated dinamicamente combinando o volume de pessoas aguardando com o ritmo de vazão dos atendentes em serviço:
+O tempo estimado de espera na fila é calculado dinamicamente combinando o volume de pessoas aguardando com o ritmo de vazão dos atendentes em serviço:
 
 * **Pessoas na Fila ($N_{fila}$):** Total de pessoas detectadas dentro do polígono vermelho.
 * **Atendentes em Serviço ($N_{atend}$):** Total de funcionários detectados dentro do polígono amarelo.
@@ -161,13 +161,13 @@ Executa a aplicação e inicia o servidor web na porta 5000:
 
 1. **Acesso:** Acesse `http://<IP_DO_DISPOSITIVO>:5000` via navegador na mesma rede local.
 2. **Delimitação das Zonas (ROIs):**
-   * **Fila:** Clique em **Marcar ROI Fila (Vermelho)** e selecione 4 pontos no vídeo demarcando a fila de espera.
-   * **Atendimento:** Clique em **Marcar ROI Atendimento (Amarelo)** e selecione 4 pontos demarcando o espaço de trabalho dos atendentes.
+   * 🔴 **Marcar ROI Fila (Contorno Vermelho):** Clique no botão correspondente e selecione 4 pontos sobre a área do vídeo para delimitar o perímetro onde a fila se forma.
+   * 🟡 **Marcar ROI Atendimento (Contorno Amarelo):** Clique no botão correspondente e selecione 4 pontos no vídeo demarcando o espaço físico de trabalho dos atendentes.
 3. **Leitura Visual das Detecções:**
-   * 🟢 **Verde:** Usuário identificado aguardando na fila.
-   * 🟠 **Laranja:** Funcionário/Atendente em serviço.
-   * 🔵 **Azul:** Pessoas fora das zonas de interesse.
+   * 🟢 **Verde:** Usuário identificado e contabilizado dentro da zona de fila.
+   * 🟠 **Laranja:** Funcionário/Atendente identificado e contabilizado na zona de atendimento.
+   * 🔵 **Azul:** Pessoas detectadas fora de qualquer zona de interesse configurada.
 4. **Controle e Análise:**
-   * **Limpar ROIs:** Redefine o mapeamento de áreas.
-   * **Zerar Histórico:** Reseta as estatísticas salvas no dia.
+   * **Limpar ROIs:** Redefine o mapeamento de áreas e limpa a marcação visual.
+   * **Zerar Histórico:** Reseta as estatísticas salvas para o dia vigente.
    * **Painel Histórico:** Selecione dias anteriores nos seletores para visualizar gráficos de tendência e horários de pico.
