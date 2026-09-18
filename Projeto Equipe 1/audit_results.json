@@ -1,0 +1,256 @@
+{
+  "timestamp": "2026-09-18 00:35:28",
+  "total_servicos_indexados": 11,
+  "total_qr_testados": 7,
+  "total_api_testadas": 10,
+  "api_pass": 10,
+  "api_fail": 0,
+  "tempo_total_s": 9.38,
+  "inventario": [
+    {
+      "servico": "Mina — Assistente Virtual Acadêmica",
+      "manifesto": "ForgeDB/modules/totem/module.yaml",
+      "porta": "Display HDMI /dev/fb0",
+      "dependencias": "17 pacotes Python, 15 pacotes de sistema",
+      "status_esperado": "Ativo / Pronto para Execução"
+    },
+    {
+      "servico": "Coletor Acadêmico & RAG Agent",
+      "manifesto": "ForgeDB/modules/web-scraping/module.yaml",
+      "porta": "5432, 6379, 8000",
+      "dependencias": "postgres, redis, api",
+      "status_esperado": "Ativo / Pronto para Execução"
+    },
+    {
+      "servico": "Coletor Acadêmico & RAG Agent",
+      "manifesto": "ForgeModules/sub-modulos/web-scraping/module.yaml",
+      "porta": "5432, 6379, 8000",
+      "dependencias": "postgres, redis, api",
+      "status_esperado": "Ativo / Pronto para Execução"
+    },
+    {
+      "servico": "Mina — Assistente Virtual Acadêmica",
+      "manifesto": "ForgeModules/totem/module.yaml",
+      "porta": "Display HDMI /dev/fb0",
+      "dependencias": "17 pacotes Python, 15 pacotes de sistema",
+      "status_esperado": "Ativo / Pronto para Execução"
+    },
+    {
+      "servico": "ForgeDB Catalog Registry",
+      "manifesto": "ForgeDB/modules/catalog.yaml",
+      "porta": "N/A (Repositório)",
+      "dependencias": "JSON Schema Draft 2020-12",
+      "status_esperado": "Validado em CI"
+    },
+    {
+      "servico": "forge-ap.service",
+      "manifesto": "ForgeOS/systemd/forge-ap.service",
+      "porta": "67 UDP, 53 UDP",
+      "dependencias": "wlan0, dnsmasq",
+      "status_esperado": "Ativo (systemd)"
+    },
+    {
+      "servico": "forge-display.service",
+      "manifesto": "ForgeOS/systemd/forge-display.service",
+      "porta": "Framebuffer /dev/fb0",
+      "dependencias": "local-fs.target",
+      "status_esperado": "Ativo (systemd)"
+    },
+    {
+      "servico": "forge-fbcon-disable.service",
+      "manifesto": "ForgeOS/systemd/forge-fbcon-disable.service",
+      "porta": "Framebuffer /dev/fb0",
+      "dependencias": "local-fs.target",
+      "status_esperado": "Ativo (systemd)"
+    },
+    {
+      "servico": "forge-portal.service",
+      "manifesto": "ForgeOS/systemd/forge-portal.service",
+      "porta": "8080",
+      "dependencias": "forge-ap.service",
+      "status_esperado": "Ativo (systemd)"
+    },
+    {
+      "servico": "forge-watchdog.service",
+      "manifesto": "ForgeOS/systemd/forge-watchdog.service",
+      "porta": "Framebuffer /dev/fb0",
+      "dependencias": "local-fs.target",
+      "status_esperado": "Ativo (systemd)"
+    },
+    {
+      "servico": "ForgeHub Daemon & Web UI",
+      "manifesto": "ForgeOS/web/server.py (e /opt/forgehub/forgehub)",
+      "porta": "8080 TCP",
+      "dependencias": "Linux Kernel 6.18, BBolt, wpa_supplicant",
+      "status_esperado": "Executando (Ativo)"
+    }
+  ],
+  "qr_codes": [
+    {
+      "arquivo": "07_ForgeOS_HDMI_Dual_QR_Framebuffer_1080p.png",
+      "status": "Pass",
+      "tempo_ms": 160.82,
+      "payload": "WIFI:T:WPA;S:ForgeOS • Configuração;P:BemVindo2026;;"
+    },
+    {
+      "arquivo": "qr_fase1_conectar.png",
+      "status": "Pass",
+      "tempo_ms": 163.44,
+      "payload": "WIFI:T:WPA;S:ForgeOS • Configuração;P:BemVindo2026;;"
+    },
+    {
+      "arquivo": "qr_fase2_configurar.png",
+      "status": "Pass",
+      "tempo_ms": 156.3,
+      "payload": "http://192.168.1.120:8080"
+    },
+    {
+      "arquivo": "qr_fase3_usar.png",
+      "status": "Pass",
+      "tempo_ms": 146.21,
+      "payload": "http://192.168.1.120:8080"
+    },
+    {
+      "arquivo": "qr_fase_aplicando.png",
+      "status": "N/A (Barra de Progresso)",
+      "tempo_ms": 55.08,
+      "payload": "Nenhum QR presente (Design intencional: etapa de transição)"
+    },
+    {
+      "arquivo": "qr_fase_failed.png",
+      "status": "Pass",
+      "tempo_ms": 144.07,
+      "payload": "WIFI:T:WPA;S:ForgeOS • Configuração;P:BemVindo2026;;"
+    },
+    {
+      "arquivo": "tvbox_live_hdmi.png",
+      "status": "Pass",
+      "tempo_ms": 135.08,
+      "payload": "WIFI:T:WPA;S:Forge-E10;P:forgehub;;"
+    }
+  ],
+  "api_endpoints": [
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 23.4,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (HTML do ForgeHub)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/system/info",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 1039.9,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (JSON do Hostname/OS)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/system/stats",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 15.9,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (JSON de CPU/RAM/Disco)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/hardware/telemetry",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 1018.2,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (JSON com temp/núcleos)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/modules",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 24.3,
+      "bytes": 5024,
+      "detalhes": "Retornou 200 (Lista de manifestos)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/wifi/status",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 35.9,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (Estado wlan0 / AP)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/wifi/scan",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 18.0,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (Scan de SSIDs e RSSI)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/logs?limit=25",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 22.4,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (Logs estruturados)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/status",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 12.5,
+      "bytes": 328,
+      "detalhes": "Retornou 200 (Compatibilidade v1)"
+    },
+    {
+      "servico": "ForgeHub API",
+      "teste": "GET /api/telemetry",
+      "resultado": "Pass",
+      "status_code": 200,
+      "tempo_ms": 32.4,
+      "bytes": 576,
+      "detalhes": "Retornou 200 (Compatibilidade v1)"
+    }
+  ],
+  "portas": [
+    {
+      "servico": "SSH Server",
+      "porta": 22,
+      "aberta": true,
+      "tempo_ms": 4.7
+    },
+    {
+      "servico": "ForgeHub Web Portal",
+      "porta": 8080,
+      "aberta": true,
+      "tempo_ms": 8.7
+    },
+    {
+      "servico": "Web-Scraping API (Docker/Uvicorn)",
+      "porta": 8000,
+      "aberta": false,
+      "tempo_ms": 2011.9
+    },
+    {
+      "servico": "PostgreSQL (Docker)",
+      "porta": 5432,
+      "aberta": false,
+      "tempo_ms": 2002.8
+    },
+    {
+      "servico": "Redis (Docker)",
+      "porta": 6379,
+      "aberta": false,
+      "tempo_ms": 2012.1
+    }
+  ]
+}

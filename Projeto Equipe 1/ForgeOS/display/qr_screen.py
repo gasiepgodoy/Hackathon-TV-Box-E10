@@ -196,7 +196,14 @@ def render(shift_x=0, shift_y=0):
     image = render_panel(state_mode, info, shift_x, shift_y, logo_path)
     out = os.path.join(tempfile.gettempdir(), "forge_display_render.png")
     image.save(out)
-    return out, 978 + shift_y
+    return out, 1010 + shift_y
+
+
+def pulse_variants(png, fy):
+    """Generate subtle footer pulse buffers for framebuffer ping-pong updates."""
+    base = Image.open(png).convert("RGBA").crop((0, fy, 1920, 1080))
+    raw = base.tobytes("raw", "BGRA")
+    return [raw, raw]
 
 
 def push(png):
