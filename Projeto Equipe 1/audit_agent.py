@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import time
 import json
@@ -156,40 +156,57 @@ def scan_qr_codes():
 def test_api_endpoints():
     log("Executando bateria de testes em endpoints HTTP...")
     endpoints = [
-        ("Início / Web UI", "GET", "/", 200, "HTML do ForgeHub"),
-        ("Sistema - Info do Host", "GET", "/api/system/info", 200, "JSON do Hostname/OS"),
-        ("Sistema - Estatísticas", "GET", "/api/system/stats", 200, "JSON de CPU/RAM/Disco"),
-        ("Hardware - Telemetria", "GET", "/api/hardware/telemetry", 200, "JSON com temp/núcleos"),
-        ("Módulos - Catálogo & Estado", "GET", "/api/modules", 200, "Lista de manifestos"),
-        ("Rede - Status Wi-Fi", "GET", "/api/wifi/status", 200, "Estado wlan0 / AP"),
-        ("Rede - Varredura Wi-Fi", "GET", "/api/wifi/scan", 200, "Scan de SSIDs e RSSI"),
-        ("Logs - Stream RFC 5424", "GET", "/api/logs?limit=25", 200, "Logs estruturados"),
-        ("Legado - Status", "GET", "/api/status", 200, "Compatibilidade v1"),
-        ("Legado - Telemetria", "GET", "/api/telemetry", 200, "Compatibilidade v1")
+        ("Início / Web UI", "GET", f"{BASE_URL}/", 200, "HTML do ForgeHub"),
+        ("Sistema - Info do Host", "GET", f"{BASE_URL}/api/system/info", 200, "JSON do Hostname/OS"),
+        ("Sistema - Estatísticas", "GET", f"{BASE_URL}/api/system/stats", 200, "JSON de CPU/RAM/Disco"),
+        ("Hardware - Telemetria", "GET", f"{BASE_URL}/api/hardware/telemetry", 200, "JSON com temp/núcleos"),
+        ("Módulos - Catálogo & Estado", "GET", f"{BASE_URL}/api/modules", 200, "Lista de manifestos limpa"),
+        ("Rede - Status Wi-Fi", "GET", f"{BASE_URL}/api/wifi/status", 200, "Estado wlan0 / AP"),
+        ("Rede - Varredura Wi-Fi", "GET", f"{BASE_URL}/api/wifi/scan", 200, "Scan de SSIDs e RSSI"),
+        ("Logs - Stream RFC 5424", "GET", f"{BASE_URL}/api/logs?limit=25", 200, "Logs estruturados"),
+        ("Legado - Status", "GET", f"{BASE_URL}/api/status", 200, "Compatibilidade v1"),
+        ("Legado - Telemetria", "GET", f"{BASE_URL}/api/telemetry", 200, "Compatibilidade v1"),
+        ("Mina TTS API - Health", "GET", f"http://{APPLIANCE_HOST}:8000/health", 200, "Status ok e voz pt-BR"),
+        ("Mina TTS API - Vozes pt-BR", "GET", f"http://{APPLIANCE_HOST}:8000/voices?locale=pt-BR", 200, "Vozes neurais disponíveis"),
     ]
 
     results = []
-    for name, method, path, expected_code, desc in endpoints:
-        url = f"{BASE_URL}{path}"
+    for name, method, url, expected_code, desc in endpoints:
         t0 = time.perf_counter()
         try:
             res = requests.request(method, url, timeout=4)
             elapsed_ms = (time.perf_counter() - t0) * 1000
             passed = (res.status_code == expected_code)
+            
+            # Auditoria especial para /api/modules: validar ausência de módulos invisíveis
+            extra_note = ""
+            if "/api/modules" in url and passed:
+                try:
+                    mods = res.json().get("modules", [])
+                    mod_ids = [m.get("id") for m in mods]
+                    phantom = [pid for pid in ["calendario-academico", "documentos-formularios", "file-server-lite", "horarios-unesp", "kiosk-web", "painel-campus", "terminal-admin", "transporte-linha307"] if pid in mod_ids]
+                    if len(phantom) == 0 and len(mods) == 2:
+                        extra_note = " (✅ 0 módulos fantasmas; apenas serviços reais ativos)"
+                    else:
+                        passed = False
+                        extra_note = f" (❌ Contém fantasmas: {phantom})"
+                except Exception as ex:
+                    extra_note = f" (Erro parsing: {ex})"
+
             results.append({
-                "servico": "ForgeHub API",
-                "teste": f"{method} {path}",
+                "servico": "ForgeHub / MABI API",
+                "teste": f"{method} {url.split(APPLIANCE_HOST)[-1]}",
                 "resultado": "Pass" if passed else "Fail",
                 "status_code": res.status_code,
                 "tempo_ms": round(elapsed_ms, 1),
                 "bytes": len(res.content),
-                "detalhes": f"Retornou {res.status_code} ({desc})"
+                "detalhes": f"Retornou {res.status_code} ({desc}){extra_note}"
             })
         except Exception as e:
             elapsed_ms = (time.perf_counter() - t0) * 1000
             results.append({
-                "servico": "ForgeHub API",
-                "teste": f"{method} {path}",
+                "servico": "ForgeHub / MABI API",
+                "teste": f"{method} {url.split(APPLIANCE_HOST)[-1]}",
                 "resultado": "Fail",
                 "status_code": 0,
                 "tempo_ms": round(elapsed_ms, 1),
@@ -205,9 +222,7 @@ def test_ports():
     ports_to_test = [
         ("SSH Server", APPLIANCE_HOST, 22),
         ("ForgeHub Web Portal", APPLIANCE_HOST, 8080),
-        ("Web-Scraping API (Docker/Uvicorn)", APPLIANCE_HOST, 8000),
-        ("PostgreSQL (Docker)", APPLIANCE_HOST, 5432),
-        ("Redis (Docker)", APPLIANCE_HOST, 6379),
+        ("Mina TTS API (FastAPI Edge-TTS)", APPLIANCE_HOST, 8000),
     ]
 
     port_results = []

@@ -67,8 +67,9 @@ lifecycle:
   start: "python main_cli.py"
   start_gui: "python main_gui.py"
   start_gui_fullscreen: "python main_gui.py --fullscreen"
-  stop: "pkill -f 'main_cli.py|main_gui.py'"
-  healthcheck: "pgrep -f 'main_cli.py|main_gui.py' > /dev/null"
+  start_tts: "python -m uvicorn tts_api.main:app --host 0.0.0.0 --port 8000"
+  stop: "pkill -f 'main_cli.py|main_gui.py|tts_api.main'"
+  healthcheck: "curl -sf http://localhost:8000/health > /dev/null || pgrep -f 'main_cli.py|main_gui.py' > /dev/null"
   systemd_unit: "forge-totem.service"
 
 native_components:

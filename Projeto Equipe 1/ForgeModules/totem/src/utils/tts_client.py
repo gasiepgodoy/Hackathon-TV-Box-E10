@@ -42,14 +42,14 @@ class TTSClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000",  # Kept for compatibility
+        base_url: str = "http://localhost:8000",  # Remote TTS API service
         enabled: bool = True,
         voice: str = "pt-BR-FranciscaNeural",
         rate: str = "-13%",
-        pitch: str = "+3Hz",
-        volume: str = "+0%",
+        pitch: str = "+1Hz",
+        volume: str = "+10%",
     ):
-        self._enabled = enabled and _HAS_MINIAUDIO and _HAS_EDGE_TTS
+        self._enabled = enabled and (_HAS_EDGE_TTS or bool(base_url))
         self._voice = voice
         self._rate = rate
         self._pitch = pitch
@@ -85,7 +85,7 @@ class TTSClient:
             self._device = None
 
     async def health_check(self) -> bool:
-        """Verify the edge-tts local module functions properly."""
+        """Verify the edge-tts engine functions properly (via remote API or local edge_tts)."""
         if not self._enabled:
             return False
 
@@ -95,14 +95,33 @@ class TTSClient:
         elif self._base_url and self._base_url != "local":
             self._resolved_url = self._base_url
 
-        try:
-            await edge_tts.list_voices()
-            logger.info("Local embedded TTS engine initialized (voice=%s, resolved_remote=%s)", self._voice, self._resolved_url)
-            return True
-        except Exception as exc:
-            logger.warning("Embedded TTS engine check failed (no internet?): %s", exc)
-        self._enabled = False
-        return False
+        # Actively test remote TTS API if URL is resolved
+        if self._resolved_url:
+            try:
+                import aiohttp
+                if self._session is None or self._session.closed:
+                    self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2))
+                async with self._session.get(f"{self._resolved_url}/health") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        logger.info("Remote TTS API connected successfully at %s (voice=%s, cache=%s)", self._resolved_url, data.get("default_voice", self._voice), data.get("cache_entries", 0))
+                        return True
+            except Exception as exc:
+                logger.debug("Remote TTS API at %s not responding (%s), checking local engine...", self._resolved_url, exc)
+
+        if _HAS_EDGE_TTS:
+            try:
+                await edge_tts.list_voices()
+                logger.info("Local embedded TTS engine initialized (voice=%s, remote=%s)", self._voice, self._resolved_url)
+                return True
+            except Exception as exc:
+                logger.warning("Embedded TTS engine check failed (no internet?): %s", exc)
+
+        if not self._resolved_url and not _HAS_EDGE_TTS:
+            self._enabled = False
+            return False
+
+        return True
 
     def _resolve_mdns(self) -> Optional[str]:
         """Discover the MinaTTS FastAPI service dynamically using Zeroconf."""

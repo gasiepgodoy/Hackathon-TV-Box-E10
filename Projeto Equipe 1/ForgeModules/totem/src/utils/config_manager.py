@@ -103,9 +103,9 @@ class ConfigManager:
             "ENABLED": True,
             "API_URL": "http://localhost:8000",
             "VOICE": "pt-BR-FranciscaNeural",
-            "RATE": "+15%",
-            "PITCH": "+3Hz",
-            "VOLUME": "+0%",
+            "RATE": "-13%",
+            "PITCH": "+1Hz",
+            "VOLUME": "+10%",
         },
         "LLM_OPTIONS": {
             "ENABLED": True,
