@@ -210,23 +210,41 @@ flowchart TB
 
 ## Telas reais (sem mock)
 
-### Tela HDMI (framebuffer /dev/fb0)
+### 1. Gravação Desktop — ForgeImager (Rust + Tauri + React)
 
-A TV Box renderiza diretamente no framebuffer Linux — não precisa de servidor gráfico.
+Gravação com streaming multithread, verificação SHA-256 e injeção userspace em partição ext4 (`crates/forge-write-conf`) sem necessidade de root no host:
 
-| QR Code do ponto de acesso |
+| Gravação e Injeção ext4 no MicroSD |
 | :---: |
-| ![HDMI QR](imagens/07_ForgeOS_HDMI_Dual_QR_Framebuffer_1080p.png) |
+| <img src="imagens/forgeimager_flashing.png" alt="ForgeImager Gravação e Loading" width="100%" /> |
 
-### Portal web (`:8080`) — acessado pelo celular
+### 2. Tela HDMI na TV (Framebuffer /dev/fb0 — Kiosk Nativo)
 
-| Visão geral | Rede | Serviços |
+A TV Box renderiza diretamente no framebuffer Linux (1080p @ 60Hz), sem servidor gráfico X11/Wayland. O onboarding avança dinamicamente em 3 fases:
+
+| Fase 1: Conectar | Fase 2: Configurar | Fase 3: Usar |
 | :---: | :---: | :---: |
-| ![Overview](imagens/01_ForgeOS_Audit_Overview.png) | ![Rede](imagens/02_ForgeOS_Audit_Networking.png) | ![Serviços](imagens/03_ForgeOS_Audit_Services.png) |
+| ![Fase 1 - Conectar](imagens/qr_fase1_conectar.png) | ![Fase 2 - Configurar](imagens/qr_fase2_configurar.png) | ![Fase 3 - Usar](imagens/qr_fase3_usar.png) |
 
-| Módulos | Logs RFC 5424 | Mobile |
+| Conexão em Andamento | Rollback Automático (Watchdog 75s) | Hardware Real em Execução |
+| :---: | :---: | :---: |
+| ![Conexão em Andamento](imagens/qr_fase_aplicando.png) | ![Falha e Rollback](imagens/qr_fase_failed.png) | ![Hardware Real](imagens/tvbox_live_hdmi.png) |
+
+### 3. Portal Web ForgeOS Hub (`:8080`) — Painel do Dispositivo
+
+Interface responsiva para desktop, TV e smartphones, otimizada para appliances de borda:
+
+| Visão Geral / Início | Gerenciamento de Rede & Wi-Fi | Telemetria de Hardware & Recursos |
+| :---: | :---: | :---: |
+| ![Overview](imagens/01_ForgeOS_Audit_Overview.png) | ![Rede](imagens/02_ForgeOS_Audit_Networking.png) | ![Telemetria](imagens/03_ForgeOS_Audit_Services.png) |
+
+| Marketplace de Módulos | Logs RFC 5424 em Tempo Real | Experiência Mobile Responsiva |
 | :---: | :---: | :---: |
 | ![Módulos](imagens/04_ForgeOS_Audit_Modules_Hub.png) | ![Logs](imagens/05_ForgeOS_Audit_Logs_RFC5424.png) | ![Mobile](imagens/mobile_overview.png) |
+
+| Aplicações Instaladas | Configurações do Sistema | Modo Claro Institucional |
+| :---: | :---: | :---: |
+| ![Aplicações](imagens/forgeos_apps.png) | ![Configurações](imagens/forgeos_settings.png) | ![Modo Claro](imagens/forgeos_light_mode.png) |
 
 ---
 
@@ -350,24 +368,29 @@ Projeto Equipe 1/
 - [Imagem pré-compilada do sistema](https://github.com/gasiepgodoy/Hackathon-TV-Box-E10/releases/tag/equipe1-v1.2.0)
 - [ForgeImager — código-fonte e instruções de compilação](https://github.com/multi-forge/multi-forge/tree/main/ForgeImager)
 
-### 2. Gravação no MicroSD
+### 2. Gravação no MicroSD via ForgeImager
+
+O **ForgeImager** automatiza o download, a validação de integridade SHA-256 e a gravação multithread com injeção ext4 userspace:
+
+<p align="center">
+  <img src="imagens/forgeimager_flashing.png" alt="Processo de gravação e injeção do ForgeImager" width="90%" />
+</p>
 
 ```bash
-# Opção A: ForgeImager (interface gráfica)
+# Opção A: ForgeImager (interface gráfica desktop recomendada)
 cd ForgeImager && pnpm install && pnpm tauri dev
 
-# Opção B: Linha de comando
+# Opção B: Linha de comando direta
 xzcat forgeos-btv-e10.img.xz | sudo dd of=/dev/sdX bs=4M status=progress && sync
 ```
 
-### 3. Primeiro boot
+### 3. Primeiro boot e Onboarding Visual na TV
 
-1. Insira o MicroSD na BTV E10.
-2. Conecte o cabo HDMI na TV e ligue a energia.
-3. Aguarde ~30 segundos — a TV mostra o QR Code do ponto de acesso.
-4. No celular, leia o QR Code (ou conecte manualmente na rede `ForgeOS-Setup-E10`).
-5. Abra `http://192.168.4.1:8080` no navegador do celular.
-6. Escolha a rede Wi-Fi, insira as credenciais e aguarde a confirmação na TV.
+1. **Inserção e Alimentação:** Insira o MicroSD na BTV Express E10, conecte o cabo HDMI na TV e ligue a energia.
+2. **Inicialização Kiosk (~30s):** A TV Box inicializa e renderiza diretamente via framebuffer a **Fase 1 (Conectar)** com o QR Code de pareamento Wi-Fi (`ForgeOS-Setup-E10`).
+3. **Leitura pelo Celular:** Aponte a câmera do smartphone para o QR Code da TV. Assim que o celular conecta, a tela atualiza dinamicamente para a **Fase 2 (Configurar)** exibindo o QR Code de acesso ao portal web.
+4. **Provisionamento:** No navegador do celular, abra `http://192.168.4.1:8080`, selecione a rede local (WPA2 ou eduroam 802.1X) e aplique as credenciais. A TV mostra o status de conexão em andamento.
+5. **Pronto para Uso:** A TV avança para a **Fase 3 (Usar)** exibindo o IP local atribuído e a telemetria do sistema. M.A.B.I e os módulos cadastrados iniciam normalmente.
 
 ### 4. Acesso posterior
 

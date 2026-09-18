@@ -4,13 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "playwright test --config playwright.frontend.config.js",
+    "test:hardware": "playwright test --config playwright.config.js portal.spec.js",
+    "preview": "node preview.cjs",
+    "test:qr": "node display-qr.cjs artifacts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.62.1",
+    "jsqr": "^1.4.0",
+    "pngjs": "^7.0.0"
   }
 }
