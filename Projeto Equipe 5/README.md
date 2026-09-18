@@ -68,7 +68,7 @@ O tempo estimado de espera na fila é calculado dinamicamente combinando o volum
 
 * **Pessoas na Fila ($N_{fila}$):** Total de pessoas detectadas dentro do polígono vermelho.
 * **Atendentes em Serviço ($N_{atend}$):** Total de funcionários detectados dentro do polígono amarelo.
-* **Tempo Médio de Atendimento por Pessoa ($T_{atend}$):** Constante operacional calibrada conforme o histórico do local (ex: $20$ segundos por usuário).
+* **Tempo Médio de Atendimento por Pessoa ($T_{atend}$):** Constante operacional calibrada conforme o histórico do local (ex: $30$ segundos por usuário).
 
 $$\text{Tempo Estimado (min)} = \frac{N_{\text{fila}} \times T_{\text{atend}}}{\max(N_{\text{atend}}, 1) \times 60}$$
 
