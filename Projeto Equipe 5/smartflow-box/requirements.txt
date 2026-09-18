@@ -1,0 +1,5 @@
+flask
+opencv-python-headless
+numpy
+shapely
+pytz
