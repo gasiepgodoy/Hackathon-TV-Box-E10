@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 # Configurações de performance e sensibilidade da IA
 cv2.setNumThreads(1)
-CONFIDENCE_THRESHOLD = 0.15  # Reduzido para capturar pessoas no fundo / com oclusão
+CONFIDENCE_THRESHOLD = 0.35  # Ajustado para evitar falsos positivos mantendo boa sensibilidade
 NMS_THRESHOLD = 0.45
 CONFIG_FILE = "config_roi.json"
 DB_NAME = "banco_dados.db"
